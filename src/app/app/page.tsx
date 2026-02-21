@@ -30,7 +30,7 @@ export default function AppPage() {
             variant="ghost"
             size="icon"
             onClick={() => setPanelCollapsed(!isPanelCollapsed)}
-            className="text-slate-400 hover:text-slate-200"
+            className="md:hidden text-slate-400 hover:text-slate-200"
           >
             <Menu className="w-5 h-5" />
           </Button>
@@ -47,10 +47,17 @@ export default function AppPage() {
       
       <div className="flex pt-14 min-h-screen">
         {/* Left Panel */}
+        {/* Overlay for mobile */}
+        {!isPanelCollapsed && (
+          <div 
+            className="fixed inset-0 bg-black/50 z-40 md:hidden"
+            onClick={() => setPanelCollapsed(true)}
+          />
+        )}
         <aside
           className={cn(
-            "fixed left-0 top-14 bottom-0 w-80 bg-slate-900 border-r border-slate-800 overflow-y-auto transition-transform duration-300 md:translate-x-0",
-            isPanelCollapsed ? "-translate-x-full" : "translate-x-0"
+            "fixed left-0 top-14 bottom-0 w-80 bg-slate-900 border-r border-slate-800 overflow-y-auto transition-transform duration-300 z-40",
+            isPanelCollapsed ? "-translate-x-full md:translate-x-0" : "translate-x-0"
           )}
         >
           <div className="p-4 space-y-6">
@@ -96,10 +103,7 @@ export default function AppPage() {
         
         {/* Main Workspace */}
         <main
-          className={cn(
-            "flex-1 p-6 transition-all duration-300",
-            isPanelCollapsed ? "ml-0" : "ml-80"
-          )}
+          className="flex-1 p-6 ml-0 md:ml-80"
         >
           <div className="max-w-4xl mx-auto">
             <div className="text-center py-20">
