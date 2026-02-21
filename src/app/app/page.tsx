@@ -9,8 +9,10 @@ import { HistoryDrawer } from "@/components/HistoryDrawer"
 import { UserMenu } from "@/components/UserMenu"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { Menu, Save, History } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Menu, Save, History, Share2, Plus, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { saveStory, shareStory } from "@/app/actions/story"
 
 interface StoryData {
   id: string
@@ -26,10 +28,22 @@ export default function AppPage() {
     setPanelCollapsed, 
     storyInput, 
     setStoryInput,
-    setStoryOutput
+    setStoryOutput,
+    storyOutput,
+    selectedTopics,
+    characters,
+    setError,
+    isGenerating
   } = useAppStore()
   
   const [historyOpen, setHistoryOpen] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [sharing, setSharing] = useState(false)
+  const [shareCopied, setShareCopied] = useState(false)
+  const [title, setTitle] = useState("")
+  const [saved, setSaved] = useState(false)
+  
+  const hasOutput = storyOutput.trim().length > 0
   
   const handleSaveDraft = () => {
     localStorage.setItem("nyx-ai-draft", storyInput)
@@ -38,9 +52,71 @@ export default function AppPage() {
   
   const handleLoadStory = (story: StoryData) => {
     setStoryOutput(story.content)
+    setTitle(story.title || "")
     if (story.topics) {
       // Load topics if needed
     }
+  }
+  
+  const handleSave = async () => {
+    if (!storyOutput) return
+    
+    setSaving(true)
+    const result = await saveStory({
+      title: title || "無標題",
+      content: storyOutput,
+      topics: selectedTopics,
+      roles: characters
+    })
+    
+    if (result.error) {
+      setError(result.error)
+    } else {
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2000)
+    }
+    setSaving(false)
+  }
+  
+  const handleShare = async () => {
+    if (!storyOutput) return
+    
+    // First save the story
+    setSaving(true)
+    const saveResult = await saveStory({
+      title: title || "無標題",
+      content: storyOutput,
+      topics: selectedTopics,
+      roles: characters,
+      is_public: true
+    })
+    
+    if (saveResult.error) {
+      setError(saveResult.error)
+      setSaving(false)
+      return
+    }
+    
+    // Then share
+    setSharing(true)
+    const result = await shareStory(saveResult.story?.id || "")
+    
+    if (result.error) {
+      setError(result.error)
+    } else if (result.shareId) {
+      const shareUrl = `${window.location.origin}/share/${result.shareId}`
+      navigator.clipboard.writeText(shareUrl)
+      setShareCopied(true)
+      setTimeout(() => setShareCopied(false), 2000)
+    }
+    setSaving(false)
+    setSharing(false)
+  }
+  
+  const handleNewStory = () => {
+    setStoryOutput("")
+    setTitle("")
+    setSaved(false)
   }
   
   return (
@@ -62,16 +138,75 @@ export default function AppPage() {
           </span>
         </div>
         
-        <div className="flex items-center gap-2">
+        {/* 固定右側按鈕群 */}
+        <div className="flex items-center gap-1">
+          {/* 歷史按鈕 */}
           <Button
             variant="ghost"
-            size="icon"
+            size="sm"
             onClick={() => setHistoryOpen(true)}
-            className="text-slate-400 hover:text-slate-200"
-            title="歷史記錄"
+            className="text-slate-300 hover:text-white"
           >
-            <History className="w-5 h-5" />
+            <History className="w-4 h-4 mr-1" />
+            <span className="hidden sm:inline">歷史</span>
           </Button>
+          
+          {/* 儲存按鈕 */}
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={!hasOutput || saving}
+            onClick={handleSave}
+            className={cn(
+              "text-slate-300 hover:text-white",
+              !hasOutput && "opacity-50 cursor-not-allowed"
+            )}
+          >
+            {saving ? (
+              <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+            ) : (
+              <Save className="w-4 h-4 mr-1" />
+            )}
+            <span className="hidden sm:inline">{saved ? "已儲存" : "儲存"}</span>
+          </Button>
+          
+          {/* 分享按鈕 */}
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={!hasOutput || sharing}
+            onClick={handleShare}
+            className={cn(
+              "text-slate-300 hover:text-white",
+              !hasOutput && "opacity-50 cursor-not-allowed"
+            )}
+          >
+            {sharing || saving ? (
+              <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+            ) : shareCopied ? (
+              <Share2 className="w-4 h-4 mr-1 text-green-400" />
+            ) : (
+              <Share2 className="w-4 h-4 mr-1" />
+            )}
+            <span className="hidden sm:inline">{shareCopied ? "已複製" : "分享"}</span>
+          </Button>
+          
+          {/* 新建按鈕 */}
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={!hasOutput || isGenerating}
+            onClick={handleNewStory}
+            className={cn(
+              "text-slate-300 hover:text-white",
+              !hasOutput && "opacity-50 cursor-not-allowed"
+            )}
+          >
+            <Plus className="w-4 h-4 mr-1" />
+            <span className="hidden sm:inline">新建</span>
+          </Button>
+          
+          {/* 登入/登出 */}
           <UserMenu />
         </div>
       </header>
@@ -85,7 +220,6 @@ export default function AppPage() {
       
       <div className="flex pt-14 min-h-screen">
         {/* Left Panel */}
-        {/* Overlay for mobile */}
         {!isPanelCollapsed && (
           <div 
             className="fixed inset-0 bg-black/50 z-40 md:hidden"
@@ -98,7 +232,22 @@ export default function AppPage() {
             isPanelCollapsed ? "-translate-x-full md:translate-x-0" : "translate-x-0"
           )}
         >
-          <div className="p-4 space-y-6">
+          <div className="p-4 space-y-4">
+            {/* 標題輸入 - 永遠顯示 */}
+            {hasOutput && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-300">
+                  故事標題
+                </label>
+                <Input
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="輸入標題..."
+                  className="bg-slate-800 border-slate-700 text-slate-200"
+                />
+              </div>
+            )}
+            
             {/* Story Input */}
             <div className="space-y-2">
               <label className="text-sm font-medium text-slate-300">
@@ -137,8 +286,8 @@ export default function AppPage() {
               <CharacterManager />
             </div>
             
-            {/* Generate Buttons */}
-            <div className="space-y-2">
+            {/* Generate Buttons - 固定在左側面板底部 */}
+            <div className="pt-4 border-t border-slate-800">
               <GenerateButtons onOpenHistory={() => setHistoryOpen(true)} />
             </div>
           </div>

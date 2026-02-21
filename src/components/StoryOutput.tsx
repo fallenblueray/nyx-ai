@@ -2,13 +2,11 @@
 
 import { useState, useEffect } from "react"
 import { useAppStore } from "@/store/useAppStore"
-import { saveStory, shareStory } from "@/app/actions/story"
 import ReactMarkdown from "react-markdown"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Loader2, Sparkles, RotateCcw, Save, Share2, Check, Edit2, Eye } from "lucide-react"
+import { Loader2, Sparkles, RotateCcw, Edit2, Eye } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const MAX_CHARS = 5000
@@ -101,7 +99,7 @@ interface GenerateButtonsProps {
   onOpenHistory?: () => void
 }
 
-export function GenerateButtons({ onOpenHistory }: GenerateButtonsProps) {
+export function GenerateButtons(_props: GenerateButtonsProps) {
   const { 
     storyInput,
     selectedTopics,
@@ -113,12 +111,6 @@ export function GenerateButtons({ onOpenHistory }: GenerateButtonsProps) {
     setError,
     appendStoryOutput
   } = useAppStore()
-  
-  const [saving, setSaving] = useState(false)
-  const [sharing, setSharing] = useState(false)
-  const [shareCopied, setShareCopied] = useState(false)
-  const [title, setTitle] = useState("")
-  const [saved, setSaved] = useState(false)
   
   const canGenerate = storyInput.trim().length > 0 || selectedTopics.length > 0 || characters.length > 0
   const hasOutput = storyOutput.trim().length > 0
@@ -163,7 +155,6 @@ ${charStr || "（自由創作）"}`
     
     setIsGenerating(true)
     setError(null)
-    setSaved(false)
     
     try {
       const { systemPrompt, userPrompt } = buildPrompt(isContinue)
@@ -205,163 +196,44 @@ ${charStr || "（自由創作）"}`
     }
   }
   
-  const handleSave = async () => {
-    if (!storyOutput) return
-    
-    setSaving(true)
-    const result = await saveStory({
-      title: title || "無標題",
-      content: storyOutput,
-      topics: selectedTopics,
-      roles: characters
-    })
-    
-    if (result.error) {
-      setError(result.error)
-    } else {
-      setSaved(true)
-    }
-    setSaving(false)
-  }
-  
-  const handleShare = async () => {
-    if (!storyOutput) return
-    
-    // First save the story
-    setSaving(true)
-    const saveResult = await saveStory({
-      title: title || "無標題",
-      content: storyOutput,
-      topics: selectedTopics,
-      roles: characters,
-      is_public: true
-    })
-    
-    if (saveResult.error) {
-      setError(saveResult.error)
-      setSaving(false)
-      return
-    }
-    
-    // Then share
-    setSharing(true)
-    const result = await shareStory(saveResult.story?.id || "")
-    
-    if (result.error) {
-      setError(result.error)
-    } else if (result.shareId) {
-      const shareUrl = `${window.location.origin}/share/${result.shareId}`
-      navigator.clipboard.writeText(shareUrl)
-      setShareCopied(true)
-      setTimeout(() => setShareCopied(false), 2000)
-    }
-    setSaving(false)
-    setSharing(false)
-  }
-  
   return (
-    <div className="space-y-3">
-      {hasOutput && (
-        <Input
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="輸入標題..."
-          className="bg-slate-800 border-slate-700 text-slate-200"
-        />
-      )}
-      
-      <div className="flex gap-2">
-        {!hasOutput ? (
-          <Button
-            onClick={() => generateStory(false)}
-            disabled={!canGenerate || isGenerating}
-            className="flex-1 bg-blue-600 hover:bg-blue-700"
-          >
-            {isGenerating ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                生成中...
-              </>
-            ) : (
-              <>
-                <Sparkles className="w-4 h-4 mr-2" />
-                開始創作
-              </>
-            )}
-          </Button>
-        ) : (
-          <>
-            <Button
-              onClick={() => generateStory(true)}
-              disabled={isGenerating}
-              className="flex-1 bg-purple-600 hover:bg-purple-700"
-            >
-              {isGenerating ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  續寫中...
-                </>
-              ) : (
-                <>
-                  <RotateCcw className="w-4 h-4 mr-2" />
-                  繼續創作
-                </>
-              )}
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => setStoryOutput("")}
-              disabled={isGenerating}
-              className="border-slate-700 text-slate-300 hover:bg-slate-800"
-            >
-              新建
-            </Button>
-          </>
-        )}
-      </div>
-      
-      {hasOutput && (
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={handleSave}
-            disabled={saving || sharing}
-            className="flex-1 border-slate-700 text-slate-300 hover:bg-slate-800"
-          >
-            {saving ? (
+    <div className="space-y-2">
+      {!hasOutput ? (
+        <Button
+          onClick={() => generateStory(false)}
+          disabled={!canGenerate || isGenerating}
+          className="w-full bg-blue-600 hover:bg-blue-700"
+        >
+          {isGenerating ? (
+            <>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            ) : saved ? (
-              <Check className="w-4 h-4 mr-2 text-green-400" />
-            ) : (
-              <Save className="w-4 h-4 mr-2" />
-            )}
-            {saved ? "已儲存" : "儲存"}
-          </Button>
-          
-          <Button
-            variant="outline"
-            onClick={handleShare}
-            disabled={saving || sharing}
-            className="flex-1 border-slate-700 text-slate-300 hover:bg-slate-800"
-          >
-            {sharing || saving ? (
+              生成中...
+            </>
+          ) : (
+            <>
+              <Sparkles className="w-4 h-4 mr-2" />
+              開始創作
+            </>
+          )}
+        </Button>
+      ) : (
+        <Button
+          onClick={() => generateStory(true)}
+          disabled={isGenerating}
+          className="w-full bg-purple-600 hover:bg-purple-700"
+        >
+          {isGenerating ? (
+            <>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            ) : shareCopied ? (
-              <Check className="w-4 h-4 mr-2 text-green-400" />
-            ) : (
-              <Share2 className="w-4 h-4 mr-2" />
-            )}
-            {shareCopied ? "已複製" : "分享"}
-          </Button>
-          
-          <Button
-            variant="outline"
-            onClick={onOpenHistory}
-            className="border-slate-700 text-slate-300 hover:bg-slate-800"
-          >
-            <Sparkles className="w-4 h-4" />
-          </Button>
-        </div>
+              續寫中...
+            </>
+          ) : (
+            <>
+              <RotateCcw className="w-4 h-4 mr-2" />
+              繼續創作
+            </>
+          )}
+        </Button>
       )}
     </div>
   )

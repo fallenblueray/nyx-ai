@@ -1,17 +1,29 @@
 "use client"
 
+import { useState } from "react"
 import { useSession, signOut } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { LogIn, LogOut, User } from "lucide-react"
 import { useRouter } from "next/navigation"
 
+function useMounted() {
+  const [mounted, setMounted] = useState(false)
+  // Use dynamic import pattern - only set mounted after first render on client
+  if (typeof window !== 'undefined' && !mounted) {
+    setMounted(true)
+  }
+  return mounted
+}
+
 export function UserMenu() {
   const { data: session, status } = useSession()
   const router = useRouter()
+  const mounted = useMounted()
 
-  if (status === "loading") {
+  // SSR or loading state - show skeleton
+  if (!mounted || status === "loading") {
     return (
-      <div className="text-sm text-slate-400">載入中...</div>
+      <div className="w-20 h-8 bg-slate-800 animate-pulse rounded" />
     )
   }
 
