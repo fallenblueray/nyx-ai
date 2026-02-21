@@ -98,7 +98,7 @@ export function StoryOutput() {
 }
 
 interface GenerateButtonsProps {
-  onOpenHistory: () => void
+  onOpenHistory?: () => void
 }
 
 export function GenerateButtons({ onOpenHistory }: GenerateButtonsProps) {

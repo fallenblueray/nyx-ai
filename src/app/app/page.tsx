@@ -6,9 +6,10 @@ import { TopicSelector } from "@/components/TopicSelector"
 import { CharacterManager } from "@/components/CharacterManager"
 import { StoryOutput, GenerateButtons } from "@/components/StoryOutput"
 import { HistoryDrawer } from "@/components/HistoryDrawer"
+import { UserMenu } from "@/components/UserMenu"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { Menu, Save } from "lucide-react"
+import { Menu, Save, History } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface StoryData {
@@ -60,7 +61,19 @@ export default function AppPage() {
             無審查 · 自由創作
           </span>
         </div>
-        <GenerateButtons onOpenHistory={() => setHistoryOpen(true)} />
+        
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setHistoryOpen(true)}
+            className="text-slate-400 hover:text-slate-200"
+            title="歷史記錄"
+          >
+            <History className="w-5 h-5" />
+          </Button>
+          <UserMenu />
+        </div>
       </header>
       
       {/* History Drawer */}
@@ -122,6 +135,11 @@ export default function AppPage() {
                 角色卡
               </label>
               <CharacterManager />
+            </div>
+            
+            {/* Generate Buttons */}
+            <div className="space-y-2">
+              <GenerateButtons onOpenHistory={() => setHistoryOpen(true)} />
             </div>
           </div>
         </aside>
