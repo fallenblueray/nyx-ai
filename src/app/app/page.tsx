@@ -3,9 +3,10 @@
 import { useAppStore } from "@/store/useAppStore"
 import { TopicSelector } from "@/components/TopicSelector"
 import { CharacterManager } from "@/components/CharacterManager"
+import { StoryOutput, GenerateButtons } from "@/components/StoryOutput"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { Menu, Save, Sparkles } from "lucide-react"
+import { Menu, Save } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export default function AppPage() {
@@ -13,13 +14,17 @@ export default function AppPage() {
     isPanelCollapsed, 
     setPanelCollapsed, 
     storyInput, 
-    setStoryInput 
+    setStoryInput,
+    selectedTopics,
+    characters
   } = useAppStore()
   
   const handleSaveDraft = () => {
     localStorage.setItem("nyx-ai-draft", storyInput)
     alert("草稿已儲存！")
   }
+  
+  const hasInput = storyInput.trim().length > 0 || selectedTopics.length > 0 || characters.length > 0
   
   return (
     <main className="min-h-screen bg-slate-950 text-slate-200">
@@ -39,10 +44,7 @@ export default function AppPage() {
             無審查 · 自由創作
           </span>
         </div>
-        <Button className="bg-blue-600 hover:bg-blue-700">
-          <Sparkles className="w-4 h-4 mr-2" />
-          開始創作
-        </Button>
+        <GenerateButtons />
       </header>
       
       <div className="flex pt-14 min-h-screen">
@@ -103,18 +105,10 @@ export default function AppPage() {
         
         {/* Main Workspace */}
         <main
-          className="flex-1 p-6 ml-0 md:ml-80"
+          className="flex-1 p-4 md:p-6 ml-0 md:ml-80"
         >
-          <div className="max-w-4xl mx-auto">
-            <div className="text-center py-20">
-              <Sparkles className="w-16 h-16 text-slate-700 mx-auto mb-4" />
-              <h2 className="text-2xl font-bold text-slate-500 mb-2">
-                準備開始創作
-              </h2>
-              <p className="text-slate-600">
-                在左側面板輸入劇情起點，選擇題材和角色
-              </p>
-            </div>
+          <div className="h-[calc(100vh-5rem)]">
+            <StoryOutput />
           </div>
         </main>
       </div>

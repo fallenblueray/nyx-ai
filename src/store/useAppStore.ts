@@ -23,6 +23,17 @@ interface AppState {
   storyInput: string
   setStoryInput: (input: string) => void
   
+  // Story output
+  storyOutput: string
+  setStoryOutput: (output: string) => void
+  appendStoryOutput: (text: string) => void
+  
+  // Generation state
+  isGenerating: boolean
+  setIsGenerating: (generating: boolean) => void
+  error: string | null
+  setError: (error: string | null) => void
+  
   // Selected topics
   selectedTopics: Topic[]
   setSelectedTopics: (topics: Topic[]) => void
@@ -43,9 +54,22 @@ export const useAppStore = create<AppState>()(
       isPanelCollapsed: false,
       setPanelCollapsed: (collapsed) => set({ isPanelCollapsed: collapsed }),
       
-      // Story
+      // Story input
       storyInput: '',
       setStoryInput: (input) => set({ storyInput: input }),
+      
+      // Story output
+      storyOutput: '',
+      setStoryOutput: (output) => set({ storyOutput: output }),
+      appendStoryOutput: (text) => set((state) => ({ 
+        storyOutput: state.storyOutput + text 
+      })),
+      
+      // Generation state
+      isGenerating: false,
+      setIsGenerating: (generating) => set({ isGenerating: generating }),
+      error: null,
+      setError: (error) => set({ error }),
       
       // Topics
       selectedTopics: [],
