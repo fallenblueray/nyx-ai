@@ -23,7 +23,7 @@ export default function Home() {
           <Button 
             size="lg"
             className="bg-blue-600 hover:bg-blue-700 text-lg px-8"
-            onClick={() => window.location.href = '/app'}
+            onClick={() => window.location.href = '/auth/signin'}
           >
             開始創作
           </Button>
