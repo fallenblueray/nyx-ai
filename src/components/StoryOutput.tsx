@@ -3,7 +3,6 @@
 import { useAppStore } from "@/store/useAppStore"
 import ReactMarkdown from "react-markdown"
 import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Loader2, Sparkles, RotateCcw } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -12,11 +11,8 @@ const MAX_CHARS = 5000
 
 export function StoryOutput() {
   const { 
-    storyOutput, 
-    setStoryOutput,
-    isGenerating, 
-    error,
-    setError 
+    storyOutput,
+    error
   } = useAppStore()
   
   const charCount = storyOutput.length

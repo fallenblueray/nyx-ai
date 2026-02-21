@@ -24,8 +24,6 @@ export default function AppPage() {
     alert("草稿已儲存！")
   }
   
-  const hasInput = storyInput.trim().length > 0 || selectedTopics.length > 0 || characters.length > 0
-  
   return (
     <main className="min-h-screen bg-slate-950 text-slate-200">
       {/* Top Bar */}
