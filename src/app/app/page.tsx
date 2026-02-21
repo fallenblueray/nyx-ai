@@ -11,15 +11,21 @@ import { Textarea } from "@/components/ui/textarea"
 import { Menu, Save } from "lucide-react"
 import { cn } from "@/lib/utils"
 
+interface StoryData {
+  id: string
+  title: string
+  content: string
+  created_at?: string
+  topics?: Array<{ category: string; item: string }>
+}
+
 export default function AppPage() {
   const { 
     isPanelCollapsed, 
     setPanelCollapsed, 
     storyInput, 
     setStoryInput,
-    setStoryOutput,
-    selectedTopics,
-    characters
+    setStoryOutput
   } = useAppStore()
   
   const [historyOpen, setHistoryOpen] = useState(false)
@@ -29,7 +35,7 @@ export default function AppPage() {
     alert("草稿已儲存！")
   }
   
-  const handleLoadStory = (story: any) => {
+  const handleLoadStory = (story: StoryData) => {
     setStoryOutput(story.content)
     if (story.topics) {
       // Load topics if needed
@@ -125,7 +131,7 @@ export default function AppPage() {
           className="flex-1 p-4 md:p-6 ml-0 md:ml-80"
         >
           <div className="h-[calc(100vh-5rem)]">
-            <StoryOutput onOpenHistory={() => setHistoryOpen(true)} />
+            <StoryOutput />
           </div>
         </main>
       </div>

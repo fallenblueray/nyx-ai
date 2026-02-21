@@ -17,16 +17,10 @@ export function HistoryDrawer({ isOpen, onClose, onLoadStory }: HistoryDrawerPro
   const [stories, setStories] = useState<(StoryData & { id: string; created_at: string })[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
-  const [shouldLoad, setShouldLoad] = useState(false)
+  const shouldLoad = isOpen && stories.length === 0 && !loading
 
   useEffect(() => {
-    if (isOpen && !shouldLoad) {
-      setShouldLoad(true)
-    }
-  }, [isOpen, shouldLoad])
-
-  useEffect(() => {
-    if (shouldLoad && isOpen) {
+    if (shouldLoad) {
       const fetchStories = async () => {
         setLoading(true)
         setError("")
@@ -43,7 +37,7 @@ export function HistoryDrawer({ isOpen, onClose, onLoadStory }: HistoryDrawerPro
       }
       fetchStories()
     }
-  }, [shouldLoad, isOpen])
+  }, [shouldLoad])
 
   const handleLoad = (story: StoryData & { id: string }) => {
     onLoadStory(story)

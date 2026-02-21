@@ -1,26 +1,30 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useAppStore } from "@/store/useAppStore"
 import { saveStory, shareStory } from "@/app/actions/story"
 import ReactMarkdown from "react-markdown"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Loader2, Sparkles, RotateCcw, Save, Share2, Check } from "lucide-react"
+import { Loader2, Sparkles, RotateCcw, Save, Share2, Check, Edit2, Eye } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const MAX_CHARS = 5000
 
-interface StoryOutputProps {
-  onOpenHistory: () => void
-}
-
-export function StoryOutput({ onOpenHistory: _onOpenHistory }: StoryOutputProps) {
+export function StoryOutput() {
   const { 
     storyOutput,
     error
   } = useAppStore()
+  
+  const [isEditing, setIsEditing] = useState(false)
+  const [editContent, setEditContent] = useState("")
+  
+  useEffect(() => {
+    setEditContent(storyOutput)
+  }, [storyOutput])
   
   const charCount = storyOutput.length
   const remainingChars = MAX_CHARS - charCount
@@ -30,19 +34,53 @@ export function StoryOutput({ onOpenHistory: _onOpenHistory }: StoryOutputProps)
       <CardHeader className="pb-2 border-b border-slate-800">
         <div className="flex items-center justify-between">
           <CardTitle className="text-slate-200 text-base">故事輸出</CardTitle>
-          <span className={cn(
-            "text-xs",
-            remainingChars < 0 ? "text-red-400" : "text-slate-500"
-          )}>
-            {charCount} / {MAX_CHARS} 字
-          </span>
+          <div className="flex items-center gap-2">
+            {storyOutput && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsEditing(!isEditing)}
+                className="text-slate-400 hover:text-slate-200 h-7 px-2"
+              >
+                {isEditing ? (
+                  <>
+                    <Eye className="w-3 h-3 mr-1" />
+                    預覽
+                  </>
+                ) : (
+                  <>
+                    <Edit2 className="w-3 h-3 mr-1" />
+                    編輯
+                  </>
+                )}
+              </Button>
+            )}
+            <span className={cn(
+              "text-xs",
+              remainingChars < 0 ? "text-red-400" : "text-slate-500"
+            )}>
+              {charCount} / {MAX_CHARS} 字
+            </span>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="flex-1 p-4 overflow-auto">
         {storyOutput ? (
-          <div className="prose prose-invert prose-sm max-w-none">
-            <ReactMarkdown>{storyOutput}</ReactMarkdown>
-          </div>
+          isEditing ? (
+            <Textarea
+              value={editContent}
+              onChange={(e) => {
+                setEditContent(e.target.value)
+                // Also update the store
+                useAppStore.getState().setStoryOutput(e.target.value)
+              }}
+              className="min-h-[300px] bg-slate-800 border-slate-700 text-slate-200 resize-none font-mono text-sm"
+            />
+          ) : (
+            <div className="prose prose-invert prose-sm max-w-none">
+              <ReactMarkdown>{storyOutput}</ReactMarkdown>
+            </div>
+          )
         ) : (
           <div className="h-full flex items-center justify-center text-slate-600 text-sm">
             點擊「開始創作」生成故事
