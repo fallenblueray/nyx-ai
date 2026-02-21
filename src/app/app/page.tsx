@@ -1,9 +1,11 @@
 "use client"
 
+import { useState } from "react"
 import { useAppStore } from "@/store/useAppStore"
 import { TopicSelector } from "@/components/TopicSelector"
 import { CharacterManager } from "@/components/CharacterManager"
 import { StoryOutput, GenerateButtons } from "@/components/StoryOutput"
+import { HistoryDrawer } from "@/components/HistoryDrawer"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Menu, Save } from "lucide-react"
@@ -15,13 +17,23 @@ export default function AppPage() {
     setPanelCollapsed, 
     storyInput, 
     setStoryInput,
+    setStoryOutput,
     selectedTopics,
     characters
   } = useAppStore()
   
+  const [historyOpen, setHistoryOpen] = useState(false)
+  
   const handleSaveDraft = () => {
     localStorage.setItem("nyx-ai-draft", storyInput)
     alert("草稿已儲存！")
+  }
+  
+  const handleLoadStory = (story: any) => {
+    setStoryOutput(story.content)
+    if (story.topics) {
+      // Load topics if needed
+    }
   }
   
   return (
@@ -42,8 +54,15 @@ export default function AppPage() {
             無審查 · 自由創作
           </span>
         </div>
-        <GenerateButtons />
+        <GenerateButtons onOpenHistory={() => setHistoryOpen(true)} />
       </header>
+      
+      {/* History Drawer */}
+      <HistoryDrawer 
+        isOpen={historyOpen}
+        onClose={() => setHistoryOpen(false)}
+        onLoadStory={handleLoadStory}
+      />
       
       <div className="flex pt-14 min-h-screen">
         {/* Left Panel */}
@@ -106,7 +125,7 @@ export default function AppPage() {
           className="flex-1 p-4 md:p-6 ml-0 md:ml-80"
         >
           <div className="h-[calc(100vh-5rem)]">
-            <StoryOutput />
+            <StoryOutput onOpenHistory={() => setHistoryOpen(true)} />
           </div>
         </main>
       </div>
