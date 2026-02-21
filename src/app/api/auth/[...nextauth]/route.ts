@@ -1,6 +1,6 @@
 import NextAuth from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
-import { createServerClient } from "@/lib/supabase"
+import { createServerClientAsync } from "@/lib/supabase/server-async"
 
 const handler = NextAuth({
   providers: [
@@ -15,7 +15,7 @@ const handler = NextAuth({
           return null
         }
 
-        const supabase = await createServerClient()
+        const supabase = await createServerClientAsync()
         
         const { data, error } = await supabase.auth.signInWithPassword({
           email: credentials.email,
@@ -23,6 +23,7 @@ const handler = NextAuth({
         })
 
         if (error || !data.user) {
+          console.error('Supabase auth error:', error)
           return null
         }
 
