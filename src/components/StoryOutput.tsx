@@ -121,7 +121,7 @@ ${charStr || "（自由創作）"}`
           "X-Title": "NyxAI"
         },
         body: JSON.stringify({
-          model: "deepseek/deepseek-chat",
+          model: "deepseek/deepseek-r1-0528",
           messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: userPrompt }
