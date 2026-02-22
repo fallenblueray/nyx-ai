@@ -116,7 +116,7 @@ export async function getSharedStory(shareId: string) {
       .select('*')
       .or(`share_id.eq.${shareId},id.eq.${shareId}`)
       .eq('is_public', true)
-      .single()
+      .maybeSingle()
 
     if (error || !story) {
       return { error: '找不到故事' }
