@@ -288,7 +288,7 @@ export default function AppPage() {
             
             {/* Generate Buttons - 固定在左側面板底部 */}
             <div className="pt-4 border-t border-slate-800">
-              <GenerateButtons onOpenHistory={() => setHistoryOpen(true)} />
+              <GenerateButtons />
             </div>
           </div>
         </aside>
