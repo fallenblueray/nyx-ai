@@ -108,25 +108,31 @@ export async function getUserStories() {
 
 export async function getSharedStory(shareId: string) {
   try {
-    // Use anon client directly (no auth needed for public stories)
     const { createClient } = await import('@supabase/supabase-js')
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     )
 
-    // Support both share_id and direct story id
-    const { data: story, error } = await supabase
+    // Try by ID first, then by share_id
+    let query = supabase
       .from('stories')
       .select('*')
-      .or(`share_id.eq.${shareId},id.eq.${shareId}`)
       .eq('is_public', true)
-      .maybeSingle()
 
-    if (error || !story) {
-      return { error: '找不到故事' }
+    // Check if shareId looks like UUID (direct id) or token
+    if (shareId.includes('-') && shareId.length === 36) {
+      // Try both: as story id first, then as share_id
+      const { data: data1 } = await query.eq('id', shareId).maybeSingle()
+      if (data1) return { story: data1 }
+      
+      const { data: data2, error } = await query.eq('share_id', shareId).maybeSingle()
+      if (error || !data2) return { error: '找不到故事' }
+      return { story: data2 }
     }
 
+    const { data: story, error } = await query.eq('id', shareId).maybeSingle()
+    if (error || !story) return { error: '找不到故事' }
     return { story }
   } catch (err) {
     console.error('getSharedStory error:', err)
