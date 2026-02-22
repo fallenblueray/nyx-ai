@@ -107,20 +107,26 @@ export async function getUserStories() {
 }
 
 export async function getSharedStory(shareId: string) {
-  const supabase = await createServerClient()
+  try {
+    const supabase = await createServerClient()
 
-  const { data: story, error } = await supabase
-    .from('stories')
-    .select('*')
-    .eq('share_id', shareId)
-    .eq('is_public', true)
-    .single()
+    // Support both share_id (UUID v4 token) and direct story id
+    const { data: story, error } = await supabase
+      .from('stories')
+      .select('*')
+      .or(`share_id.eq.${shareId},id.eq.${shareId}`)
+      .eq('is_public', true)
+      .single()
 
-  if (error || !story) {
-    return { error: '找不到故事' }
+    if (error || !story) {
+      return { error: '找不到故事' }
+    }
+
+    return { story }
+  } catch (err) {
+    console.error('getSharedStory error:', err)
+    return { error: '載入故事失敗' }
   }
-
-  return { story }
 }
 
 export async function shareStory(id: string) {
