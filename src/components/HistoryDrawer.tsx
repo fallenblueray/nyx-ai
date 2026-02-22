@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useSession } from "next-auth/react"
 import { getUserStories, type StoryData } from "@/app/actions/story"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -17,7 +18,7 @@ export function HistoryDrawer({ isOpen, onClose, onLoadStory }: HistoryDrawerPro
   const [stories, setStories] = useState<(StoryData & { id: string; created_at: string })[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
-  const { data: session, status } = useSession()
+  const { status } = useSession()
   const isLoggedIn = status === 'authenticated'
   const shouldLoad = isOpen && isLoggedIn && stories.length === 0 && !loading
 
@@ -76,7 +77,13 @@ export function HistoryDrawer({ isOpen, onClose, onLoadStory }: HistoryDrawerPro
         
         {/* Content */}
         <ScrollArea className="flex-1 p-4">
-          {loading && (
+          {!isLoggedIn && (
+            <div className="text-center py-8 text-slate-500">
+              🔒 登入後查看歷史
+            </div>
+          )}
+
+          {isLoggedIn && loading && (
             <div className="text-center py-8 text-slate-500">
               載入中...
             </div>
@@ -88,7 +95,7 @@ export function HistoryDrawer({ isOpen, onClose, onLoadStory }: HistoryDrawerPro
             </div>
           )}
           
-          {!loading && !error && stories.length === 0 && (
+          {isLoggedIn && !loading && !error && stories.length === 0 && (
             <div className="text-center py-8 text-slate-500">
               還沒有儲存的故事
             </div>

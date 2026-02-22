@@ -99,7 +99,7 @@ interface GenerateButtonsProps {
   onOpenHistory?: () => void
 }
 
-export function GenerateButtons(_props: GenerateButtonsProps) {
+export function GenerateButtons() {
   const { 
     storyInput,
     selectedTopics,
