@@ -6,7 +6,16 @@ import { ArrowLeft } from "lucide-react"
 
 export default async function SharePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const { story, error } = await getSharedStory(id)
+  let story = null
+  let error = ''
+  try {
+    const result = await getSharedStory(id)
+    story = result.story ?? null
+    error = result.error ?? ''
+  } catch (e) {
+    console.error('SharePage error:', e)
+    error = '載入故事時發生錯誤'
+  }
 
   if (error || !story) {
     return (
