@@ -108,9 +108,14 @@ export async function getUserStories() {
 
 export async function getSharedStory(shareId: string) {
   try {
-    const supabase = await createServerClient()
+    // Use anon client directly (no auth needed for public stories)
+    const { createClient } = await import('@supabase/supabase-js')
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    )
 
-    // Support both share_id (UUID v4 token) and direct story id
+    // Support both share_id and direct story id
     const { data: story, error } = await supabase
       .from('stories')
       .select('*')
