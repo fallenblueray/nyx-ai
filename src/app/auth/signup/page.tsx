@@ -7,10 +7,14 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { createClient } from "@supabase/supabase-js"
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
+const getSupabase = () => {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  if (!url || !key) {
+    throw new Error("Supabase credentials not configured")
+  }
+  return createClient(url, key)
+}
 
 export default function SignUp() {
   const router = useRouter()
@@ -34,6 +38,7 @@ export default function SignUp() {
       }
 
       // Sign up
+      const supabase = getSupabase()
       const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
