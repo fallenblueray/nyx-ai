@@ -1,16 +1,22 @@
 "use client"
 
 import { useState } from "react"
-import { signIn } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { createClient } from "@supabase/supabase-js"
 
-export default function SignIn() {
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
+
+export default function SignUp() {
   const router = useRouter()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
 
@@ -20,20 +26,48 @@ export default function SignIn() {
     setLoading(true)
 
     try {
-      const result = await signIn("credentials", {
+      // Validate
+      if (password !== confirmPassword) {
+        setError("密碼不符，請重新輸入")
+        setLoading(false)
+        return
+      }
+
+      // Sign up
+      const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
-        redirect: false,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/signin`,
+        },
       })
 
-      if (result?.error) {
-        setError("登入失敗，請檢查帳號密碼")
-      } else {
-        router.push("/app")
-        router.refresh()
+      if (signUpError) {
+        setError(signUpError.message || "註冊失敗，請重試")
+        setLoading(false)
+        return
       }
-    } catch {
+
+      // Auto-confirm (for dev, since confirm email is disabled)
+      if (data.user) {
+        // Sign in immediately
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        })
+
+        if (signInError) {
+          setError("帳號已建立，請在登入頁登入")
+          setTimeout(() => router.push("/auth/signin"), 2000)
+        } else {
+          // Auto redirect to app
+          router.push("/app")
+          router.refresh()
+        }
+      }
+    } catch (err) {
       setError("發生錯誤，請重試")
+      console.error("signup error:", err)
     } finally {
       setLoading(false)
     }
@@ -44,10 +78,10 @@ export default function SignIn() {
       <Card className="max-w-md w-full bg-slate-900 border-slate-800">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold text-white">
-            登入 NyxAI
+            建立帳號
           </CardTitle>
           <p className="text-slate-400 text-sm">
-            輸入帳號密碼開始創作
+            開始你的 NyxAI 創作旅程
           </p>
         </CardHeader>
         <CardContent>
@@ -57,7 +91,7 @@ export default function SignIn() {
                 {error}
               </div>
             )}
-            
+
             <div>
               <label className="text-sm text-slate-400">Email</label>
               <Input
@@ -69,37 +103,51 @@ export default function SignIn() {
                 className="bg-slate-800 border-slate-700 text-slate-200"
               />
             </div>
-            
+
             <div>
               <label className="text-sm text-slate-400">密碼</label>
               <Input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="密碼"
+                placeholder="至少 6 個字符"
+                required
+                minLength={6}
+                className="bg-slate-800 border-slate-700 text-slate-200"
+              />
+            </div>
+
+            <div>
+              <label className="text-sm text-slate-400">確認密碼</label>
+              <Input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="再輸入一次"
                 required
                 className="bg-slate-800 border-slate-700 text-slate-200"
               />
             </div>
-            
+
             <Button
               type="submit"
               disabled={loading}
               className="w-full bg-blue-600 hover:bg-blue-700"
             >
-              {loading ? "登入中..." : "登入"}
+              {loading ? "建立中..." : "建立帳號"}
             </Button>
           </form>
-          
+
           <div className="mt-4 text-center">
             <p className="text-sm text-slate-500">
-              還沒有帳號？{" "}
-              <a
-                href="/auth/signup"
+              已有帳號？{" "}
+              <button
+                type="button"
+                onClick={() => router.push("/auth/signin")}
                 className="text-blue-400 hover:underline"
               >
-                註冊
-              </a>
+                登入
+              </button>
             </p>
           </div>
         </CardContent>
