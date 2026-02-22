@@ -115,7 +115,7 @@ export async function getSharedStory(shareId: string) {
     )
 
     // Try by ID first, then by share_id
-    let query = supabase
+    const query = supabase
       .from('stories')
       .select('*')
       .eq('is_public', true)
