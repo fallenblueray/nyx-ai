@@ -17,7 +17,9 @@ export function HistoryDrawer({ isOpen, onClose, onLoadStory }: HistoryDrawerPro
   const [stories, setStories] = useState<(StoryData & { id: string; created_at: string })[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
-  const shouldLoad = isOpen && stories.length === 0 && !loading
+  const { data: session, status } = useSession()
+  const isLoggedIn = status === 'authenticated'
+  const shouldLoad = isOpen && isLoggedIn && stories.length === 0 && !loading
 
   useEffect(() => {
     if (shouldLoad) {

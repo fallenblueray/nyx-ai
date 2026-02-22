@@ -3,6 +3,7 @@ import CredentialsProvider from "next-auth/providers/credentials"
 import { createServerClientAsync } from "@/lib/supabase/server-async"
 
 const handler = NextAuth({
+  secret: process.env.NEXTAUTH_SECRET,
   providers: [
     CredentialsProvider({
       name: "credentials",

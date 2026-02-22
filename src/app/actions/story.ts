@@ -20,29 +20,36 @@ export async function saveStory(data: StoryData) {
     return { error: '請先登入' }
   }
 
-  const supabase = await createServerClient()
+  try {
+    const supabase = await createServerClient()
 
-  const storyData = {
-    user_id: session.user.id,
-    title: data.title,
-    content: data.content,
-    topics: JSON.stringify(data.topics),
-    roles: JSON.stringify(data.roles),
-    is_public: data.is_public || false,
+    const storyData = {
+      user_id: session.user.id,
+      title: data.title,
+      content: data.content,
+      topics: JSON.stringify(data.topics),
+      roles: JSON.stringify(data.roles),
+      is_public: data.is_public || false,
+    }
+
+    const { data: story, error } = await supabase
+      .from('stories')
+      .insert(storyData)
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Supabase save error:', error)
+      if (error.code === '42501') return { error: '權限不足，請重新登入' }
+      return { error: error.message }
+    }
+
+    revalidatePath('/app')
+    return { story }
+  } catch (err) {
+    console.error('saveStory unexpected error:', err)
+    return { error: '儲存失敗，請稍後重試' }
   }
-
-  const { data: story, error } = await supabase
-    .from('stories')
-    .insert(storyData)
-    .select()
-    .single()
-
-  if (error) {
-    return { error: error.message }
-  }
-
-  revalidatePath('/app')
-  return { story }
 }
 
 export async function updateStory(id: string, data: Partial<StoryData>) {
