@@ -1,6 +1,7 @@
 'use server'
 
 import { createServerClient } from '@/lib/supabase'
+import { createClient } from '@supabase/supabase-js'
 import { getServerSession } from 'next-auth'
 import { revalidatePath } from 'next/cache'
 
@@ -108,7 +109,6 @@ export async function getUserStories() {
 
 export async function getSharedStory(shareId: string) {
   try {
-    const { createClient } = await import('@supabase/supabase-js')
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
