@@ -95,10 +95,6 @@ export function StoryOutput() {
   )
 }
 
-interface GenerateButtonsProps {
-  onOpenHistory?: () => void
-}
-
 export function GenerateButtons() {
   const { 
     storyInput,
