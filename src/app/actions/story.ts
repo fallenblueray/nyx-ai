@@ -15,7 +15,7 @@ export async function getUserWordCount(): Promise<{ wordCount: number; isFirstPu
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
   const { data } = await supabase
-    .from('users')
+    .from('profiles')
     .select('word_count, is_first_purchase')
     .eq('id', session.user.id)
     .single()
@@ -37,7 +37,7 @@ export async function deductWordCount(wordsUsed: number): Promise<{ success: boo
   )
 
   const { data: user } = await supabase
-    .from('users')
+    .from('profiles')
     .select('word_count')
     .eq('id', session.user.id)
     .single()
@@ -49,7 +49,7 @@ export async function deductWordCount(wordsUsed: number): Promise<{ success: boo
 
   const newCount = current - wordsUsed
   await supabase
-    .from('users')
+    .from('profiles')
     .upsert({ id: session.user.id, word_count: newCount })
 
   return { success: true, remaining: newCount }

@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
   const { data: user } = await supabase
-    .from('users')
+    .from('profiles')
     .select('is_first_purchase')
     .eq('id', session.user.id)
     .single()

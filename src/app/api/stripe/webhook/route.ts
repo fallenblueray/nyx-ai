@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
 
     // 查用户首充状态
     const { data: user } = await supabase
-      .from('users')
+      .from('profiles')
       .select('is_first_purchase, word_count')
       .eq('id', userId)
       .single()
@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
     // 原子更新 word_count
     const newWordCount = (user?.word_count ?? 0) + finalWords
     await supabase
-      .from('users')
+      .from('profiles')
       .upsert({ id: userId, word_count: newWordCount, is_first_purchase: isFirstPurchase ? false : (user?.is_first_purchase ?? true) })
 
     // 记录支付历史
