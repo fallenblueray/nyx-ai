@@ -1,19 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { stripe, PRICE_MAP, FIRST_PRICE_IDS } from '@/lib/stripe'
-import { createClient } from '@supabase/supabase-js'
+import { createAdminClient } from '@/lib/supabase-admin'
 
 // 必须用 raw body 做 webhook 签名验证
 export const dynamic = 'force-dynamic'
 
-const getAdminClient = () => {
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!key) console.warn('SUPABASE_SERVICE_ROLE_KEY not set, using anon key')
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    key || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
-}
+const getAdminClient = () => createAdminClient()
 
 export async function POST(req: NextRequest) {
   const body = await req.text()

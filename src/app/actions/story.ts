@@ -1,7 +1,7 @@
 'use server'
 
 import { createServerClient } from '@/lib/supabase'
-import { createClient } from '@supabase/supabase-js'
+import { createAnonClient } from '@/lib/supabase-admin'
 import { getServerSession } from 'next-auth'
 import { revalidatePath } from 'next/cache'
 
@@ -10,10 +10,7 @@ export async function getUserWordCount(): Promise<{ wordCount: number; isFirstPu
   const session = await getServerSession()
   if (!session?.user?.id) return { wordCount: 0, isFirstPurchase: true }
 
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+  const supabase = createAnonClient()
   const { data } = await supabase
     .from('profiles')
     .select('word_count, is_first_purchase')
@@ -31,10 +28,7 @@ export async function deductWordCount(wordsUsed: number): Promise<{ success: boo
   const session = await getServerSession()
   if (!session?.user?.id) return { success: false, remaining: 0, error: '請先登入' }
 
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+  const supabase = createAnonClient()
 
   const { data: user } = await supabase
     .from('profiles')
@@ -159,10 +153,7 @@ export async function getUserStories() {
 
 export async function getSharedStory(shareId: string) {
   try {
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
+    const supabase = createAnonClient()
 
     // Try by ID first, then by share_id
     const query = supabase

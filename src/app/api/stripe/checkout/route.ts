@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { stripe } from '@/lib/stripe'
 import { getServerSession } from 'next-auth'
-import { createClient } from '@supabase/supabase-js'
+import { createAnonClient } from '@/lib/supabase-admin'
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession()
@@ -15,10 +15,7 @@ export async function POST(req: NextRequest) {
   }
 
   // 查用户首充状态
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+  const supabase = createAnonClient()
   const { data: user } = await supabase
     .from('profiles')
     .select('is_first_purchase')
