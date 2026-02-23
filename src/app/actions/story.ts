@@ -5,6 +5,56 @@ import { createClient } from '@supabase/supabase-js'
 import { getServerSession } from 'next-auth'
 import { revalidatePath } from 'next/cache'
 
+// 查詢用戶剩餘字數
+export async function getUserWordCount(): Promise<{ wordCount: number; isFirstPurchase: boolean }> {
+  const session = await getServerSession()
+  if (!session?.user?.id) return { wordCount: 0, isFirstPurchase: true }
+
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+  const { data } = await supabase
+    .from('users')
+    .select('word_count, is_first_purchase')
+    .eq('id', session.user.id)
+    .single()
+
+  return {
+    wordCount: data?.word_count ?? 5000,
+    isFirstPurchase: data?.is_first_purchase ?? true,
+  }
+}
+
+// 扣除字數（生成完成後呼叫）
+export async function deductWordCount(wordsUsed: number): Promise<{ success: boolean; remaining: number; error?: string }> {
+  const session = await getServerSession()
+  if (!session?.user?.id) return { success: false, remaining: 0, error: '請先登入' }
+
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+
+  const { data: user } = await supabase
+    .from('users')
+    .select('word_count')
+    .eq('id', session.user.id)
+    .single()
+
+  const current = user?.word_count ?? 5000
+  if (current < wordsUsed) {
+    return { success: false, remaining: current, error: '字數不足，請充值' }
+  }
+
+  const newCount = current - wordsUsed
+  await supabase
+    .from('users')
+    .upsert({ id: session.user.id, word_count: newCount })
+
+  return { success: true, remaining: newCount }
+}
+
 export interface StoryData {
   id?: string
   title: string
