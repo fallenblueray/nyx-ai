@@ -1,14 +1,15 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useSession, signOut } from "next-auth/react"
 import { Button } from "@/components/ui/button"
-import { LogIn, LogOut, User } from "lucide-react"
+import { LogIn, LogOut, User, Zap } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { RechargeModal } from "@/components/RechargeModal"
+import { getUserWordCount } from "@/app/actions/story"
 
 function useMounted() {
   const [mounted, setMounted] = useState(false)
-  // Use dynamic import pattern - only set mounted after first render on client
   if (typeof window !== 'undefined' && !mounted) {
     setMounted(true)
   }
@@ -19,21 +20,56 @@ export function UserMenu() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const mounted = useMounted()
+  const [wordCount, setWordCount] = useState<number>(5000)
+  const [isFirstPurchase, setIsFirstPurchase] = useState(true)
+  const [rechargeOpen, setRechargeOpen] = useState(false)
 
-  // SSR or loading state - show skeleton
+  useEffect(() => {
+    if (session?.user) {
+      getUserWordCount().then(({ wordCount, isFirstPurchase }) => {
+        setWordCount(wordCount)
+        setIsFirstPurchase(isFirstPurchase)
+      })
+    }
+  }, [session])
+
+  // 監聽支付成功後刷新字數
+  useEffect(() => {
+    const url = new URL(window.location.href)
+    if (url.searchParams.get('payment') === 'success') {
+      setTimeout(() => {
+        getUserWordCount().then(({ wordCount, isFirstPurchase }) => {
+          setWordCount(wordCount)
+          setIsFirstPurchase(isFirstPurchase)
+        })
+      }, 2000)
+    }
+  }, [])
+
   if (!mounted || status === "loading") {
-    return (
-      <div className="w-20 h-8 bg-slate-800 animate-pulse rounded" />
-    )
+    return <div className="w-20 h-8 bg-slate-800 animate-pulse rounded" />
   }
 
   if (session?.user) {
     return (
       <div className="flex items-center gap-2">
+        {/* 剩餘字數 + 充值按鈕 */}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setRechargeOpen(true)}
+          className="text-yellow-400 hover:text-yellow-300 hover:bg-slate-800 px-2"
+          title="點擊充值"
+        >
+          <Zap className="w-4 h-4 mr-1" />
+          <span className="text-sm">{wordCount.toLocaleString()} 字</span>
+        </Button>
+
         <div className="flex items-center gap-2 text-sm text-slate-300">
           <User className="w-4 h-4" />
           <span className="hidden sm:inline">{session.user.email}</span>
         </div>
+
         <Button
           variant="outline"
           size="sm"
@@ -43,6 +79,13 @@ export function UserMenu() {
           <LogOut className="w-4 h-4" />
           <span className="ml-1 hidden sm:inline">登出</span>
         </Button>
+
+        <RechargeModal
+          open={rechargeOpen}
+          onClose={() => setRechargeOpen(false)}
+          isFirstPurchase={isFirstPurchase}
+          wordCount={wordCount}
+        />
       </div>
     )
   }

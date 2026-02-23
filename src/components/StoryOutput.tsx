@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react"
 import { useAppStore } from "@/store/useAppStore"
+import { deductWordCount, getUserWordCount } from "@/app/actions/story"
+import { RechargeModal } from "@/components/RechargeModal"
 import ReactMarkdown from "react-markdown"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -107,6 +109,8 @@ export function GenerateButtons() {
     setError,
     appendStoryOutput
   } = useAppStore()
+  const [rechargeOpen, setRechargeOpen] = useState(false)
+  const [wordInfo, setWordInfo] = useState<{ wordCount: number; isFirstPurchase: boolean } | null>(null)
   
   const canGenerate = storyInput.trim().length > 0 || selectedTopics.length > 0 || characters.length > 0
   const hasOutput = storyOutput.trim().length > 0
@@ -180,6 +184,18 @@ ${charStr || "（自由創作）"}`
       const data = await response.json()
       const content = data.choices?.[0]?.message?.content || ""
       
+      // 扣除字數
+      const wordsUsed = content.length
+      const deductResult = await deductWordCount(wordsUsed)
+      if (!deductResult.success) {
+        // 字數不足，顯示充值 modal
+        const info = await getUserWordCount()
+        setWordInfo(info)
+        setRechargeOpen(true)
+        setError(`字數不足（需要 ${wordsUsed} 字，剩餘 ${deductResult.remaining} 字），請充值`)
+        return
+      }
+
       if (isContinue) {
         appendStoryOutput("\n\n" + content)
       } else {
@@ -193,44 +209,55 @@ ${charStr || "（自由創作）"}`
   }
   
   return (
-    <div className="space-y-2">
-      {!hasOutput ? (
-        <Button
-          onClick={() => generateStory(false)}
-          disabled={!canGenerate || isGenerating}
-          className="w-full bg-blue-600 hover:bg-blue-700"
-        >
-          {isGenerating ? (
-            <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              生成中...
-            </>
-          ) : (
-            <>
-              <Sparkles className="w-4 h-4 mr-2" />
-              開始創作
-            </>
-          )}
-        </Button>
-      ) : (
-        <Button
-          onClick={() => generateStory(true)}
-          disabled={isGenerating}
-          className="w-full bg-purple-600 hover:bg-purple-700"
-        >
-          {isGenerating ? (
-            <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              續寫中...
-            </>
-          ) : (
-            <>
-              <RotateCcw className="w-4 h-4 mr-2" />
-              繼續創作
-            </>
-          )}
-        </Button>
+    <>
+      <div className="space-y-2">
+        {!hasOutput ? (
+          <Button
+            onClick={() => generateStory(false)}
+            disabled={!canGenerate || isGenerating}
+            className="w-full bg-blue-600 hover:bg-blue-700"
+          >
+            {isGenerating ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                生成中...
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-4 h-4 mr-2" />
+                開始創作
+              </>
+            )}
+          </Button>
+        ) : (
+          <Button
+            onClick={() => generateStory(true)}
+            disabled={isGenerating}
+            className="w-full bg-purple-600 hover:bg-purple-700"
+          >
+            {isGenerating ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                續寫中...
+              </>
+            ) : (
+              <>
+                <RotateCcw className="w-4 h-4 mr-2" />
+                繼續創作
+              </>
+            )}
+          </Button>
+        )}
+      </div>
+
+      {wordInfo && (
+        <RechargeModal
+          open={rechargeOpen}
+          onClose={() => setRechargeOpen(false)}
+          isFirstPurchase={wordInfo.isFirstPurchase}
+          wordCount={wordInfo.wordCount}
+        />
       )}
-    </div>
+    </>
   )
 }
