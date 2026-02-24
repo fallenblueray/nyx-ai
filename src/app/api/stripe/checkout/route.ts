@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { stripe } from '@/lib/stripe'
+import { getStripe } from '@/lib/stripe'
 import { getServerSession } from 'next-auth'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
 
     const isFirstPurchase = user?.is_first_purchase ?? true
 
-    const checkoutSession = await stripe.checkout.sessions.create({
+    const checkoutSession = await getStripe().checkout.sessions.create({
       mode: 'payment',
       payment_method_types: ['card'],
       line_items: [{ price: priceId, quantity: 1 }],

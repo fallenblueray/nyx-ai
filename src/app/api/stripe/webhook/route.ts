@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
-import { stripe, PRICE_MAP, FIRST_PRICE_IDS } from '@/lib/stripe'
+import { getStripe, PRICE_MAP, FIRST_PRICE_IDS } from '@/lib/stripe'
 import { createAdminClient } from '@/lib/supabase-admin'
 
 // 必须用 raw body 做 webhook 签名验证
@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
 
   let event: Stripe.Event
   try {
-    event = stripe.webhooks.constructEvent(body, sig, process.env.STRIPE_WEBHOOK_SECRET!)
+    event = getStripe().webhooks.constructEvent(body, sig, process.env.STRIPE_WEBHOOK_SECRET!)
   } catch (err) {
     console.error('Webhook signature failed:', err)
     return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })

@@ -1,8 +1,25 @@
 import Stripe from 'stripe'
 
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2026-01-28.clover',
-})
+// Lazy init — avoid module-level crash during Next.js build
+let _stripe: Stripe | null = null
+
+export function getStripe(): Stripe {
+  if (!_stripe) {
+    const key = process.env.STRIPE_SECRET_KEY
+    if (!key) throw new Error('Missing STRIPE_SECRET_KEY')
+    _stripe = new Stripe(key, {
+      apiVersion: '2026-01-28.clover',
+    })
+  }
+  return _stripe
+}
+
+/** @deprecated use getStripe() instead */
+export const stripe = {
+  get checkout() { return getStripe().checkout },
+  get webhooks() { return getStripe().webhooks },
+  get prices() { return getStripe().prices },
+} as unknown as Stripe
 
 export const PRICE_MAP: Record<string, number> = {
   price_1T3vFHEu4Bc1R5b5dwDRWBMZ: 50000,
