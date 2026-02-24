@@ -10,9 +10,9 @@ import { getUserWordCount } from "@/app/actions/story"
 
 function useMounted() {
   const [mounted, setMounted] = useState(false)
-  if (typeof window !== 'undefined' && !mounted) {
-    setMounted(true)
-  }
+  useEffect(() => {
+    queueMicrotask(() => setMounted(true))
+  }, [])
   return mounted
 }
 
@@ -33,10 +33,11 @@ export function UserMenu() {
     }
   }, [session])
 
-  // 監聽支付成功後刷新字數
+  // 監聽支付成功後刷新字數（用 searchParams 避免 SSR 問題）
   useEffect(() => {
-    const url = new URL(window.location.href)
-    if (url.searchParams.get('payment') === 'success') {
+    if (typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('payment') === 'success') {
       setTimeout(() => {
         getUserWordCount().then(({ wordCount, isFirstPurchase }) => {
           setWordCount(wordCount)
