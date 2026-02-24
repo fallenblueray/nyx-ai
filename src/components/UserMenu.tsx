@@ -20,7 +20,7 @@ export function UserMenu() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const mounted = useMounted()
-  const [wordCount, setWordCount] = useState<number>(5000)
+  const [wordCount, setWordCount] = useState<number>(8000)
   const [isFirstPurchase, setIsFirstPurchase] = useState(true)
   const [rechargeOpen, setRechargeOpen] = useState(false)
 

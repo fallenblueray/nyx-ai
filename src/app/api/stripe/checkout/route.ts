@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getStripe } from '@/lib/stripe'
 import { getServerSession } from 'next-auth'
+import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession()
+  // ✅ 修復：必須傳入 authOptions，否則 session.user.id 為 undefined
+  const session = await getServerSession(authOptions)
+  console.log('🔐 [checkout] session:', session?.user?.email, '| id:', session?.user?.id)
+
   if (!session?.user?.id) {
     return NextResponse.json({ error: '請先登入' }, { status: 401 })
   }

@@ -3,11 +3,12 @@
 import { createServerClient } from '@/lib/supabase'
 import { createAnonClient } from '@/lib/supabase-admin'
 import { getServerSession } from 'next-auth'
+import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { revalidatePath } from 'next/cache'
 
 // 查詢用戶剩餘字數
 export async function getUserWordCount(): Promise<{ wordCount: number; isFirstPurchase: boolean }> {
-  const session = await getServerSession()
+  const session = await getServerSession(authOptions)
   if (!session?.user?.id) return { wordCount: 0, isFirstPurchase: true }
 
   const supabase = createAnonClient()
@@ -18,14 +19,14 @@ export async function getUserWordCount(): Promise<{ wordCount: number; isFirstPu
     .single()
 
   return {
-    wordCount: data?.word_count ?? 5000,
+    wordCount: data?.word_count ?? 8000,
     isFirstPurchase: data?.is_first_purchase ?? true,
   }
 }
 
 // 扣除字數（生成完成後呼叫）
 export async function deductWordCount(wordsUsed: number): Promise<{ success: boolean; remaining: number; error?: string }> {
-  const session = await getServerSession()
+  const session = await getServerSession(authOptions)
   if (!session?.user?.id) return { success: false, remaining: 0, error: '請先登入' }
 
   const supabase = createAnonClient()
@@ -36,7 +37,7 @@ export async function deductWordCount(wordsUsed: number): Promise<{ success: boo
     .eq('id', session.user.id)
     .single()
 
-  const current = user?.word_count ?? 5000
+  const current = user?.word_count ?? 8000
   if (current < wordsUsed) {
     return { success: false, remaining: current, error: '字數不足，請充值' }
   }
@@ -59,7 +60,7 @@ export interface StoryData {
 }
 
 export async function saveStory(data: StoryData) {
-  const session = await getServerSession()
+  const session = await getServerSession(authOptions)
   
   if (!session?.user?.id) {
     return { error: '請先登入' }
@@ -98,7 +99,7 @@ export async function saveStory(data: StoryData) {
 }
 
 export async function updateStory(id: string, data: Partial<StoryData>) {
-  const session = await getServerSession()
+  const session = await getServerSession(authOptions)
   
   if (!session?.user?.id) {
     return { error: '請先登入' }
@@ -130,7 +131,7 @@ export async function updateStory(id: string, data: Partial<StoryData>) {
 }
 
 export async function getUserStories() {
-  const session = await getServerSession()
+  const session = await getServerSession(authOptions)
   
   if (!session?.user?.id) {
     return { error: '請先登入' }
@@ -182,7 +183,7 @@ export async function getSharedStory(shareId: string) {
 }
 
 export async function shareStory(id: string) {
-  const session = await getServerSession()
+  const session = await getServerSession(authOptions)
   
   if (!session?.user?.id) {
     return { error: '請先登入' }

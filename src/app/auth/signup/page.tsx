@@ -55,6 +55,24 @@ export default function SignUp() {
 
       // Auto-confirm (for dev, since confirm email is disabled)
       if (data.user) {
+        // ✅ 初始化 profiles 表（新用戶免費 8000 字）
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .upsert(
+            {
+              id: data.user.id,
+              email: data.user.email,
+              word_count: 8000,
+              is_first_purchase: true,
+            },
+            { onConflict: 'id' }
+          )
+
+        if (profileError) {
+          console.error('Profile init error:', profileError)
+          // 繼續進行，不阻擋用戶登入
+        }
+
         // Sign in immediately
         const { error: signInError } = await supabase.auth.signInWithPassword({
           email,

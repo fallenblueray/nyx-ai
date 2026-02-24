@@ -1,8 +1,9 @@
-import NextAuth from "next-auth"
+import NextAuth, { type NextAuthOptions } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
 import { createServerClientAsync } from "@/lib/supabase/server-async"
 
-const handler = NextAuth({
+// ✅ export authOptions 供其他 API routes 使用
+export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
   providers: [
     CredentialsProvider({
@@ -56,6 +57,8 @@ const handler = NextAuth({
   session: {
     strategy: "jwt",
   },
-})
+}
+
+const handler = NextAuth(authOptions)
 
 export { handler as GET, handler as POST }
