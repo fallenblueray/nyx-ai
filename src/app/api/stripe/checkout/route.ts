@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { stripe } from '@/lib/stripe'
 import { getServerSession } from 'next-auth'
-import { createAnonClient } from '@/lib/supabase-admin'
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession()
@@ -14,17 +15,40 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: '缺少 priceId' }, { status: 400 })
   }
 
-  // 查用户首充状态
-  const supabase = createAnonClient()
-  const { data: user } = await supabase
-    .from('profiles')
-    .select('is_first_purchase')
-    .eq('id', session.user.id)
-    .single()
+  // ✓ 建立 Supabase server client (with SSR)
+  const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-  const isFirstPurchase = user?.is_first_purchase ?? true
+  if (!supabaseUrl) throw new Error('Missing SUPABASE_URL')
+  if (!supabaseAnonKey) throw new Error('Missing SUPABASE_ANON_KEY')
+
+  const cookieStore = await cookies()
+  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+    cookies: {
+      getAll: () => cookieStore.getAll(),
+      setAll: (cookiesToSet) => {
+        cookiesToSet.forEach(({ name, value, options }) =>
+          cookieStore.set(name, value, options)
+        )
+      },
+    },
+  })
 
   try {
+    // 查用户首充状态
+    const { data: user, error: userError } = await supabase
+      .from('profiles')
+      .select('is_first_purchase')
+      .eq('id', session.user.id)
+      .single()
+
+    if (userError) {
+      console.error('Failed to fetch user:', userError)
+      return NextResponse.json({ error: '無法讀取用戶資料' }, { status: 500 })
+    }
+
+    const isFirstPurchase = user?.is_first_purchase ?? true
+
     const checkoutSession = await stripe.checkout.sessions.create({
       mode: 'payment',
       payment_method_types: ['card'],
