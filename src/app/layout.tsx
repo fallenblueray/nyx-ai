@@ -18,6 +18,9 @@ export const metadata: Metadata = {
   description: "AI 故事生成平台，無審查自由創作",
 };
 
+// 網頁版本號 - 每次新增功能或修改內容 +0.001
+const VERSION = 'v1.001'
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -31,6 +34,10 @@ export default function RootLayout({
         <Providers>
           {children}
         </Providers>
+        {/* 版本號 */}
+        <footer className="fixed bottom-2 right-2 text-xs text-gray-400 opacity-50 hover:opacity-100 transition-opacity pointer-events-none">
+          {VERSION}
+        </footer>
       </body>
     </html>
   );
