@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getStripe } from '@/lib/stripe'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
+import { createAdminClient } from '@/lib/supabase-admin'
 
 export async function POST(req: NextRequest) {
   console.log('📝 [checkout] Request received')
@@ -45,22 +44,13 @@ export async function POST(req: NextRequest) {
       throw new Error('Missing SUPABASE_URL or SUPABASE_ANON_KEY')
     }
 
-    const cookieStore = await cookies()
-    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-      cookies: {
-        getAll: () => cookieStore.getAll(),
-        setAll: (cookiesToSet) => {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            cookieStore.set(name, value, options)
-          )
-        },
-      },
-    })
+    // ✅ 使用 admin client 讀取用戶資料（繞過 RLS）
+    const adminSupabase = createAdminClient()
 
     // ✅ 加強：用戶資料讀取錯誤處理
     let isFirstPurchase = true
     try {
-      const { data: user, error: userError } = await supabase
+      const { data: user, error: userError } = await adminSupabase
         .from('profiles')
         .select('is_first_purchase')
         .eq('id', session.user.id)
