@@ -28,12 +28,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: '請先登入' }, { status: 401 })
     }
 
-    // ✓ 建立 Supabase server client (with SSR)
+    // ✅ 建立 Supabase server client
     const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
     const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-    if (!supabaseUrl) throw new Error('Missing SUPABASE_URL')
-    if (!supabaseAnonKey) throw new Error('Missing SUPABASE_ANON_KEY')
+    if (!supabaseUrl || !supabaseAnonKey) {
+      console.error('❌ Missing Supabase config')
+      throw new Error('Missing SUPABASE_URL or SUPABASE_ANON_KEY')
+    }
 
     const cookieStore = await cookies()
     const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
@@ -47,20 +49,41 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    // 查用户首充状态
-    const { data: user, error: userError } = await supabase
-      .from('profiles')
-      .select('is_first_purchase')
-      .eq('id', session.user.id)
-      .single()
+    // ✅ 加強：用戶資料讀取錯誤處理
+    let isFirstPurchase = true
+    try {
+      const { data: user, error: userError } = await supabase
+        .from('profiles')
+        .select('is_first_purchase')
+        .eq('id', session.user.id)
+        .single()
 
-    if (userError) {
-      console.error('Failed to fetch user:', userError)
-      return NextResponse.json({ error: '無法讀取用戶資料' }, { status: 500 })
+      if (userError) {
+        console.error('❌ Failed to fetch user profile:', userError.message, userError.details)
+        // 如果 profile 不存在，預設為首充
+        if (userError.code === 'PGRST116') {
+          console.log('⚠️ Profile not found, defaulting to first purchase')
+          isFirstPurchase = true
+        } else {
+          return NextResponse.json(
+            { error: '無法讀取用戶資料，請重新登入或聯絡管理員' },
+            { status: 500 }
+          )
+        }
+      } else {
+        isFirstPurchase = user?.is_first_purchase ?? true
+      }
+    } catch (queryErr) {
+      console.error('❌ Query exception:', queryErr)
+      return NextResponse.json(
+        { error: '資料庫錯誤，請稍後重試' },
+        { status: 500 }
+      )
     }
 
-    const isFirstPurchase = user?.is_first_purchase ?? true
+    console.log('💳 [checkout] isFirstPurchase:', isFirstPurchase)
 
+    // ✅ 建立 Stripe Checkout Session
     const checkoutSession = await getStripe().checkout.sessions.create({
       mode: 'payment',
       payment_method_types: ['card'],
