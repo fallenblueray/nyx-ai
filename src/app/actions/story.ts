@@ -1,7 +1,7 @@
 'use server'
 
 import { createServerClient } from '@/lib/supabase'
-import { createAnonClient } from '@/lib/supabase-admin'
+import { createAdminClient } from '@/lib/supabase-admin'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { revalidatePath } from 'next/cache'
@@ -11,18 +11,22 @@ export async function getUserWordCount(): Promise<{ wordCount: number; isFirstPu
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) return { wordCount: 0, isFirstPurchase: true }
 
-  // 使用 admin client 繞過 RLS
-  const supabase = createAnonClient()
+  // ✅ 使用 admin client 繞過 RLS
+  const supabase = createAdminClient()
   
-  // 清除緩存
+  // 清除緩存確保取最新數據
   revalidatePath('/app')
   revalidatePath('/')
   
-  const { data } = await supabase
+  console.log('📊 [getUserWordCount] Fetching for user:', session.user.id)
+  
+  const { data, error } = await supabase
     .from('profiles')
     .select('word_count, is_first_purchase')
     .eq('id', session.user.id)
     .single()
+
+  console.log('📊 [getUserWordCount] Result:', data, 'Error:', error)
 
   return {
     wordCount: data?.word_count ?? 8000,
