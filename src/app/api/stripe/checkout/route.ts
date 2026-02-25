@@ -6,39 +6,47 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
 export async function POST(req: NextRequest) {
-  // ✅ 修復：必須傳入 authOptions，否則 session.user.id 為 undefined
-  const session = await getServerSession(authOptions)
-  console.log('🔐 [checkout] session:', session?.user?.email, '| id:', session?.user?.id)
-
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: '請先登入' }, { status: 401 })
+  // ✅ 驗證 STRIPE_SECRET_KEY
+  const stripeKey = process.env.STRIPE_SECRET_KEY
+  if (!stripeKey) {
+    console.error('❌ Missing STRIPE_SECRET_KEY')
+    return NextResponse.json({ error: '伺服器配置錯誤，請聯絡管理員' }, { status: 500 })
   }
-
-  const { priceId } = await req.json()
-  if (!priceId) {
-    return NextResponse.json({ error: '缺少 priceId' }, { status: 400 })
-  }
-
-  // ✓ 建立 Supabase server client (with SSR)
-  const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-  if (!supabaseUrl) throw new Error('Missing SUPABASE_URL')
-  if (!supabaseAnonKey) throw new Error('Missing SUPABASE_ANON_KEY')
-
-  const cookieStore = await cookies()
-  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-    cookies: {
-      getAll: () => cookieStore.getAll(),
-      setAll: (cookiesToSet) => {
-        cookiesToSet.forEach(({ name, value, options }) =>
-          cookieStore.set(name, value, options)
-        )
-      },
-    },
-  })
 
   try {
+    // ✅ 解析 body
+    const { priceId } = await req.json()
+    if (!priceId) {
+      return NextResponse.json({ error: '缺少 priceId' }, { status: 400 })
+    }
+
+    // ✅ 驗證 session（傳入 authOptions）
+    const session = await getServerSession(authOptions)
+    console.log('🔐 [checkout] session:', session?.user?.email, '| id:', session?.user?.id)
+
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: '請先登入' }, { status: 401 })
+    }
+
+    // ✓ 建立 Supabase server client (with SSR)
+    const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+    if (!supabaseUrl) throw new Error('Missing SUPABASE_URL')
+    if (!supabaseAnonKey) throw new Error('Missing SUPABASE_ANON_KEY')
+
+    const cookieStore = await cookies()
+    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+      cookies: {
+        getAll: () => cookieStore.getAll(),
+        setAll: (cookiesToSet) => {
+          cookiesToSet.forEach(({ name, value, options }) =>
+            cookieStore.set(name, value, options)
+          )
+        },
+      },
+    })
+
     // 查用户首充状态
     const { data: user, error: userError } = await supabase
       .from('profiles')
@@ -68,7 +76,10 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ url: checkoutSession.url })
   } catch (err) {
-    console.error('Checkout error:', err)
-    return NextResponse.json({ error: '建立付款失敗' }, { status: 500 })
+    console.error('❌ Checkout error:', err)
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : '建立付款失敗' },
+      { status: 500 }
+    )
   }
 }

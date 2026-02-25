@@ -41,15 +41,18 @@ export function RechargeModal({ open, onClose, isFirstPurchase, wordCount }: Rec
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl bg-slate-900 border-slate-700">
+      <DialogContent 
+        className="max-w-2xl bg-slate-900 border-slate-700"
+        aria-describedby="recharge-description"
+      >
         <DialogHeader>
           <DialogTitle className="text-white flex items-center gap-2">
             <Zap className="w-5 h-5 text-yellow-400" />
             充值字數
-            <span className="text-sm font-normal text-slate-400 ml-2">
-              剩餘：{wordCount.toLocaleString()} 字
-            </span>
           </DialogTitle>
+          <p id="recharge-description" className="text-sm text-slate-400">
+            剩餘：{wordCount.toLocaleString()} 字
+          </p>
         </DialogHeader>
 
         {isFirstPurchase && (
