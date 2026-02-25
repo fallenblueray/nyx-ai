@@ -10,8 +10,9 @@ import { UserMenu } from "@/components/UserMenu"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
-import { Menu, Save, History, Share2, Plus, Loader2 } from "lucide-react"
+import { Menu, Save, History, Share2, Plus, Loader2, Settings } from "lucide-react"
 import { cn } from "@/lib/utils"
+import Link from "next/link"
 import { saveStory, shareStory } from "@/app/actions/story"
 
 interface StoryData {
@@ -206,6 +207,18 @@ export default function AppPage() {
             <span className="hidden sm:inline">新建</span>
           </Button>
           
+          {/* 設定按鈕 */}
+          <Link href="/settings">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-slate-300 hover:text-white"
+              title="設定"
+            >
+              <Settings className="w-4 h-4" />
+            </Button>
+          </Link>
+
           {/* 登入/登出 */}
           <UserMenu />
         </div>
