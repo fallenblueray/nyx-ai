@@ -39,7 +39,7 @@ export async function deductWordCount(wordsUsed: number): Promise<{ success: boo
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) return { success: false, remaining: 0, error: '請先登入' }
 
-  const supabase = createAnonClient()
+  const supabase = createAdminClient()
 
   const { data: user } = await supabase
     .from('profiles')
@@ -164,7 +164,7 @@ export async function getUserStories() {
 
 export async function getSharedStory(shareId: string) {
   try {
-    const supabase = createAnonClient()
+    const supabase = createAdminClient()
 
     // Try by ID first, then by share_id
     const query = supabase
