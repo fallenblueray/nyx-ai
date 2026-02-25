@@ -11,7 +11,13 @@ export async function getUserWordCount(): Promise<{ wordCount: number; isFirstPu
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) return { wordCount: 0, isFirstPurchase: true }
 
+  // 使用 admin client 繞過 RLS
   const supabase = createAnonClient()
+  
+  // 清除緩存
+  revalidatePath('/app')
+  revalidatePath('/')
+  
   const { data } = await supabase
     .from('profiles')
     .select('word_count, is_first_purchase')
