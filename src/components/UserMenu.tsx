@@ -33,18 +33,30 @@ export function UserMenu() {
     }
   }, [session])
 
-  // 監聽支付成功後刷新字數（用 searchParams 避免 SSR 問題）
+  // 監聽支付成功後刷新字數
   useEffect(() => {
     if (typeof window === 'undefined') return
-    const params = new URLSearchParams(window.location.search)
-    if (params.get('payment') === 'success') {
-      setTimeout(() => {
+    
+    const checkPayment = () => {
+      const params = new URLSearchParams(window.location.search)
+      if (params.get('payment') === 'success') {
+        console.log('💰 Payment success detected, fetching new word count...')
         getUserWordCount().then(({ wordCount, isFirstPurchase }) => {
+          console.log('💰 New word count:', wordCount)
           setWordCount(wordCount)
           setIsFirstPurchase(isFirstPurchase)
         })
-      }, 2000)
+        // 清除 URL 參數
+        window.history.replaceState({}, '', '/app')
+      }
     }
+    
+    // 立即檢查
+    checkPayment()
+    
+    // 監聽 popstate 事件（瀏覽器導航）
+    window.addEventListener('popstate', checkPayment)
+    return () => window.removeEventListener('popstate', checkPayment)
   }, [])
 
   if (!mounted || status === "loading") {
