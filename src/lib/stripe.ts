@@ -1,27 +1,26 @@
 import Stripe from 'stripe'
 
-// Lazy init — avoid module-level crash during Next.js build
-let _stripe: Stripe | null = null
-
+// Always create new instance to avoid stale cache in serverless
 export function getStripe(): Stripe {
-  if (!_stripe) {
-    const key = process.env.STRIPE_SECRET_KEY
-    if (!key) {
-      throw new Error('❌ Missing STRIPE_SECRET_KEY environment variable')
-    }
-    // 驗證 key 格式
-    if (!key.startsWith('sk_test_') && !key.startsWith('sk_live_')) {
-      throw new Error(`❌ Invalid STRIPE_SECRET_KEY format: ${key.slice(0, 10)}...`)
-    }
-    console.log('💳 [stripe] Initializing with key:', key.slice(0, 12) + '...')
-    
-    _stripe = new Stripe(key, {
-      apiVersion: '2026-01-28.clover',
-      timeout: 30000,
-      maxNetworkRetries: 3,
-    })
+  const key = process.env.STRIPE_SECRET_KEY
+  if (!key) {
+    console.error('❌ STRIPE_SECRET_KEY is not defined')
+    throw new Error('❌ Missing STRIPE_SECRET_KEY environment variable')
   }
-  return _stripe
+  
+  // 驗證 key 格式
+  if (!key.startsWith('sk_test_') && !key.startsWith('sk_live_')) {
+    console.error('❌ Invalid STRIPE_SECRET_KEY format:', key.slice(0, 10))
+    throw new Error(`❌ Invalid STRIPE_SECRET_KEY format: ${key.slice(0, 10)}...`)
+  }
+  
+  console.log('💳 [stripe] Initializing with key:', key.slice(0, 12) + '...')
+  
+  return new Stripe(key, {
+    apiVersion: '2026-01-28.clover',
+    timeout: 30000,
+    maxNetworkRetries: 3,
+  })
 }
 
 /** @deprecated use getStripe() instead */

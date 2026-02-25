@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -43,16 +43,15 @@ export function RechargeModal({ open, onClose, isFirstPurchase, wordCount }: Rec
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent 
         className="max-w-2xl bg-slate-900 border-slate-700"
-        aria-describedby="recharge-description"
       >
         <DialogHeader>
           <DialogTitle className="text-white flex items-center gap-2">
             <Zap className="w-5 h-5 text-yellow-400" />
             充值字數
           </DialogTitle>
-          <p id="recharge-description" className="text-sm text-slate-400">
-            剩餘：{wordCount.toLocaleString()} 字
-          </p>
+          <DialogDescription className="text-slate-400">
+            選擇充值方案以獲取更多字數額度。剩餘：{wordCount.toLocaleString()} 字
+          </DialogDescription>
         </DialogHeader>
 
         {isFirstPurchase && (
