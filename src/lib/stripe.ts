@@ -3,8 +3,11 @@ import Stripe from 'stripe'
 // Always create new instance to avoid stale cache in serverless
 export function getStripe(): Stripe {
   const key = process.env.STRIPE_SECRET_KEY
+  console.log('🔑 [stripe] getStripe called, key exists:', !!key)
+  console.log('🔑 [stripe] key first 8 chars:', key?.slice(0, 8))
+  
   if (!key) {
-    console.error('❌ STRIPE_SECRET_KEY is not defined')
+    console.error('❌ STRIPE_SECRET_KEY is not defined in getStripe()')
     throw new Error('❌ Missing STRIPE_SECRET_KEY environment variable')
   }
   
@@ -14,13 +17,20 @@ export function getStripe(): Stripe {
     throw new Error(`❌ Invalid STRIPE_SECRET_KEY format: ${key.slice(0, 10)}...`)
   }
   
-  console.log('💳 [stripe] Initializing with key:', key.slice(0, 12) + '...')
+  console.log('💳 [stripe] Creating Stripe instance with key:', key.slice(0, 12) + '...')
   
-  return new Stripe(key, {
-    apiVersion: '2026-01-28.clover',
-    timeout: 30000,
-    maxNetworkRetries: 3,
-  })
+  try {
+    const stripe = new Stripe(key, {
+      apiVersion: '2026-01-28.clover',
+      timeout: 30000,
+      maxNetworkRetries: 3,
+    })
+    console.log('✅ [stripe] Stripe instance created successfully')
+    return stripe
+  } catch (err) {
+    console.error('❌ [stripe] Failed to create Stripe instance:', err)
+    throw err
+  }
 }
 
 /** @deprecated use getStripe() instead */

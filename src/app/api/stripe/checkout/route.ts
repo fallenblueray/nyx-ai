@@ -6,8 +6,13 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
 export async function POST(req: NextRequest) {
+  console.log('📝 [checkout] Request received')
+  
   // ✅ 驗證 STRIPE_SECRET_KEY
   const stripeKey = process.env.STRIPE_SECRET_KEY
+  console.log('🔑 [checkout] STRIPE_SECRET_KEY exists:', !!stripeKey)
+  console.log('🔑 [checkout] STRIPE_SECRET_KEY starts with:', stripeKey?.slice(0, 8))
+  
   if (!stripeKey) {
     console.error('❌ Missing STRIPE_SECRET_KEY')
     return NextResponse.json({ error: '伺服器配置錯誤，請聯絡管理員' }, { status: 500 })
@@ -16,6 +21,8 @@ export async function POST(req: NextRequest) {
   try {
     // ✅ 解析 body
     const { priceId } = await req.json()
+    console.log('📦 [checkout] priceId:', priceId)
+    
     if (!priceId) {
       return NextResponse.json({ error: '缺少 priceId' }, { status: 400 })
     }
@@ -31,6 +38,7 @@ export async function POST(req: NextRequest) {
     // ✅ 建立 Supabase server client
     const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
     const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    console.log('🗄️ [checkout] Supabase URL:', supabaseUrl ? 'exists' : 'missing')
 
     if (!supabaseUrl || !supabaseAnonKey) {
       console.error('❌ Missing Supabase config')
@@ -59,7 +67,7 @@ export async function POST(req: NextRequest) {
         .single()
 
       if (userError) {
-        console.error('❌ Failed to fetch user profile:', userError.message, userError.details)
+        console.error('❌ Failed to fetch user profile:', userError.message)
         // 如果 profile 不存在，預設為首充
         if (userError.code === 'PGRST116') {
           console.log('⚠️ Profile not found, defaulting to first purchase')
@@ -101,8 +109,13 @@ export async function POST(req: NextRequest) {
         success_url: `${process.env.NEXTAUTH_URL || 'https://nyx-ai-woad.vercel.app'}/app?payment=success`,
         cancel_url: `${process.env.NEXTAUTH_URL || 'https://nyx-ai-woad.vercel.app'}/app?payment=cancelled`,
       })
-    } catch (stripeErr) {
+      
+      console.log('✅ [checkout] Session created:', checkoutSession.id)
+    } catch (stripeErr: unknown) {
       console.error('❌ Stripe session create error:', stripeErr)
+      const stripeError = stripeErr as { type?: string; message?: string }
+      console.error('❌ Stripe error type:', stripeError?.type)
+      console.error('❌ Stripe error message:', stripeError?.message)
       return NextResponse.json(
         { error: 'Stripe 連線失敗，請稍後重試或聯絡管理員' },
         { status: 500 }
@@ -112,6 +125,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ url: checkoutSession?.url })
   } catch (err) {
     console.error('❌ Checkout error:', err)
+    console.error('❌ Error stack:', err)
     return NextResponse.json(
       { error: err instanceof Error ? err.message : '建立付款失敗' },
       { status: 500 }
