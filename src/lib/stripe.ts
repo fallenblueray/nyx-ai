@@ -6,9 +6,19 @@ let _stripe: Stripe | null = null
 export function getStripe(): Stripe {
   if (!_stripe) {
     const key = process.env.STRIPE_SECRET_KEY
-    if (!key) throw new Error('Missing STRIPE_SECRET_KEY')
+    if (!key) {
+      throw new Error('❌ Missing STRIPE_SECRET_KEY environment variable')
+    }
+    // 驗證 key 格式
+    if (!key.startsWith('sk_test_') && !key.startsWith('sk_live_')) {
+      throw new Error(`❌ Invalid STRIPE_SECRET_KEY format: ${key.slice(0, 10)}...`)
+    }
+    console.log('💳 [stripe] Initializing with key:', key.slice(0, 12) + '...')
+    
     _stripe = new Stripe(key, {
       apiVersion: '2026-01-28.clover',
+      timeout: 30000,
+      maxNetworkRetries: 3,
     })
   }
   return _stripe

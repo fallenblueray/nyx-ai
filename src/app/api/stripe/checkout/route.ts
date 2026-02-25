@@ -83,21 +83,33 @@ export async function POST(req: NextRequest) {
 
     console.log('💳 [checkout] isFirstPurchase:', isFirstPurchase)
 
-    // ✅ 建立 Stripe Checkout Session
-    const checkoutSession = await getStripe().checkout.sessions.create({
-      mode: 'payment',
-      payment_method_types: ['card'],
-      line_items: [{ price: priceId, quantity: 1 }],
-      metadata: {
-        user_id: session.user.id,
-        price_id: priceId,
-        is_first_purchase: String(isFirstPurchase),
-      },
-      success_url: `${process.env.NEXTAUTH_URL || 'https://nyx-ai-woad.vercel.app'}/app?payment=success`,
-      cancel_url: `${process.env.NEXTAUTH_URL || 'https://nyx-ai-woad.vercel.app'}/app?payment=cancelled`,
-    })
+    // ✅ 初始化 Stripe 並建立 Checkout Session
+    let checkoutSession
+    try {
+      const stripe = getStripe()
+      console.log('💳 [checkout] Stripe initialized successfully')
+      
+      checkoutSession = await stripe.checkout.sessions.create({
+        mode: 'payment',
+        payment_method_types: ['card'],
+        line_items: [{ price: priceId, quantity: 1 }],
+        metadata: {
+          user_id: session.user.id,
+          price_id: priceId,
+          is_first_purchase: String(isFirstPurchase),
+        },
+        success_url: `${process.env.NEXTAUTH_URL || 'https://nyx-ai-woad.vercel.app'}/app?payment=success`,
+        cancel_url: `${process.env.NEXTAUTH_URL || 'https://nyx-ai-woad.vercel.app'}/app?payment=cancelled`,
+      })
+    } catch (stripeErr) {
+      console.error('❌ Stripe session create error:', stripeErr)
+      return NextResponse.json(
+        { error: 'Stripe 連線失敗，請稍後重試或聯絡管理員' },
+        { status: 500 }
+      )
+    }
 
-    return NextResponse.json({ url: checkoutSession.url })
+    return NextResponse.json({ url: checkoutSession?.url })
   } catch (err) {
     console.error('❌ Checkout error:', err)
     return NextResponse.json(
