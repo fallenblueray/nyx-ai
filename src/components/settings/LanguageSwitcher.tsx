@@ -31,6 +31,9 @@ export function LanguageSwitcher({
     setIsLoading(true);
     try {
       setLanguage(newLanguage);
+      // 保存到 localStorage（立即生效，供其他頁面讀取）
+      localStorage.setItem('language', newLanguage);
+      // 保存到數據庫（長期保存）
       await updateUserPreference('preferred_language', newLanguage);
       // 刷新整個頁面以應用新語言（強制 hard reload）
       setTimeout(() => {

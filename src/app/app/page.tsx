@@ -14,6 +14,7 @@ import { Menu, Save, History, Share2, Plus, Loader2, Settings } from "lucide-rea
 import { cn } from "@/lib/utils"
 import Link from "next/link"
 import { saveStory, shareStory } from "@/app/actions/story"
+import { useTranslation } from "@/components/TranslationContext"
 
 interface StoryData {
   id: string
@@ -24,6 +25,7 @@ interface StoryData {
 }
 
 export default function AppPage() {
+  const translations = useTranslation()
   const { 
     isPanelCollapsed, 
     setPanelCollapsed, 
@@ -135,7 +137,7 @@ export default function AppPage() {
           </Button>
           <h1 className="text-lg font-bold text-white">NyxAI</h1>
           <span className="px-2 py-0.5 bg-purple-600/20 text-purple-400 text-xs rounded-full border border-purple-600/30">
-            無審查 · 自由創作
+            {translations.app?.tagline || "無審查 · 自由創作"}
           </span>
         </div>
         
