@@ -5,6 +5,7 @@ import { useAppStore, type Topic } from "@/store/useAppStore"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { useTranslation } from "@/components/TranslationContext"
 
 // 題材數據（來自設計稿）
 const TOPICS = [
@@ -35,9 +36,15 @@ const TOPICS = [
 ]
 
 export function TopicSelector() {
+  const translations = useTranslation()
   const [search, setSearch] = useState("")
   const [activeCategory, setActiveCategory] = useState(0)
   const { selectedTopics, addTopic, removeTopic } = useAppStore()
+  
+  // 獲取翻譯後的分類名稱
+  const getCategoryName = (category: string) => {
+    return translations.topics?.[category] || category
+  }
   
   // 過濾結果
   const filteredTopics = search
@@ -68,7 +75,7 @@ export function TopicSelector() {
   return (
     <div className="space-y-3">
       <Input
-        placeholder="搜尋題材..."
+        placeholder={translations.app?.searchTopics || "搜尋題材..."}
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         className="bg-slate-800 border-slate-700 text-slate-200 placeholder:text-slate-500"
@@ -89,7 +96,7 @@ export function TopicSelector() {
                 : "text-slate-400 hover:text-slate-200 hover:bg-slate-800"
             )}
           >
-            {cat.category}
+            {getCategoryName(cat.category)}
           </Button>
         ))}
       </div>
@@ -117,14 +124,14 @@ export function TopicSelector() {
       {/* 已選題材 */}
       {selectedTopics.length > 0 && (
         <div className="pt-2 border-t border-slate-800">
-          <p className="text-xs text-slate-500 mb-2">已選：</p>
+          <p className="text-xs text-slate-500 mb-2">{translations.app?.selected || "已選"}：</p>
           <div className="flex flex-wrap gap-1">
             {selectedTopics.map((t, idx) => (
               <span
                 key={idx}
                 className="inline-flex items-center gap-1 px-2 py-1 bg-slate-800 rounded text-xs text-slate-300"
               >
-                {t.category}: {t.item}
+                {getCategoryName(t.category)}: {t.item}
                 <button
                   onClick={() => removeTopic(t)}
                   className="text-slate-500 hover:text-red-400"

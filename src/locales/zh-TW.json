@@ -48,6 +48,16 @@
     "publishSuccess": "發布成功",
     "saved": "已儲存",
     "searchTopics": "搜尋題材...",
-    "addCharacter": "新增角色"
+    "addCharacter": "新增角色",
+    "selected": "已選",
+    "editCharacter": "編輯角色"
+  },
+  "topics": {
+    "職業": "職業",
+    "幻想": "幻想",
+    "都市": "都市",
+    "禁忌": "禁忌",
+    "特殊": "特殊",
+    "穿越": "穿越"
   }
 }

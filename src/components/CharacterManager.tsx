@@ -13,8 +13,10 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Plus, Pencil, Trash2 } from "lucide-react"
+import { useTranslation } from "@/components/TranslationContext"
 
 export function CharacterManager() {
+  const translations = useTranslation()
   const { characters, addCharacter, updateCharacter, deleteCharacter } = useAppStore()
   const [isOpen, setIsOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
