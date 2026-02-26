@@ -215,7 +215,7 @@ export default function AppPage() {
               variant="ghost"
               size="sm"
               className="text-slate-300 hover:text-white"
-              title="{translations.app?.settings || "設定"}"
+              title={translations.app?.settings || "設定"}
             >
               <Settings className="w-4 h-4" />
             </Button>
@@ -271,7 +271,7 @@ export default function AppPage() {
               <Textarea
                 value={storyInput}
                 onChange={(e) => setStoryInput(e.target.value)}
-                placeholder="{translations.app?.inputPlaceholder || "輸入你的劇情起點或靈感..."}"
+                placeholder={translations.app?.inputPlaceholder || "輸入你的劇情起點或靈感..."}
                 className="min-h-[120px] bg-slate-800 border-slate-700 text-slate-200 placeholder:text-slate-500 resize-none"
               />
               <Button
