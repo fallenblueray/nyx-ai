@@ -1,7 +1,7 @@
 'use server'
 
 import { createAdminClient } from '@/lib/supabase-admin'
-import { createServerClient } from '@/lib/supabase/server-async'
+import { createServerClientAsync } from '@/lib/supabase/server-async'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { revalidatePath } from 'next/cache'
@@ -48,7 +48,7 @@ export async function updateUserPreference(
   value: string
 ) {
   try {
-    const supabase = await createServerClient()
+    const supabase = await createServerClientAsync()
     
     // 獲取當前用戶
     const {

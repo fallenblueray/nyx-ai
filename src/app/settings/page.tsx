@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { createServerClient } from '@/lib/supabase/server-async';
+import { createServerClientAsync } from '@/lib/supabase/server-async';
 import { LanguageSwitcher } from '@/components/settings/LanguageSwitcher';
 import { ThemeSwitcher } from '@/components/settings/ThemeSwitcher';
 import { WordCountDisplay } from '@/components/settings/WordCountDisplay';
@@ -17,7 +17,7 @@ export const metadata = {
 
 export default async function SettingsPage() {
   // 驗證用戶登入
-  const supabase = await createServerClient();
+  const supabase = await createServerClientAsync();
   const {
     data: { user },
     error: userError,
