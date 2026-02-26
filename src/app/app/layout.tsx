@@ -30,5 +30,31 @@ export default async function AppLayout({
   const translations = getTranslation(language);
 
   // 將翻譯傳遞給 TranslationProvider
-  return <TranslationProvider translations={translations}>{children}</TranslationProvider>;
+  return (
+    <>
+      {/* 主題初始化腳本 - 必須在 layout 級別應用 */}
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `
+            (function() {
+              try {
+                const theme = localStorage.getItem('theme');
+                const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                const isDark = theme ? theme === 'dark' : systemDark;
+                
+                if (isDark) {
+                  document.documentElement.classList.add('dark');
+                  document.documentElement.style.colorScheme = 'dark';
+                } else {
+                  document.documentElement.classList.remove('dark');
+                  document.documentElement.style.colorScheme = 'light';
+                }
+              } catch(e) {}
+            })();
+          `,
+        }}
+      />
+      <TranslationProvider translations={translations}>{children}</TranslationProvider>
+    </>
+  );
 }

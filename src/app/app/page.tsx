@@ -281,7 +281,7 @@ export default function AppPage() {
                 className="w-full border-slate-700 text-slate-300 hover:bg-slate-800"
               >
                 <Save className="w-4 h-4 mr-2" />
-                儲存草稿
+                {translations.app?.saveDraft || "儲存草稿"}
               </Button>
             </div>
             
