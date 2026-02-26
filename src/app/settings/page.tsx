@@ -1,98 +1,101 @@
-"use client"
+import { redirect } from 'next/navigation';
+import { createServerClient } from '@/lib/supabase/server-async';
+import { LanguageSwitcher } from '@/components/settings/LanguageSwitcher';
+import { ThemeSwitcher } from '@/components/settings/ThemeSwitcher';
+import { WordCountDisplay } from '@/components/settings/WordCountDisplay';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
+import { getTranslation } from '@/lib/i18n';
+import type { Language } from '@/lib/i18n';
 
-import { useSession } from "next-auth/react"
-import { useRouter } from "next/navigation"
-import { useEffect } from "react"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ThemeSwitcher } from "@/components/ThemeSwitcher"
-import { LanguageSwitcher } from "@/components/LanguageSwitcher"
-import { DefaultTopicsSelector } from "@/components/DefaultTopicsSelector"
-import { Button } from "@/components/ui/button"
-import { ArrowLeft, Settings } from "lucide-react"
+export const metadata = {
+  title: '設定 | NyxAI',
+  description: '管理語言、外觀、字數和充值',
+};
 
-export default function SettingsPage() {
-  const { data: session, status } = useSession()
-  const router = useRouter()
+export default async function SettingsPage() {
+  // 驗證用戶登入
+  const supabase = await createServerClient();
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
 
-  // 未登入 → 跳轉
-  useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/auth/signin")
-    }
-  }, [status, router])
-
-  if (status === "loading") {
-    return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-purple-600 border-t-transparent rounded-full animate-spin" />
-      </div>
-    )
+  if (userError || !user) {
+    redirect('/auth/signin');
   }
 
-  if (!session) return null
+  // 獲取用戶偏好設定（從 public.profiles 表）
+  const { data: profileData, error: dataError } = await supabase
+    .from('profiles')
+    .select('preferred_language, word_count')
+    .eq('user_id', user.id)
+    .single();
+
+  if (dataError || !profileData) {
+    redirect('/app');
+  }
+
+  const language = (profileData.preferred_language || 'zh-TW') as Language;
+  const translations = getTranslation(language);
+  const wordCount = profileData.word_count || 0;
 
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-200">
-      {/* Top Bar */}
-      <header className="fixed top-0 left-0 right-0 h-14 bg-slate-900/80 backdrop-blur border-b border-slate-800 z-50 flex items-center justify-between px-4">
-        <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => router.push("/app")}
-            className="text-slate-400 hover:text-slate-200"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <Settings className="w-5 h-5 text-slate-400" />
-          <h1 className="text-lg font-semibold text-white">設定</h1>
+    <div className="min-h-screen bg-white dark:bg-slate-950">
+      {/* Header */}
+      <div className="border-b border-slate-200 dark:border-slate-800">
+        <div className="mx-auto max-w-2xl px-4 py-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between">
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
+              {translations.settings.title}
+            </h1>
+            <Link href="/app">
+              <Button variant="ghost" size="sm">
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                {translations.settings.back}
+              </Button>
+            </Link>
+          </div>
         </div>
-        <span className="text-sm text-slate-400">{session.user?.email}</span>
-      </header>
+      </div>
 
       {/* Content */}
-      <div className="pt-14 max-w-2xl mx-auto px-4 py-8">
-        <Tabs defaultValue="theme" className="w-full">
-          <TabsList className="bg-slate-800 border border-slate-700 mb-6 w-full">
-            <TabsTrigger
-              value="theme"
-              className="flex-1 data-[state=active]:bg-purple-600 data-[state=active]:text-white text-slate-400"
-            >
-              主題
+      <div className="mx-auto max-w-2xl px-4 py-8 sm:px-6 lg:px-8">
+        <Tabs defaultValue="language" className="w-full">
+          {/* Tabs 標籤 */}
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="language">
+              {translations.settings.tabs.language}
             </TabsTrigger>
-            <TabsTrigger
-              value="language"
-              className="flex-1 data-[state=active]:bg-purple-600 data-[state=active]:text-white text-slate-400"
-            >
-              語言
+            <TabsTrigger value="appearance">
+              {translations.settings.tabs.appearance}
             </TabsTrigger>
-            <TabsTrigger
-              value="topics"
-              className="flex-1 data-[state=active]:bg-purple-600 data-[state=active]:text-white text-slate-400"
-            >
-              預設題材
+            <TabsTrigger value="wordcount">
+              {translations.settings.tabs.wordCount}
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="theme">
-            <div className="bg-slate-900 rounded-lg border border-slate-800 p-6">
-              <ThemeSwitcher />
-            </div>
+          {/* 語言 Tab */}
+          <TabsContent value="language" className="space-y-4">
+            <LanguageSwitcher
+              currentLanguage={language}
+              translations={translations}
+            />
           </TabsContent>
 
-          <TabsContent value="language">
-            <div className="bg-slate-900 rounded-lg border border-slate-800 p-6">
-              <LanguageSwitcher />
-            </div>
+          {/* 外觀 Tab */}
+          <TabsContent value="appearance" className="space-y-4">
+            <ThemeSwitcher translations={translations} />
           </TabsContent>
 
-          <TabsContent value="topics">
-            <div className="bg-slate-900 rounded-lg border border-slate-800 p-6">
-              <DefaultTopicsSelector />
-            </div>
+          {/* 字數與充值 Tab */}
+          <TabsContent value="wordcount" className="space-y-4">
+            <WordCountDisplay wordCount={wordCount} translations={translations} />
           </TabsContent>
         </Tabs>
       </div>
-    </main>
-  )
+    </div>
+  );
 }

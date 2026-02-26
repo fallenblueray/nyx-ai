@@ -1,0 +1,33 @@
+{
+  "settings": {
+    "title": "設定",
+    "back": "返回",
+    "tabs": {
+      "language": "語言",
+      "appearance": "外觀",
+      "wordCount": "字數與充值"
+    },
+    "language": {
+      "label": "選擇語言",
+      "zhTW": "繁體中文",
+      "zhCN": "簡體中文"
+    },
+    "appearance": {
+      "label": "主題",
+      "light": "亮色",
+      "dark": "深色"
+    },
+    "wordCount": {
+      "remaining": "剩餘字數",
+      "recharge": "立即充值",
+      "warning": "字數不足，立即充值",
+      "used": "已用字數"
+    }
+  },
+  "topBar": {
+    "settings": "設定"
+  },
+  "app": {
+    "publishSuccess": "發布成功"
+  }
+}
