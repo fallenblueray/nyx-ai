@@ -28,6 +28,23 @@
     "settings": "设置"
   },
   "app": {
+    "tagline": "无审查 · 自由创作",
+    "history": "历史",
+    "save": "保存",
+    "share": "分享",
+    "new": "新建",
+    "settings": "设置",
+    "untitled": "无标题",
+    "storyStart": "剧情起点",
+    "topicSelection": "题材选择",
+    "characterCard": "角色卡",
+    "generate": "开始创作",
+    "storyOutput": "故事输出",
+    "inputPlaceholder": "输入你的剧情起点或灵感...",
+    "saveDraft": "保存草稿",
+    "draftSaved": "草稿已保存！",
+    "saving": "保存中...",
+    "copied": "已复制!",
     "publishSuccess": "发布成功"
   }
 }

@@ -28,6 +28,23 @@
     "settings": "設定"
   },
   "app": {
+    "tagline": "無審查 · 自由創作",
+    "history": "歷史",
+    "save": "儲存",
+    "share": "分享",
+    "new": "新建",
+    "settings": "設定",
+    "untitled": "無標題",
+    "storyStart": "劇情起點",
+    "topicSelection": "題材選擇",
+    "characterCard": "角色卡",
+    "generate": "開始創作",
+    "storyOutput": "故事輸出",
+    "inputPlaceholder": "輸入你的劇情起點或靈感...",
+    "saveDraft": "儲存草稿",
+    "draftSaved": "草稿已儲存！",
+    "saving": "儲存中...",
+    "copied": "已複製!",
     "publishSuccess": "發布成功"
   }
 }
