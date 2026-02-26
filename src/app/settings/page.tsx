@@ -21,7 +21,10 @@ export default async function SettingsPage() {
   // 驗證用戶登入（使用 NextAuth）
   const session = await getServerSession(authOptions);
 
+  console.log('Settings page - session:', session);
+
   if (!session?.user?.id) {
+    console.log('No session or user ID, redirecting to signin');
     redirect('/auth/signin');
   }
 
@@ -33,7 +36,10 @@ export default async function SettingsPage() {
     .eq('user_id', session.user.id)
     .single();
 
+  console.log('Profile data:', profileData, 'Error:', dataError);
+
   if (dataError || !profileData) {
+    console.log('No profile data, redirecting to app');
     redirect('/app');
   }
 
