@@ -30,18 +30,24 @@ export function ThemeSwitcher({ translations }: ThemeSwitcherProps) {
 
   const applyTheme = (newTheme: Theme) => {
     const html = document.documentElement;
+    // 確保 DOM 更新
     if (newTheme === 'dark') {
       html.classList.add('dark');
+      html.style.colorScheme = 'dark';
     } else {
       html.classList.remove('dark');
+      html.style.colorScheme = 'light';
     }
+    // 確保 localStorage 更新
     localStorage.setItem('theme', newTheme);
+    console.log('[Theme] Applied:', newTheme, 'HTML class:', html.className);
   };
 
-  const handleThemeChange = (newTheme: Theme) => {
+  const handleThemeChange = (value: string) => {
+    const newTheme = value as Theme;
+    console.log('[Theme] Changing to:', newTheme);
     setTheme(newTheme);
     applyTheme(newTheme);
-    // 主題改變是純客戶端操作，立即應用到 DOM
   };
 
   if (!mounted) return null;
@@ -49,7 +55,7 @@ export function ThemeSwitcher({ translations }: ThemeSwitcherProps) {
   return (
     <div className="space-y-4">
       <Label>{translations.settings.appearance.label}</Label>
-      <RadioGroup value={theme} onValueChange={(v) => handleThemeChange(v as Theme)}>
+      <RadioGroup value={theme} onValueChange={handleThemeChange}>
         <div className="flex items-center space-x-2">
           <RadioGroupItem value="light" id="light" />
           <Label htmlFor="light" className="flex items-center space-x-2 cursor-pointer">

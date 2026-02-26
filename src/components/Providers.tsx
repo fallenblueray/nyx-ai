@@ -17,16 +17,17 @@ function ThemeInitializer({ children }: { children: React.ReactNode }) {
     const html = document.documentElement
     if (initial === "dark") {
       html.classList.add("dark")
+      html.style.colorScheme = "dark"
     } else {
       html.classList.remove("dark")
+      html.style.colorScheme = "light"
     }
+    console.log("[ThemeInitializer] Initialized theme:", initial)
 
     setMounted(true)
   }, [])
 
-  // 避免 hydration mismatch
-  if (!mounted) return null
-
+  // 顯示内容，但可能會有 flash（先顯示默認，然後立即應用主題）
   return <>{children}</>
 }
 
