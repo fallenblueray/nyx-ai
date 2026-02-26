@@ -38,11 +38,10 @@ export function ThemeSwitcher({ translations }: ThemeSwitcherProps) {
     localStorage.setItem('theme', newTheme);
   };
 
-  const handleThemeChange = async (newTheme: Theme) => {
+  const handleThemeChange = (newTheme: Theme) => {
     setTheme(newTheme);
     applyTheme(newTheme);
-    // 主題改變是純客戶端操作，無需刷新頁面
-    // localStorage 已在 applyTheme 中保存
+    // 主題改變是純客戶端操作，立即應用到 DOM
   };
 
   if (!mounted) return null;

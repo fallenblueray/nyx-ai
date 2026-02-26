@@ -32,12 +32,13 @@ export function LanguageSwitcher({
     try {
       setLanguage(newLanguage);
       await updateUserPreference('preferred_language', newLanguage);
-      // 刷新整個頁面以應用新語言
-      setTimeout(() => location.reload(), 300);
+      // 刷新整個頁面以應用新語言（強制 hard reload）
+      setTimeout(() => {
+        window.location.href = window.location.href;
+      }, 500);
     } catch (error) {
       console.error('語言切換失敗:', error);
       setLanguage(currentLanguage);
-    } finally {
       setIsLoading(false);
     }
   };
