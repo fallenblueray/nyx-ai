@@ -1,6 +1,16 @@
 @import "tailwindcss";
 
+/* 啟用 class-based dark mode for Tailwind v4 */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* 預設亮色主題 */
 :root {
+  --background: #ffffff;
+  --foreground: #020617;
+}
+
+/* 深色主題 */
+.dark {
   --background: #020617;
   --foreground: #fafafa;
 }
