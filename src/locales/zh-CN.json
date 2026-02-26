@@ -45,6 +45,9 @@
     "draftSaved": "草稿已保存！",
     "saving": "保存中...",
     "copied": "已复制!",
-    "publishSuccess": "发布成功"
+    "publishSuccess": "发布成功",
+    "saved": "已保存",
+    "searchTopics": "搜索题材...",
+    "addCharacter": "新增角色"
   }
 }

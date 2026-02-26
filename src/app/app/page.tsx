@@ -151,7 +151,7 @@ export default function AppPage() {
             className="text-slate-300 hover:text-white"
           >
             <History className="w-4 h-4 mr-1" />
-            <span className="hidden sm:inline">歷史</span>
+            <span className="hidden sm:inline">{translations.app?.history || "歷史"}</span>
           </Button>
           
           {/* 儲存按鈕 */}
@@ -170,7 +170,7 @@ export default function AppPage() {
             ) : (
               <Save className="w-4 h-4 mr-1" />
             )}
-            <span className="hidden sm:inline">{saved ? "已儲存" : "儲存"}</span>
+            <span className="hidden sm:inline">{saved ? (translations.app?.saved || "已儲存") : "儲存"}</span>
           </Button>
           
           {/* 分享按鈕 */}
@@ -191,7 +191,7 @@ export default function AppPage() {
             ) : (
               <Share2 className="w-4 h-4 mr-1" />
             )}
-            <span className="hidden sm:inline">{shareCopied ? "已複製" : "分享"}</span>
+            <span className="hidden sm:inline">{shareCopied ? (translations.app?.copied || "已複製") : "分享"}</span>
           </Button>
           
           {/* 新建按鈕 */}
@@ -206,7 +206,7 @@ export default function AppPage() {
             )}
           >
             <Plus className="w-4 h-4 mr-1" />
-            <span className="hidden sm:inline">新建</span>
+            <span className="hidden sm:inline">{translations.app?.new || "新建"}</span>
           </Button>
           
           {/* 設定按鈕 */}
@@ -215,7 +215,7 @@ export default function AppPage() {
               variant="ghost"
               size="sm"
               className="text-slate-300 hover:text-white"
-              title="設定"
+              title="{translations.app?.settings || "設定"}"
             >
               <Settings className="w-4 h-4" />
             </Button>
@@ -266,12 +266,12 @@ export default function AppPage() {
             {/* Story Input */}
             <div className="space-y-2">
               <label className="text-sm font-medium text-slate-300">
-                劇情起點
+                {translations.app?.storyStart || "劇情起點"}
               </label>
               <Textarea
                 value={storyInput}
                 onChange={(e) => setStoryInput(e.target.value)}
-                placeholder="輸入你的劇情起點或靈感..."
+                placeholder="{translations.app?.inputPlaceholder || "輸入你的劇情起點或靈感..."}"
                 className="min-h-[120px] bg-slate-800 border-slate-700 text-slate-200 placeholder:text-slate-500 resize-none"
               />
               <Button
@@ -288,7 +288,7 @@ export default function AppPage() {
             {/* Topic Selector */}
             <div className="space-y-2">
               <label className="text-sm font-medium text-slate-300">
-                題材選擇
+                {translations.app?.topicSelection || "題材選擇"}
               </label>
               <TopicSelector />
             </div>
@@ -296,7 +296,7 @@ export default function AppPage() {
             {/* Character Manager */}
             <div className="space-y-2">
               <label className="text-sm font-medium text-slate-300">
-                角色卡
+                {translations.app?.characterCard || "角色卡"}
               </label>
               <CharacterManager />
             </div>
