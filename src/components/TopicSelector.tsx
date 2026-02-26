@@ -46,6 +46,11 @@ export function TopicSelector() {
     return translations.topics?.[category] || category
   }
   
+  // 獲取翻譯後的題材項目
+  const getItemName = (item: string) => {
+    return translations.topicItems?.[item] || item
+  }
+  
   // 過濾結果
   const filteredTopics = search
     ? TOPICS.map(cat => ({
@@ -116,7 +121,7 @@ export function TopicSelector() {
                 : "border-slate-700 text-slate-300 hover:bg-slate-800"
             )}
           >
-            {item}
+            {getItemName(item)}
           </Button>
         ))}
       </div>
