@@ -59,11 +59,10 @@ export function WordCountDisplay({
 
       {/* 充值 Modal */}
       <RechargeModal
-        isOpen={isOpen}
-        onOpenChange={setIsOpen}
-        onSuccess={() => {
-          // webhook 會更新 word_count，頁面會 refresh
-        }}
+        open={isOpen}
+        onClose={() => setIsOpen(false)}
+        isFirstPurchase={false}
+        wordCount={displayCount}
       />
     </div>
   );
