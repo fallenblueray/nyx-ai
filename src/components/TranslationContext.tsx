@@ -46,7 +46,8 @@ export function TranslationProvider({
   children: React.ReactNode
   translations?: Translations 
 }) {
-  const [t, setT] = useState<Translations>(defaultTranslations)
+  // 初始值使用服務器傳來的翻譯（來自數據庫的用戶偏好）
+  const [t, setT] = useState<Translations>(translations || defaultTranslations)
 
   // 從 localStorage 讀取語言設置
   const loadLanguage = useCallback(() => {
@@ -58,13 +59,11 @@ export function TranslationProvider({
     } catch (e) {
       console.error('[Translation] Error reading localStorage:', e)
     }
+    // 默認使用服務器翻譯
     return translations || defaultTranslations
   }, [translations])
 
   useEffect(() => {
-    // 初始加載
-    setT(loadLanguage())
-
     // 監聽 localStorage 變化
     const handleStorage = (e: StorageEvent) => {
       if (e.key === 'language' && e.newValue) {
@@ -78,7 +77,7 @@ export function TranslationProvider({
 
     window.addEventListener('storage', handleStorage)
     return () => window.removeEventListener('storage', handleStorage)
-  }, [loadLanguage])
+  }, [])
 
   return (
     <TranslationContext.Provider value={t}>

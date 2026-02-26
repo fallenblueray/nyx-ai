@@ -50,7 +50,7 @@ export default function AppPage() {
   
   const handleSaveDraft = () => {
     localStorage.setItem("nyx-ai-draft", storyInput)
-    alert("草稿已儲存！")
+    alert(translations.app?.draftSaved || "草稿已儲存！")
   }
   
   const handleLoadStory = (story: StoryData) => {
