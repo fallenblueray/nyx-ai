@@ -30,7 +30,7 @@ export function ThemeSwitcher({ translations }: ThemeSwitcherProps) {
 
   const applyTheme = (newTheme: Theme) => {
     const html = document.documentElement;
-    // 確保 DOM 更新
+    // 立即應用到 DOM（同步操作）
     if (newTheme === 'dark') {
       html.classList.add('dark');
       html.style.colorScheme = 'dark';
@@ -40,14 +40,15 @@ export function ThemeSwitcher({ translations }: ThemeSwitcherProps) {
     }
     // 確保 localStorage 更新
     localStorage.setItem('theme', newTheme);
-    console.log('[Theme] Applied:', newTheme, 'HTML class:', html.className);
+    console.log('[Theme] Applied:', newTheme, 'classList:', Array.from(html.classList).join(' '));
   };
 
   const handleThemeChange = (value: string) => {
     const newTheme = value as Theme;
-    console.log('[Theme] Changing to:', newTheme);
-    setTheme(newTheme);
+    console.log('[Theme] User changed to:', newTheme);
+    // 立即應用，然後更新狀態
     applyTheme(newTheme);
+    setTheme(newTheme);
   };
 
   if (!mounted) return null;
