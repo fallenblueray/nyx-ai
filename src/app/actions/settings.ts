@@ -1,7 +1,6 @@
 'use server'
 
 import { createAdminClient } from '@/lib/supabase-admin'
-import { createServerClientAsync } from '@/lib/supabase/server-async'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { revalidatePath } from 'next/cache'
@@ -48,23 +47,18 @@ export async function updateUserPreference(
   value: string
 ) {
   try {
-    const supabase = await createServerClientAsync()
-    
-    // 獲取當前用戶
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser()
+    const session = await getServerSession(authOptions)
 
-    if (userError || !user) {
+    if (!session?.user?.id) {
       throw new Error('用戶未登入')
     }
 
-    // 更新 public.profiles 表
+    // 使用 admin client 更新 public.profiles 表
+    const supabase = createAdminClient()
     const { error } = await supabase
       .from('profiles')
       .update({ [key]: value })
-      .eq('user_id', user.id)
+      .eq('user_id', session.user.id)
 
     if (error) {
       throw new Error(`更新失敗: ${error.message}`)

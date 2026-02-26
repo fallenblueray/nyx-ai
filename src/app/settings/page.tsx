@@ -1,5 +1,7 @@
 import { redirect } from 'next/navigation';
-import { createServerClientAsync } from '@/lib/supabase/server-async';
+import { getServerSession } from 'next-auth';
+import { createAdminClient } from '@/lib/supabase-admin';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { LanguageSwitcher } from '@/components/settings/LanguageSwitcher';
 import { ThemeSwitcher } from '@/components/settings/ThemeSwitcher';
 import { WordCountDisplay } from '@/components/settings/WordCountDisplay';
@@ -16,22 +18,19 @@ export const metadata = {
 };
 
 export default async function SettingsPage() {
-  // 驗證用戶登入
-  const supabase = await createServerClientAsync();
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
+  // 驗證用戶登入（使用 NextAuth）
+  const session = await getServerSession(authOptions);
 
-  if (userError || !user) {
+  if (!session?.user?.id) {
     redirect('/auth/signin');
   }
 
-  // 獲取用戶偏好設定（從 public.profiles 表）
+  // 獲取用戶偏好設定（使用 admin client）
+  const supabase = createAdminClient();
   const { data: profileData, error: dataError } = await supabase
     .from('profiles')
     .select('preferred_language, word_count')
-    .eq('user_id', user.id)
+    .eq('user_id', session.user.id)
     .single();
 
   if (dataError || !profileData) {
