@@ -58,7 +58,7 @@ export async function updateUserPreference(
     const { error } = await supabase
       .from('profiles')
       .update({ [key]: value })
-      .eq('user_id', session.user.id)
+      .eq('id', session.user.id)
 
     if (error) {
       throw new Error(`更新失敗: ${error.message}`)

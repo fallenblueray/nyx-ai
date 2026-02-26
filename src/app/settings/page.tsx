@@ -33,7 +33,7 @@ export default async function SettingsPage() {
   const { data: profileData, error: dataError } = await supabase
     .from('profiles')
     .select('preferred_language, word_count')
-    .eq('user_id', session.user.id)
+    .eq('id', session.user.id)
     .single();
 
   console.log('Profile data:', profileData, 'Error:', dataError);
