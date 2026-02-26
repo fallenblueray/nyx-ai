@@ -32,8 +32,8 @@ export function LanguageSwitcher({
     try {
       setLanguage(newLanguage);
       await updateUserPreference('preferred_language', newLanguage);
-      // 延遲重新載入，讓 UI 有時間反應
-      setTimeout(() => router.refresh(), 300);
+      // 刷新整個頁面以應用新語言
+      setTimeout(() => location.reload(), 300);
     } catch (error) {
       console.error('語言切換失敗:', error);
       setLanguage(currentLanguage);
