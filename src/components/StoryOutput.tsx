@@ -159,42 +159,38 @@ ${charStr || "（自由創作）"}`
     try {
       const { systemPrompt, userPrompt } = buildPrompt(isContinue)
       
-      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      // 調用內部 API（服務端 API key）
+      const response = await fetch("/api/generate-story", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${process.env.NEXT_PUBLIC_OPENROUTER_API_KEY}`,
-          "HTTP-Referer": "https://nyx-ai-woad.vercel.app",
-          "X-Title": "NyxAI"
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          model: "deepseek/deepseek-r1-0528",
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userPrompt }
-          ],
-          max_tokens: 4000
+          systemPrompt,
+          userPrompt,
+          model: "deepseek/deepseek-r1-0528"
         })
       })
       
+      const result = await response.json()
+      
       if (!response.ok) {
-        throw new Error(`API 錯誤: ${response.status}`)
+        if (response.status === 402) {
+          // 字數不足，顯示充值 modal
+          const info = await getUserWordCount()
+          setWordInfo(info)
+          setRechargeOpen(true)
+          setError(`字數不足（需要 ${result.required} 字，剩餘 ${result.remaining} 字），請充值`)
+          return
+        }
+        throw new Error(result.error || `API 錯誤: ${response.status}`)
       }
       
-      const data = await response.json()
-      const content = data.choices?.[0]?.message?.content || ""
+      const { content, wordsUsed, remaining } = result
       
-      // 扣除字數
-      const wordsUsed = content.length
-      const deductResult = await deductWordCount(wordsUsed)
-      if (!deductResult.success) {
-        // 字數不足，顯示充值 modal
-        const info = await getUserWordCount()
-        setWordInfo(info)
-        setRechargeOpen(true)
-        setError(`字數不足（需要 ${wordsUsed} 字，剩餘 ${deductResult.remaining} 字），請充值`)
-        return
-      }
+      // 更新字數顯示
+      const info = await getUserWordCount()
+      setWordInfo({ ...info, word_count: remaining })
 
       if (isContinue) {
         appendStoryOutput("\n\n" + content)
