@@ -10,6 +10,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Plus, Pencil, Trash2 } from "lucide-react"
@@ -76,6 +77,9 @@ export function CharacterManager() {
         <DialogContent className="bg-slate-900 border-slate-800 text-slate-200">
           <DialogHeader>
             <DialogTitle>{editingId ? "編輯角色" : "新增角色"}</DialogTitle>
+            <DialogDescription className="text-slate-400">
+              {editingId ? "修改角色的名稱、描述和特質" : "新增一個角色，包括名稱、描述和特質"}
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
