@@ -190,7 +190,7 @@ ${charStr || "（自由創作）"}`
       
       // 更新字數顯示
       const info = await getUserWordCount()
-      setWordInfo({ ...info, word_count: remaining })
+      setWordInfo({ ...info, wordCount: remaining })
 
       if (isContinue) {
         appendStoryOutput("\n\n" + content)
