@@ -1,4 +1,3 @@
-import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { createAdminClient } from '@/lib/supabase-admin';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
@@ -11,23 +10,27 @@ export default async function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // 驗證用戶登入
+  // 不在這裡做服務端重定向，允許匿名訪問
+  // 客戶端會處理登入狀態
   const session = await getServerSession(authOptions);
+  const userId = session?.user?.id;
 
-  if (!session?.user?.id) {
-    redirect('/auth/signin');
+  // 只在有登入時獲取偏好設定
+  let translations = getTranslation('zh-TW');
+  
+  if (userId) {
+    const supabase = createAdminClient();
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('preferred_language')
+      .eq('id', userId)
+      .maybeSingle();
+
+    if (profileData?.preferred_language) {
+      const language = profileData.preferred_language as Language;
+      translations = getTranslation(language);
+    }
   }
-
-  // 獲取用戶偏好設定
-  const supabase = createAdminClient();
-  const { data: profileData } = await supabase
-    .from('profiles')
-    .select('preferred_language')
-    .eq('id', session.user.id)
-    .single();
-
-  const language = (profileData?.preferred_language || 'zh-TW') as Language;
-  const translations = getTranslation(language);
 
   // 將翻譯傳遞給 TranslationProvider
   return (
