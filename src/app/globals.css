@@ -3,19 +3,122 @@
 /* 啟用 class-based dark mode for Tailwind v4 */
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* 預設亮色主題 */
+/* ============================================================
+   淺色主題（預設）
+   ============================================================ */
 :root {
-  --background: #ffffff;
-  --foreground: #020617;
+  --background: #f8fafc;
+  --foreground: #0f172a;
+
+  --surface: #ffffff;
+  --surface-2: #f1f5f9;
+  --surface-3: #e2e8f0;
+
+  --border: #cbd5e1;
+  --border-subtle: #e2e8f0;
+
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+
+  --accent: #7c3aed;
+  --accent-hover: #6d28d9;
+  --accent-bg: rgba(124, 58, 237, 0.1);
+  --accent-border: rgba(124, 58, 237, 0.3);
+
+  --header-bg: rgba(255, 255, 255, 0.85);
+  --sidebar-bg: #ffffff;
+  --input-bg: #f8fafc;
 }
 
-/* 深色主題 */
+/* ============================================================
+   深色主題
+   ============================================================ */
 .dark {
   --background: #020617;
-  --foreground: #fafafa;
+  --foreground: #f8fafc;
+
+  --surface: #0f172a;
+  --surface-2: #1e293b;
+  --surface-3: #334155;
+
+  --border: #334155;
+  --border-subtle: #1e293b;
+
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-muted: #64748b;
+
+  --accent: #7c3aed;
+  --accent-hover: #8b5cf6;
+  --accent-bg: rgba(124, 58, 237, 0.2);
+  --accent-border: rgba(124, 58, 237, 0.4);
+
+  --header-bg: rgba(15, 23, 42, 0.85);
+  --sidebar-bg: #0f172a;
+  --input-bg: #1e293b;
 }
 
+/* ============================================================
+   基礎樣式
+   ============================================================ */
 body {
   background: var(--background);
   color: var(--foreground);
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
+
+/* 滾動條樣式 */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* ============================================================
+   主題 utility class
+   ============================================================ */
+.nyx-header {
+  background: var(--header-bg);
+  border-color: var(--border);
+  backdrop-filter: blur(12px);
+}
+
+.nyx-sidebar {
+  background: var(--sidebar-bg);
+  border-color: var(--border);
+}
+
+.nyx-surface {
+  background: var(--surface);
+  border-color: var(--border);
+}
+
+.nyx-surface-2 {
+  background: var(--surface-2);
+}
+
+.nyx-input {
+  background: var(--input-bg);
+  border-color: var(--border);
+  color: var(--text-primary);
+}
+
+.nyx-input::placeholder {
+  color: var(--text-muted);
+}
+
+.nyx-text-primary { color: var(--text-primary); }
+.nyx-text-secondary { color: var(--text-secondary); }
+.nyx-text-muted { color: var(--text-muted); }
+.nyx-border { border-color: var(--border); }
+.nyx-accent-bg { background: var(--accent-bg); }
+.nyx-accent-border { border-color: var(--accent-border); }
