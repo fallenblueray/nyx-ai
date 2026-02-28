@@ -141,7 +141,12 @@ export async function POST(req: NextRequest) {
                 const data = line.slice(6)
 
                 if (data === '[DONE]') {
-                  const wordsUsed = fullContent.length
+                  // Debug: Log content length for debugging word count issues
+                  const contentLength = fullContent.length
+                  console.log(`[generate-story] DEBUG fullContent: length=${contentLength}, first50="${fullContent.substring(0,50)}"`)
+                  console.log(`[generate-story] DEBUG: isAnonymous=${isAnonymous}, currentWordCount=${currentWordCount}`)
+
+                  const wordsUsed = contentLength
 
                   // 字數不足檢查
                   if (currentWordCount < wordsUsed) {
@@ -175,7 +180,10 @@ export async function POST(req: NextRequest) {
                       .eq("anonymous_id", anonymousId)
                       .maybeSingle()
 
-                    const newWordsUsed = (existing?.words_used ?? 0) + wordsUsed
+                    const existingWordsUsed = existing?.words_used ?? 0
+                    const newWordsUsed = existingWordsUsed + wordsUsed
+                    console.log(`[generate-story] DEBUG: existingWordsUsed=${existingWordsUsed}, adding=${wordsUsed}, newTotal=${newWordsUsed}`)
+
                     await supabase
                       .from("anonymous_usage")
                       .upsert({
