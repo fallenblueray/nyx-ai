@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "../auth/[...nextauth]/route"
 import { createAdminClient } from "@/lib/supabase-admin"
+import { detectPromptInjection, validateInput, detectIllegalContent, checkRateLimit } from "@/lib/security"
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -19,10 +20,67 @@ export async function POST(req: NextRequest) {
 
   try {
     const session = await getServerSession(authOptions)
-    const { systemPrompt, userPrompt, model = "deepseek/deepseek-r1-0528", anonymousId } = await req.json()
+    const { systemPrompt, userPrompt, model = "deepseek/deepseek-r1-0528", anonymousId, topics, characters } = await req.json()
 
     if (!systemPrompt || !userPrompt) {
       return NextResponse.json({ error: "缺少 prompt" }, { status: 400 })
+    }
+
+    // ============================================================
+    // 安全層 1: 輸入驗證
+    // ============================================================
+    const validation = validateInput({
+      storyInput: userPrompt,
+      topics,
+      characters
+    })
+    if (!validation.valid) {
+      return NextResponse.json({ error: validation.error }, { status: 400 })
+    }
+
+    // ============================================================
+    // 安全層 2: Prompt Injection 檢測
+    // ============================================================
+    const combinedInput = `${systemPrompt} ${userPrompt}`
+    const injectionCheck = detectPromptInjection(combinedInput)
+    if (injectionCheck.isInjection) {
+      console.warn(`[security] Prompt injection detected: ${injectionCheck.matchedPattern}`)
+      return NextResponse.json({
+        error: "輸入包含不安全內容，請修正後再試"
+      }, { status: 400 })
+    }
+
+    // ============================================================
+    // 安全層 3: 非法內容檢測（法律底線）
+    // ============================================================
+    const illegalCheck = detectIllegalContent(combinedInput)
+    if (illegalCheck.isIllegal) {
+      console.warn(`[security] Illegal content detected: ${illegalCheck.matchedPattern}`)
+      return NextResponse.json({
+        error: "系統無法處理此請求"
+      }, { status: 400 })
+    }
+
+    // ============================================================
+    // 安全層 4: 速率限制
+    // ============================================================
+    const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+      || req.headers.get('x-real-ip')
+      || 'unknown'
+    const userId = session?.user?.id
+    const identifier = userId || anonymousId || clientIp
+    const rateLimitType = userId ? 'loggedIn' : 'anonymous'
+
+    const rateCheck = checkRateLimit(identifier, rateLimitType)
+    if (!rateCheck.allowed) {
+      return NextResponse.json({
+        error: `請求過於頻繁，請 ${Math.ceil(rateCheck.resetIn / 1000)} 秒後再試`
+      }, {
+        status: 429,
+        headers: {
+          'Retry-After': String(Math.ceil(rateCheck.resetIn / 1000))
+        }
+      })
     }
 
     const apiKey = process.env.OPENROUTER_API_KEY

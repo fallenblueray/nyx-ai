@@ -177,6 +177,8 @@ export function GenerateButtons() {
           systemPrompt,
           userPrompt,
           model: "deepseek/deepseek-r1-0528",
+          topics: selectedTopics,
+          characters,
           ...(anonymousId && { anonymousId }),
         })
       })
