@@ -4,6 +4,7 @@ import { authOptions } from "../auth/[...nextauth]/route"
 import { createAdminClient } from "@/lib/supabase-admin"
 import { detectPromptInjection, validateInput, detectIllegalContent, checkRateLimit } from "@/lib/security"
 import { evaluateStory } from "@/lib/evaluation"
+import { buildCacheKey, getCachedStory, setCachedStory } from "@/lib/redis-cache"
 import crypto from "crypto"
 
 export const runtime = 'nodejs'
@@ -148,6 +149,52 @@ export async function POST(req: NextRequest) {
     }
 
     // ============================================================
+    // 緩存層：命中則直接返回，跳過 OpenRouter 調用
+    // ============================================================
+    const cacheKey = buildCacheKey({ model, systemPrompt: enrichedSystemPrompt, userPrompt })
+    const cached = await getCachedStory(cacheKey)
+
+    if (cached) {
+      // 緩存命中：扣字數 + 直接以 SSE 返回
+      const wordsUsed = cached.content.length
+      if (currentWordCount < wordsUsed) {
+        return NextResponse.json({
+          error: "字數不足",
+          errorType: isAnonymous ? "free_quota_exceeded" : "insufficient_words",
+          remaining: currentWordCount,
+          required: wordsUsed
+        }, { status: 402 })
+      }
+
+      // 扣字數
+      if (isLoggedIn) {
+        await supabase.from("profiles").update({ word_count: currentWordCount - wordsUsed }).eq("id", session!.user.id)
+        updateUserPreferencesAsync(supabase, session!.user.id, wordsUsed).catch(console.warn)
+      } else if (anonymousId) {
+        const { data: ex } = await supabase.from("anonymous_usage").select("words_used").eq("anonymous_id", anonymousId).maybeSingle()
+        await supabase.from("anonymous_usage").upsert({ anonymous_id: anonymousId, words_used: (ex?.words_used ?? 0) + wordsUsed, words_limit: FREE_WORD_LIMIT }, { onConflict: 'anonymous_id' })
+      }
+
+      // 流式輸出緩存內容
+      const encoder2 = new TextEncoder()
+      const cachedStream = new ReadableStream({
+        start(ctrl) {
+          // 分塊發送，模擬流式體驗
+          const chunkSize = 50
+          for (let i = 0; i < cached.content.length; i += chunkSize) {
+            const chunk = cached.content.slice(i, i + chunkSize)
+            ctrl.enqueue(encoder2.encode(`data: ${JSON.stringify({ content: chunk })}\n\n`))
+          }
+          ctrl.enqueue(encoder2.encode(`data: ${JSON.stringify({ done: true, wordsUsed, remaining: currentWordCount - wordsUsed, isAnonymous, fromCache: true })}\n\n`))
+          ctrl.close()
+        }
+      })
+      return new Response(cachedStream, {
+        headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive' }
+      })
+    }
+
+    // ============================================================
     // 建立 Streaming Response
     // ============================================================
     const startTime = Date.now()
@@ -256,6 +303,11 @@ export async function POST(req: NextRequest) {
                   })}\n\n`))
 
                   controller.close()
+
+                  // ============================================================
+                  // 緩存層：異步寫入 Redis（不阻塞串流）
+                  // ============================================================
+                  setCachedStory(cacheKey, fullContent, model).catch(console.warn)
 
                   // ============================================================
                   // 評估層：異步記錄 + 質量評估（不阻塞串流）
