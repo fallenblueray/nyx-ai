@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "../auth/[...nextauth]/route"
 import { createAdminClient } from "@/lib/supabase-admin"
 import { detectPromptInjection, validateInput, detectIllegalContent, checkRateLimit } from "@/lib/security"
+import { evaluateStory } from "@/lib/evaluation"
+import crypto from "crypto"
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -148,6 +150,7 @@ export async function POST(req: NextRequest) {
     // ============================================================
     // 建立 Streaming Response
     // ============================================================
+    const startTime = Date.now()
     const stream = new ReadableStream({
       async start(controller) {
         try {
@@ -253,6 +256,35 @@ export async function POST(req: NextRequest) {
                   })}\n\n`))
 
                   controller.close()
+
+                  // ============================================================
+                  // 評估層：異步記錄 + 質量評估（不阻塞串流）
+                  // ============================================================
+                  const storyIdForEval = crypto.randomUUID()
+                  const promptHash = crypto.createHash('sha256')
+                    .update(userPrompt).digest('hex').slice(0, 16)
+                  
+                  // 記錄行為日誌
+                  supabase.from('evaluation_logs').insert({
+                    user_id: isLoggedIn ? session!.user.id : null,
+                    prompt_hash: promptHash,
+                    model,
+                    latency_ms: Date.now() - startTime,
+                    completion_tokens: wordsUsed,
+                    guardrail_triggered: false,
+                    is_anonymous: isAnonymous,
+                  }).then()
+
+                  // 異步質量評估（採樣 30%，節省成本）
+                  if (Math.random() < 0.3) {
+                    evaluateStory(storyIdForEval, {
+                      content: fullContent,
+                      storyInput: userPrompt,
+                      topics,
+                      characters,
+                    }).catch(console.warn)
+                  }
+
                   return
                 }
 
