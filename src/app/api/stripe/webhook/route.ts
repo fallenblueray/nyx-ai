@@ -82,9 +82,14 @@ export async function POST(req: NextRequest) {
     const newWordCount = (user?.word_count ?? 0) + finalWords
     console.log('📝 [webhook] Updating word_count:', newWordCount)
     
+    // is_first_purchase: 首充完成後永久設為 false，非首充不改變此欄位
     const { error: updateError } = await supabase
       .from('profiles')
-      .upsert({ id: userId, word_count: newWordCount, is_first_purchase: isFirstPurchase ? false : (user?.is_first_purchase ?? true) })
+      .upsert({
+        id: userId,
+        word_count: newWordCount,
+        ...(isFirstPurchase && { is_first_purchase: false }),
+      })
 
     console.log('📝 [webhook] Profile update result:', updateError)
 

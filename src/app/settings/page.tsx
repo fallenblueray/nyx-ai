@@ -5,30 +5,27 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { LanguageSwitcher } from '@/components/settings/LanguageSwitcher';
 import { ThemeSwitcher } from '@/components/settings/ThemeSwitcher';
 import { WordCountDisplay } from '@/components/settings/WordCountDisplay';
+import { MemorySettings } from '@/components/settings/MemorySettings';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { getTranslation } from '@/lib/i18n';
 import type { Language } from '@/lib/i18n';
+import { getUserPreferences } from '@/app/actions/preferences';
 
 export const metadata = {
   title: '設定 | NyxAI',
-  description: '管理語言、外觀、字數和充值',
+  description: '管理語言、外觀、字數、充值和 AI 記憶',
 };
 
 export default async function SettingsPage() {
-  // 驗證用戶登入（使用 NextAuth）
   const session = await getServerSession(authOptions);
 
-  console.log('Settings page - session:', session);
-
   if (!session?.user?.id) {
-    console.log('No session or user ID, redirecting to signin');
     redirect('/auth/signin');
   }
 
-  // 獲取用戶偏好設定（使用 admin client）
   const supabase = createAdminClient();
   const { data: profileData, error: dataError } = await supabase
     .from('profiles')
@@ -36,16 +33,16 @@ export default async function SettingsPage() {
     .eq('id', session.user.id)
     .single();
 
-  console.log('Profile data:', profileData, 'Error:', dataError);
-
   if (dataError || !profileData) {
-    console.log('No profile data, redirecting to app');
     redirect('/app');
   }
 
   const language = (profileData.preferred_language || 'zh-TW') as Language;
   const translations = getTranslation(language);
   const wordCount = profileData.word_count || 0;
+
+  // 獲取記憶層偏好
+  const { preferences } = await getUserPreferences();
 
   return (
     <div className="min-h-screen bg-white dark:bg-slate-950">
@@ -69,8 +66,7 @@ export default async function SettingsPage() {
       {/* Content */}
       <div className="mx-auto max-w-2xl px-4 py-8 sm:px-6 lg:px-8">
         <Tabs defaultValue="language" className="w-full">
-          {/* Tabs 標籤 */}
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="language">
               {translations.settings.tabs.language}
             </TabsTrigger>
@@ -80,24 +76,29 @@ export default async function SettingsPage() {
             <TabsTrigger value="wordcount">
               {translations.settings.tabs.wordCount}
             </TabsTrigger>
+            <TabsTrigger value="memory">
+              🧠 AI 記憶
+            </TabsTrigger>
           </TabsList>
 
-          {/* 語言 Tab */}
           <TabsContent value="language" className="space-y-4">
-            <LanguageSwitcher
-              currentLanguage={language}
-              translations={translations}
-            />
+            <LanguageSwitcher currentLanguage={language} translations={translations} />
           </TabsContent>
 
-          {/* 外觀 Tab */}
           <TabsContent value="appearance" className="space-y-4">
             <ThemeSwitcher translations={translations} />
           </TabsContent>
 
-          {/* 字數與充值 Tab */}
           <TabsContent value="wordcount" className="space-y-4">
             <WordCountDisplay wordCount={wordCount} translations={translations} />
+          </TabsContent>
+
+          <TabsContent value="memory" className="space-y-4">
+            {preferences ? (
+              <MemorySettings initialPreferences={preferences} />
+            ) : (
+              <p className="text-slate-400 text-sm">載入記憶設定中...</p>
+            )}
           </TabsContent>
         </Tabs>
       </div>
