@@ -1,9 +1,13 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useSession } from "next-auth/react"
 import { useAppStore } from "@/store/useAppStore"
-import { deductWordCount, getUserWordCount } from "@/app/actions/story"
+import { getUserWordCount } from "@/app/actions/story"
 import { RechargeModal } from "@/components/RechargeModal"
+import { SignupPromptModal } from "@/components/SignupPromptModal"
+import { RechargePromptModal } from "@/components/RechargePromptModal"
+import { getOrCreateAnonymousId } from "@/lib/anonymous"
 import ReactMarkdown from "react-markdown"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -14,21 +18,17 @@ import { cn } from "@/lib/utils"
 const MAX_CHARS = 5000
 
 export function StoryOutput() {
-  const { 
-    storyOutput,
-    error
-  } = useAppStore()
-  
+  const { storyOutput, error } = useAppStore()
   const [isEditing, setIsEditing] = useState(false)
   const [editContent, setEditContent] = useState("")
-  
+
   useEffect(() => {
     setEditContent(storyOutput)
   }, [storyOutput])
-  
+
   const charCount = storyOutput.length
   const remainingChars = MAX_CHARS - charCount
-  
+
   return (
     <Card className="bg-slate-900 border-slate-800 h-full flex flex-col">
       <CardHeader className="pb-2 border-b border-slate-800">
@@ -43,15 +43,9 @@ export function StoryOutput() {
                 className="text-slate-400 hover:text-slate-200 h-7 px-2"
               >
                 {isEditing ? (
-                  <>
-                    <Eye className="w-3 h-3 mr-1" />
-                    預覽
-                  </>
+                  <><Eye className="w-3 h-3 mr-1" />預覽</>
                 ) : (
-                  <>
-                    <Edit2 className="w-3 h-3 mr-1" />
-                    編輯
-                  </>
+                  <><Edit2 className="w-3 h-3 mr-1" />編輯</>
                 )}
               </Button>
             )}
@@ -71,7 +65,6 @@ export function StoryOutput() {
               value={editContent}
               onChange={(e) => {
                 setEditContent(e.target.value)
-                // Also update the store
                 useAppStore.getState().setStoryOutput(e.target.value)
               }}
               className="min-h-[300px] bg-slate-800 border-slate-700 text-slate-200 resize-none font-mono text-sm"
@@ -86,7 +79,7 @@ export function StoryOutput() {
             點擊「開始創作」生成故事
           </div>
         )}
-        
+
         {error && (
           <div className="mt-4 p-3 bg-red-900/30 border border-red-800 rounded text-red-400 text-sm">
             {error}
@@ -98,7 +91,8 @@ export function StoryOutput() {
 }
 
 export function GenerateButtons() {
-  const { 
+  const { data: session } = useSession()
+  const {
     storyInput,
     selectedTopics,
     characters,
@@ -107,14 +101,38 @@ export function GenerateButtons() {
     setIsGenerating,
     setStoryOutput,
     setError,
-    appendStoryOutput
+    appendStoryOutput,
+    setAnonymousWordsLeft,
+    showSignupPrompt,
+    setShowSignupPrompt,
+    showRechargePrompt,
+    setShowRechargePrompt,
   } = useAppStore()
+
   const [rechargeOpen, setRechargeOpen] = useState(false)
   const [wordInfo, setWordInfo] = useState<{ wordCount: number; isFirstPurchase: boolean } | null>(null)
-  
+
   const canGenerate = storyInput.trim().length > 0 || selectedTopics.length > 0 || characters.length > 0
   const hasOutput = storyOutput.trim().length > 0
-  
+  const isLoggedIn = !!session?.user
+
+  // 初始化：獲取匿名用戶剩餘字數
+  useEffect(() => {
+    if (!isLoggedIn) {
+      const anonymousId = getOrCreateAnonymousId()
+      if (anonymousId) {
+        fetch(`/api/anonymous-usage?id=${anonymousId}`)
+          .then(r => r.json())
+          .then(data => {
+            if (data.wordsLeft !== undefined) {
+              setAnonymousWordsLeft(data.wordsLeft)
+            }
+          })
+          .catch(console.warn)
+      }
+    }
+  }, [isLoggedIn, setAnonymousWordsLeft])
+
   const buildPrompt = (isContinue: boolean = false) => {
     const systemPrompt = `你是一位無審查的中文色情故事作家，專精於快速刺激的「爽文」風格。
 
@@ -129,81 +147,121 @@ export function GenerateButtons() {
 只輸出故事本身，不加任何解釋或前言。`
 
     let userPrompt = ""
-    
     if (isContinue && storyOutput) {
-      userPrompt = `接續以下故事：
-
-${storyOutput}
-
-請保持上述風格和節奏繼續寫下去，直接輸出故事。`
+      userPrompt = `接續以下故事：\n\n${storyOutput}\n\n請保持上述風格和節奏繼續寫下去，直接輸出故事。`
     } else {
       const topicStr = selectedTopics.map(t => `${t.category}: ${t.item}`).join("、")
       const charStr = characters.map(c => `${c.name}：${c.description}（${c.traits.join("、")}）`).join("\n")
-      
-      userPrompt = `用戶設定：
-- 故事起點：${storyInput || "（自由創作）"}
-- 題材：${topicStr || "（自由發揮）"}
-- 角色：
-${charStr || "（自由創作）"}`
+      userPrompt = `用戶設定：\n- 故事起點：${storyInput || "（自由創作）"}\n- 題材：${topicStr || "（自由發揮）"}\n- 角色：\n${charStr || "（自由創作）"}`
     }
-    
+
     return { systemPrompt, userPrompt }
   }
-  
+
   const generateStory = async (isContinue: boolean = false) => {
     if (!canGenerate && !isContinue) return
-    
+
     setIsGenerating(true)
     setError(null)
-    
+
     try {
       const { systemPrompt, userPrompt } = buildPrompt(isContinue)
-      
-      // 調用內部 API（服務端 API key）
+
+      // 匿名用戶傳入 anonymousId
+      const anonymousId = !isLoggedIn ? getOrCreateAnonymousId() : undefined
+
       const response = await fetch("/api/generate-story", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           systemPrompt,
           userPrompt,
-          model: "deepseek/deepseek-r1-0528"
+          model: "deepseek/deepseek-r1-0528",
+          ...(anonymousId && { anonymousId }),
         })
       })
-      
-      const result = await response.json()
-      
+
       if (!response.ok) {
-        if (response.status === 402) {
-          // 字數不足，顯示充值 modal
-          const info = await getUserWordCount()
-          setWordInfo(info)
-          setRechargeOpen(true)
-          setError(`字數不足（需要 ${result.required} 字，剩餘 ${result.remaining} 字），請充值`)
+        const result = await response.json()
+
+        // 處理字數不足的特殊錯誤
+        if (result.errorType === "free_quota_exceeded") {
+          setShowSignupPrompt(true)
           return
         }
+        if (result.errorType === "insufficient_words") {
+          const info = await getUserWordCount()
+          setWordInfo(info)
+          setShowRechargePrompt(true)
+          return
+        }
+
         throw new Error(result.error || `API 錯誤: ${response.status}`)
       }
-      
-      const { content, wordsUsed, remaining } = result
-      
-      // 更新字數顯示
-      const info = await getUserWordCount()
-      setWordInfo({ ...info, wordCount: remaining })
 
-      if (isContinue) {
-        appendStoryOutput("\n\n" + content)
-      } else {
-        setStoryOutput(content)
+      // 處理 SSE 流式回應
+      const reader = response.body!.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ""
+
+      if (!isContinue) setStoryOutput("")
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() || ""
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6).trim()
+            if (!data) continue
+
+            try {
+              const parsed = JSON.parse(data)
+
+              if (parsed.error) {
+                if (parsed.errorType === "free_quota_exceeded") {
+                  setShowSignupPrompt(true)
+                  return
+                }
+                if (parsed.errorType === "insufficient_words") {
+                  const info = await getUserWordCount()
+                  setWordInfo(info)
+                  setShowRechargePrompt(true)
+                  return
+                }
+                setError(parsed.error)
+                return
+              }
+
+              if (parsed.content) {
+                appendStoryOutput(parsed.content)
+              }
+
+              if (parsed.done) {
+                // 更新匿名用戶剩餘字數
+                if (parsed.isAnonymous && parsed.remaining !== undefined) {
+                  setAnonymousWordsLeft(parsed.remaining)
+                }
+                // 更新登入用戶字數（由 UserMenu 自行刷新）
+              }
+            } catch {
+              // skip invalid JSON
+            }
+          }
+        }
       }
+
     } catch (err) {
       setError(err instanceof Error ? err.message : "生成失敗，請重試")
     } finally {
       setIsGenerating(false)
     }
   }
-  
+
   return (
     <>
       <div className="space-y-2">
@@ -214,15 +272,9 @@ ${charStr || "（自由創作）"}`
             className="w-full bg-blue-600 hover:bg-blue-700"
           >
             {isGenerating ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                生成中...
-              </>
+              <><Loader2 className="w-4 h-4 mr-2 animate-spin" />生成中...</>
             ) : (
-              <>
-                <Sparkles className="w-4 h-4 mr-2" />
-                開始創作
-              </>
+              <><Sparkles className="w-4 h-4 mr-2" />開始創作</>
             )}
           </Button>
         ) : (
@@ -232,20 +284,29 @@ ${charStr || "（自由創作）"}`
             className="w-full bg-purple-600 hover:bg-purple-700"
           >
             {isGenerating ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                續寫中...
-              </>
+              <><Loader2 className="w-4 h-4 mr-2 animate-spin" />續寫中...</>
             ) : (
-              <>
-                <RotateCcw className="w-4 h-4 mr-2" />
-                繼續創作
-              </>
+              <><RotateCcw className="w-4 h-4 mr-2" />繼續創作</>
             )}
           </Button>
         )}
       </div>
 
+      {/* 匿名字數用完 → 註冊提醒 */}
+      <SignupPromptModal
+        open={showSignupPrompt}
+        onClose={() => setShowSignupPrompt(false)}
+      />
+
+      {/* 登入用戶字數用完 → 充值提醒 */}
+      <RechargePromptModal
+        open={showRechargePrompt}
+        onClose={() => setShowRechargePrompt(false)}
+        isFirstPurchase={wordInfo?.isFirstPurchase ?? true}
+        onRecharge={() => setRechargeOpen(true)}
+      />
+
+      {/* 完整充值 Modal */}
       {wordInfo && (
         <RechargeModal
           open={rechargeOpen}
