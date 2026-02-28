@@ -122,3 +122,44 @@ body {
 .nyx-border { border-color: var(--border); }
 .nyx-accent-bg { background: var(--accent-bg); }
 .nyx-accent-border { border-color: var(--accent-border); }
+
+/* Hover utilities */
+.hover\:nyx-surface-2:hover { background: var(--surface-2); }
+.hover\:nyx-text-primary:hover { color: var(--text-primary); }
+
+/* Input 組件統一樣式 */
+input.nyx-input, textarea.nyx-input {
+  background: var(--input-bg);
+  border-color: var(--border);
+  color: var(--text-primary);
+}
+input.nyx-input::placeholder, textarea.nyx-input::placeholder {
+  color: var(--text-muted);
+}
+
+/* Dialog 主題修正 */
+[role="dialog"] {
+  background: var(--surface) !important;
+  border-color: var(--border) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Card 主題修正 */
+.nyx-surface.card,
+.card.nyx-surface {
+  background: var(--surface);
+  border-color: var(--border);
+}
+
+/* 手機響應式：側邊欄關閉時，主輸出區域全寬 */
+@media (max-width: 767px) {
+  .story-output-mobile {
+    height: calc(100vh - 10rem);
+  }
+  
+  /* 手機版：增大按鈕點擊區域 */
+  .nyx-header button {
+    min-width: 36px;
+    min-height: 36px;
+  }
+}

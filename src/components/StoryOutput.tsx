@@ -30,17 +30,17 @@ export function StoryOutput() {
   const remainingChars = MAX_CHARS - charCount
 
   return (
-    <Card className="bg-slate-900 border-slate-800 h-full flex flex-col">
-      <CardHeader className="pb-2 border-b border-slate-800">
+    <Card className="nyx-surface nyx-border h-full flex flex-col">
+      <CardHeader className="pb-2 border-b nyx-border">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-slate-200 text-base">故事輸出</CardTitle>
+          <CardTitle className="nyx-text-primary text-base">故事輸出</CardTitle>
           <div className="flex items-center gap-2">
             {storyOutput && (
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setIsEditing(!isEditing)}
-                className="text-slate-400 hover:text-slate-200 h-7 px-2"
+                className="nyx-text-muted hover:nyx-text-primary h-7 px-2"
               >
                 {isEditing ? (
                   <><Eye className="w-3 h-3 mr-1" />預覽</>
@@ -51,7 +51,7 @@ export function StoryOutput() {
             )}
             <span className={cn(
               "text-xs",
-              remainingChars < 0 ? "text-red-400" : "text-slate-500"
+              remainingChars < 0 ? "text-red-400" : "nyx-text-muted"
             )}>
               {charCount} / {MAX_CHARS} 字
             </span>
@@ -67,7 +67,7 @@ export function StoryOutput() {
                 setEditContent(e.target.value)
                 useAppStore.getState().setStoryOutput(e.target.value)
               }}
-              className="min-h-[300px] bg-slate-800 border-slate-700 text-slate-200 resize-none font-mono text-sm"
+              className="min-h-[300px] nyx-input nyx-text-primary resize-none font-mono text-sm"
             />
           ) : (
             <div className="prose prose-invert prose-sm max-w-none">
@@ -75,7 +75,7 @@ export function StoryOutput() {
             </div>
           )
         ) : (
-          <div className="h-full flex items-center justify-center text-slate-600 text-sm">
+          <div className="h-full flex items-center justify-center nyx-text-muted text-sm">
             點擊「開始創作」生成故事
           </div>
         )}

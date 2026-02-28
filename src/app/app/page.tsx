@@ -298,9 +298,23 @@ export default function AppPage() {
         
         {/* Main Workspace */}
         <main className="flex-1 p-4 md:p-6 ml-0 md:ml-80">
-          <div className="h-[calc(100vh-5rem)]">
+          {/* 手機：面板關閉時全高；桌面：固定高度 */}
+          <div className="h-[calc(100vh-5rem)] story-output-mobile">
             <StoryOutput />
           </div>
+          
+          {/* 手機版底部快速操作欄（面板收合時顯示） */}
+          {isPanelCollapsed && (
+            <div className="md:hidden fixed bottom-0 left-0 right-0 z-30 nyx-header border-t px-4 py-2 flex gap-2">
+              <Button
+                size="sm"
+                onClick={() => setPanelCollapsed(false)}
+                className="flex-1 bg-purple-600 hover:bg-purple-700 text-white text-xs"
+              >
+                ✍️ 設定故事
+              </Button>
+            </div>
+          )}
         </main>
       </div>
     </main>

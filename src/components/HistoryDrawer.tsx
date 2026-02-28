@@ -58,18 +58,18 @@ export function HistoryDrawer({ isOpen, onClose, onLoadStory }: HistoryDrawerPro
       />
       
       {/* Drawer */}
-      <div className="fixed right-0 top-0 bottom-0 w-full max-w-md bg-slate-900 border-l border-slate-800 z-50 flex flex-col">
+      <div className="fixed right-0 top-0 bottom-0 w-full max-w-md bg-slate-900 border-l nyx-border z-50 flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-slate-800">
+        <div className="flex items-center justify-between p-4 border-b nyx-border">
           <div className="flex items-center gap-2">
-            <History className="w-5 h-5 text-slate-400" />
+            <History className="w-5 h-5 nyx-text-muted" />
             <h2 className="text-lg font-bold text-white">歷史故事</h2>
           </div>
           <Button
             variant="ghost"
             size="icon"
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-200"
+            className="nyx-text-muted hover:nyx-text-primary"
           >
             <X className="w-5 h-5" />
           </Button>
@@ -78,13 +78,13 @@ export function HistoryDrawer({ isOpen, onClose, onLoadStory }: HistoryDrawerPro
         {/* Content */}
         <ScrollArea className="flex-1 p-4">
           {!isLoggedIn && (
-            <div className="text-center py-8 text-slate-500">
+            <div className="text-center py-8 nyx-text-muted">
               🔒 登入後查看歷史
             </div>
           )}
 
           {isLoggedIn && loading && (
-            <div className="text-center py-8 text-slate-500">
+            <div className="text-center py-8 nyx-text-muted">
               載入中...
             </div>
           )}
@@ -96,7 +96,7 @@ export function HistoryDrawer({ isOpen, onClose, onLoadStory }: HistoryDrawerPro
           )}
           
           {isLoggedIn && !loading && !error && stories.length === 0 && (
-            <div className="text-center py-8 text-slate-500">
+            <div className="text-center py-8 nyx-text-muted">
               還沒有儲存的故事
             </div>
           )}
@@ -105,11 +105,11 @@ export function HistoryDrawer({ isOpen, onClose, onLoadStory }: HistoryDrawerPro
             {stories.map((story) => (
               <Card 
                 key={story.id} 
-                className="bg-slate-800/50 border-slate-700 cursor-pointer hover:bg-slate-800 transition-colors"
+                className="nyx-surface-2 nyx-border cursor-pointer hover:nyx-surface-2 transition-colors"
                 onClick={() => handleLoad(story)}
               >
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm text-slate-200 flex items-center justify-between">
+                  <CardTitle className="text-sm nyx-text-primary flex items-center justify-between">
                     {story.title || "無標題"}
                     <Button
                       variant="ghost"
@@ -125,7 +125,7 @@ export function HistoryDrawer({ isOpen, onClose, onLoadStory }: HistoryDrawerPro
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="pt-0">
-                  <p className="text-xs text-slate-500 line-clamp-2">
+                  <p className="text-xs nyx-text-muted line-clamp-2">
                     {story.content?.slice(0, 150)}...
                   </p>
                   <p className="text-xs text-slate-600 mt-2">

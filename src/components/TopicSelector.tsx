@@ -83,7 +83,7 @@ export function TopicSelector() {
         placeholder={translations.app?.searchTopics || "搜尋題材..."}
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        className="bg-slate-800 border-slate-700 text-slate-200 placeholder:text-slate-500"
+        className="nyx-input nyx-text-primary placeholder:nyx-text-muted"
       />
       
       {/* 分類標籤 */}
@@ -98,7 +98,7 @@ export function TopicSelector() {
               "text-xs",
               activeCategory === idx 
                 ? "bg-blue-600 hover:bg-blue-700" 
-                : "text-slate-400 hover:text-slate-200 hover:bg-slate-800"
+                : "nyx-text-muted hover:nyx-text-primary hover:nyx-surface-2"
             )}
           >
             {getCategoryName(cat.category)}
@@ -118,7 +118,7 @@ export function TopicSelector() {
               "text-xs",
               isSelected(item)
                 ? "bg-purple-600 hover:bg-purple-700"
-                : "border-slate-700 text-slate-300 hover:bg-slate-800"
+                : "nyx-border nyx-text-secondary hover:nyx-surface-2"
             )}
           >
             {getItemName(item)}
@@ -128,18 +128,18 @@ export function TopicSelector() {
       
       {/* 已選題材 */}
       {selectedTopics.length > 0 && (
-        <div className="pt-2 border-t border-slate-800">
-          <p className="text-xs text-slate-500 mb-2">{translations.app?.selected || "已選"}：</p>
+        <div className="pt-2 border-t nyx-border">
+          <p className="text-xs nyx-text-muted mb-2">{translations.app?.selected || "已選"}：</p>
           <div className="flex flex-wrap gap-1">
             {selectedTopics.map((t, idx) => (
               <span
                 key={idx}
-                className="inline-flex items-center gap-1 px-2 py-1 bg-slate-800 rounded text-xs text-slate-300"
+                className="inline-flex items-center gap-1 px-2 py-1 nyx-surface-2 rounded text-xs nyx-text-secondary"
               >
                 {getCategoryName(t.category)}: {t.item}
                 <button
                   onClick={() => removeTopic(t)}
-                  className="text-slate-500 hover:text-red-400"
+                  className="nyx-text-muted hover:text-red-400"
                 >
                   ×
                 </button>

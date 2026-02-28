@@ -69,44 +69,44 @@ export function CharacterManager() {
     <div className="space-y-3">
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogTrigger asChild>
-          <Button variant="outline" size="sm" className="w-full border-slate-700 text-slate-300 hover:bg-slate-800">
+          <Button variant="outline" size="sm" className="w-full nyx-border nyx-text-secondary hover:nyx-surface-2">
             <Plus className="w-4 h-4 mr-2" />
             新增角色
           </Button>
         </DialogTrigger>
-        <DialogContent className="bg-slate-900 border-slate-800 text-slate-200">
+        <DialogContent className="nyx-surface nyx-border nyx-text-primary">
           <DialogHeader>
             <DialogTitle>{editingId ? "編輯角色" : "新增角色"}</DialogTitle>
-            <DialogDescription className="text-slate-400">
+            <DialogDescription className="nyx-text-muted">
               {editingId ? "修改角色的名稱、描述和特質" : "新增一個角色，包括名稱、描述和特質"}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <label className="text-sm text-slate-400">名稱</label>
+              <label className="text-sm nyx-text-muted">名稱</label>
               <Input
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 placeholder="角色名稱"
-                className="bg-slate-800 border-slate-700"
+                className="nyx-input"
               />
             </div>
             <div>
-              <label className="text-sm text-slate-400">描述</label>
+              <label className="text-sm nyx-text-muted">描述</label>
               <Input
                 value={form.description}
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
                 placeholder="角色簡述"
-                className="bg-slate-800 border-slate-700"
+                className="nyx-input"
               />
             </div>
             <div>
-              <label className="text-sm text-slate-400">特質 (逗號分隔)</label>
+              <label className="text-sm nyx-text-muted">特質 (逗號分隔)</label>
               <Input
                 value={form.traits}
                 onChange={(e) => setForm({ ...form, traits: e.target.value })}
                 placeholder="例如: 傲嬌, 銀髮, 巨乳"
-                className="bg-slate-800 border-slate-700"
+                className="nyx-input"
               />
             </div>
             <Button onClick={handleSubmit} className="w-full bg-blue-600 hover:bg-blue-700">
@@ -119,10 +119,10 @@ export function CharacterManager() {
       {/* 角色列表 */}
       <div className="space-y-2">
         {characters.map((char) => (
-          <Card key={char.id} className="bg-slate-800/50 border-slate-700">
+          <Card key={char.id} className="nyx-surface-2 nyx-border">
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm text-slate-200">{char.name}</CardTitle>
+                <CardTitle className="text-sm nyx-text-primary">{char.name}</CardTitle>
                 <div className="flex gap-1">
                   <Button
                     variant="ghost"
@@ -144,11 +144,11 @@ export function CharacterManager() {
               </div>
             </CardHeader>
             <CardContent className="pt-0">
-              <p className="text-xs text-slate-400">{char.description}</p>
+              <p className="text-xs nyx-text-muted">{char.description}</p>
               {char.traits.length > 0 && (
                 <div className="flex flex-wrap gap-1 mt-2">
                   {char.traits.map((trait, idx) => (
-                    <span key={idx} className="px-1.5 py-0.5 bg-slate-700 rounded text-xs text-slate-300">
+                    <span key={idx} className="px-1.5 py-0.5 nyx-surface-3 rounded text-xs nyx-text-secondary">
                       {trait}
                     </span>
                   ))}
