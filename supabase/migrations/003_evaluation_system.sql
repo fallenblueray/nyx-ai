@@ -7,7 +7,7 @@
 -- ============================================================
 CREATE TABLE IF NOT EXISTS story_evaluations (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  story_id UUID NOT NULL REFERENCES stories(id) ON DELETE CASCADE,
+  story_id UUID NOT NULL,  -- story reference (no FK, stories stored externally)
   
   -- 六維度評分 (0-10)
   coherence DECIMAL(4,2) NOT NULL DEFAULT 0,
@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS evaluation_logs (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   
   -- 關聯
-  story_id UUID REFERENCES stories(id) ON DELETE SET NULL,
+  story_id UUID,  -- story reference (no FK)
   user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   
   -- 請求元數據
