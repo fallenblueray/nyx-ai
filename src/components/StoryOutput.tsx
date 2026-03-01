@@ -58,10 +58,8 @@ export function StoryOutput() {
                   variant="ghost"
                   size="sm"
                   onClick={() => {
-                    useAppStore.getState().setStoryOutput("")
-                    useAppStore.getState().setError(null)
-                    setIsEditing(false)
-                    setEditContent("")
+                    // 標記需要重新生成
+                    useAppStore.getState().setShouldRegenerate(true)
                   }}
                   className="nyx-text-muted hover:text-orange-400 h-7 px-2"
                   title="清空故事，重新開始"
@@ -146,6 +144,8 @@ export function GenerateButtons() {
     setShowSignupPrompt,
     showRechargePrompt,
     setShowRechargePrompt,
+    shouldRegenerate,
+    setShouldRegenerate,
   } = useAppStore()
 
   const [rechargeOpen, setRechargeOpen] = useState(false)
@@ -154,6 +154,16 @@ export function GenerateButtons() {
   const canGenerate = storyInput.trim().length > 0 || selectedTopics.length > 0 || characters.length > 0
   const hasOutput = storyOutput.trim().length > 0
   const isLoggedIn = !!session?.user
+
+  // 監聽 shouldRegenerate 標記，觸發重新生成
+  useEffect(() => {
+    if (shouldRegenerate && canGenerate && !isGenerating) {
+      setStoryOutput("")
+      setError(null)
+      setShouldRegenerate(false)
+      generateStory(false)
+    }
+  }, [shouldRegenerate, canGenerate, isGenerating])
 
   // 初始化：獲取匿名用戶剩餘字數
   useEffect(() => {
@@ -346,8 +356,8 @@ export function GenerateButtons() {
             </Button>
             <Button
               onClick={() => {
-                useAppStore.getState().setStoryOutput("")
-                useAppStore.getState().setError(null)
+                // 標記需要重新生成
+                useAppStore.getState().setShouldRegenerate(true)
               }}
               disabled={isGenerating}
               variant="outline"

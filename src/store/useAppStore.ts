@@ -56,6 +56,10 @@ interface AppState {
   setShowSignupPrompt: (v: boolean) => void
   showRechargePrompt: boolean  // 登入用戶字數耗盡 → 彈出充值提醒
   setShowRechargePrompt: (v: boolean) => void
+
+  // 重新生成標記（用戶按「再寫一次」時觸發）
+  shouldRegenerate: boolean
+  setShouldRegenerate: (v: boolean) => void
 }
 
 export const FREE_WORD_LIMIT = 8000
@@ -122,6 +126,10 @@ export const useAppStore = create<AppState>()(
       setShowSignupPrompt: (v) => set({ showSignupPrompt: v }),
       showRechargePrompt: false,
       setShowRechargePrompt: (v) => set({ showRechargePrompt: v }),
+
+      // 重新生成標記
+      shouldRegenerate: false,
+      setShouldRegenerate: (v) => set({ shouldRegenerate: v }),
     }),
     {
       name: 'nyx-ai-storage',
