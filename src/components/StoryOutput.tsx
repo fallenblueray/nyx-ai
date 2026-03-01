@@ -11,8 +11,9 @@ import { getOrCreateAnonymousId } from "@/lib/anonymous"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Loader2, Sparkles, RotateCcw, Edit2, Eye } from "lucide-react"
+import { Loader2, Sparkles, RotateCcw, Edit2, Eye, RefreshCw } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { summarizeStory } from "@/lib/story-utils"
 
 const MAX_CHARS = 5000
 
@@ -52,18 +53,34 @@ export function StoryOutput() {
           <CardTitle className="nyx-text-primary text-base">故事輸出</CardTitle>
           <div className="flex items-center gap-2">
             {storyOutput && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsEditing(!isEditing)}
-                className="nyx-text-muted hover:nyx-text-primary h-7 px-2"
-              >
-                {isEditing ? (
-                  <><Eye className="w-3 h-3 mr-1" />預覽</>
-                ) : (
-                  <><Edit2 className="w-3 h-3 mr-1" />編輯</>
-                )}
-              </Button>
+              <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    useAppStore.getState().setStoryOutput("")
+                    useAppStore.getState().setError(null)
+                    setIsEditing(false)
+                    setEditContent("")
+                  }}
+                  className="nyx-text-muted hover:text-orange-400 h-7 px-2"
+                  title="清空故事，重新開始"
+                >
+                  <RefreshCw className="w-3 h-3 mr-1" />再寫一次
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsEditing(!isEditing)}
+                  className="nyx-text-muted hover:nyx-text-primary h-7 px-2"
+                >
+                  {isEditing ? (
+                    <><Eye className="w-3 h-3 mr-1" />預覽</>
+                  ) : (
+                    <><Edit2 className="w-3 h-3 mr-1" />編輯</>
+                  )}
+                </Button>
+              </>
             )}
             <span className={cn(
               "text-xs",
@@ -179,7 +196,9 @@ export function GenerateButtons() {
 
     let userPrompt = ""
     if (isContinue && storyOutput) {
-      userPrompt = `接續以下故事：\n\n${storyOutput}\n\n請保持上述風格和節奏繼續寫下去，直接輸出故事。`
+      // V1：規則摘要，零延遲，保留開頭設定 + 最新劇情
+      const summary = summarizeStory(storyOutput, 600)
+      userPrompt = `接續以下故事（已精簡摘要）：\n\n${summary}\n\n請保持上述風格、人物設定和節奏繼續寫下去，直接輸出故事正文。`
     } else {
       const topicStr = selectedTopics.map(t => `${t.category}: ${t.item}`).join("、")
       const charStr = characters.map(c => `${c.name}：${c.description}（${c.traits.join("、")}）`).join("\n")
@@ -299,6 +318,7 @@ export function GenerateButtons() {
     <>
       <div className="space-y-2">
         {!hasOutput ? (
+          // 未有故事：顯示「開始創作」
           <Button
             onClick={() => generateStory(false)}
             disabled={!canGenerate || isGenerating}
@@ -311,17 +331,31 @@ export function GenerateButtons() {
             )}
           </Button>
         ) : (
-          <Button
-            onClick={() => generateStory(true)}
-            disabled={isGenerating}
-            className="w-full bg-purple-600 hover:bg-purple-700"
-          >
-            {isGenerating ? (
-              <><Loader2 className="w-4 h-4 mr-2 animate-spin" />續寫中...</>
-            ) : (
-              <><RotateCcw className="w-4 h-4 mr-2" />繼續創作</>
-            )}
-          </Button>
+          // 已有故事：「繼續創作」+ 「再寫一次」並排
+          <div className="flex gap-2">
+            <Button
+              onClick={() => generateStory(true)}
+              disabled={isGenerating}
+              className="flex-1 bg-purple-600 hover:bg-purple-700"
+            >
+              {isGenerating ? (
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" />續寫中...</>
+              ) : (
+                <><RotateCcw className="w-4 h-4 mr-2" />繼續創作</>
+              )}
+            </Button>
+            <Button
+              onClick={() => {
+                useAppStore.getState().setStoryOutput("")
+                useAppStore.getState().setError(null)
+              }}
+              disabled={isGenerating}
+              variant="outline"
+              className="flex-1 nyx-border nyx-text-secondary hover:text-orange-400"
+            >
+              <RefreshCw className="w-4 h-4 mr-2" />再寫一次
+            </Button>
+          </div>
         )}
       </div>
 
