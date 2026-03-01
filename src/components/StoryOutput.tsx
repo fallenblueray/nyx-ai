@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { useSession } from "next-auth/react"
 import { useAppStore } from "@/store/useAppStore"
 import { getUserWordCount } from "@/app/actions/story"
@@ -8,7 +8,6 @@ import { RechargeModal } from "@/components/RechargeModal"
 import { SignupPromptModal } from "@/components/SignupPromptModal"
 import { RechargePromptModal } from "@/components/RechargePromptModal"
 import { getOrCreateAnonymousId } from "@/lib/anonymous"
-import ReactMarkdown from "react-markdown"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -21,10 +20,27 @@ export function StoryOutput() {
   const { storyOutput, error } = useAppStore()
   const [isEditing, setIsEditing] = useState(false)
   const [editContent, setEditContent] = useState("")
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const outputRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     setEditContent(storyOutput)
   }, [storyOutput])
+
+  // Auto-resize textarea to match content height
+  const adjustTextareaHeight = useCallback(() => {
+    const ta = textareaRef.current
+    if (!ta) return
+    ta.style.height = "auto"
+    ta.style.height = `${ta.scrollHeight}px`
+  }, [])
+
+  useEffect(() => {
+    if (isEditing) {
+      // Small delay to let DOM update first
+      setTimeout(adjustTextareaHeight, 10)
+    }
+  }, [isEditing, editContent, adjustTextareaHeight])
 
   const charCount = storyOutput.length
   const remainingChars = MAX_CHARS - charCount
@@ -62,16 +78,22 @@ export function StoryOutput() {
         {storyOutput ? (
           isEditing ? (
             <Textarea
+              ref={textareaRef}
               value={editContent}
               onChange={(e) => {
                 setEditContent(e.target.value)
                 useAppStore.getState().setStoryOutput(e.target.value)
+                adjustTextareaHeight()
               }}
-              className="min-h-[300px] nyx-input nyx-text-primary resize-none font-mono text-sm"
+              className="w-full nyx-input nyx-text-primary resize-none font-mono text-sm leading-relaxed overflow-hidden"
+              style={{ minHeight: "400px" }}
             />
           ) : (
-            <div className="prose prose-invert prose-sm max-w-none">
-              <ReactMarkdown>{storyOutput}</ReactMarkdown>
+            <div
+              ref={outputRef}
+              className="nyx-text-primary text-sm leading-relaxed whitespace-pre-wrap break-words"
+            >
+              {storyOutput}
             </div>
           )
         ) : (
