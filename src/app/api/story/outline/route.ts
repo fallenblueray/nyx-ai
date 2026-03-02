@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '../../auth/[...nextauth]/route';
 import { createAdminClient } from '@/lib/supabase-admin';
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
@@ -29,11 +31,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check authentication
-    const supabase = createAdminClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !user) {
+    // Check authentication using NextAuth
+    const session = await getServerSession(authOptions);
+    
+    if (!session?.user) {
       return NextResponse.json(
         { error: '請先登入' },
         { status: 401 }
