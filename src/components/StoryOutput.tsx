@@ -159,6 +159,8 @@ export function GenerateButtons() {
 
   const [rechargeOpen, setRechargeOpen] = useState(false)
   const [wordInfo, setWordInfo] = useState<{ wordCount: number; isFirstPurchase: boolean } | null>(null)
+  const [targetSegments, setTargetSegments] = useState<number>(2)  // V2.5: 目標分段數
+  const [currentSegment, setCurrentSegment] = useState<number>(0)   // V2.5: 當前分段
 
   const canGenerate = storyInput.trim().length > 0 || selectedTopics.length > 0 || characters.length > 0
   const hasOutput = storyOutput.trim().length > 0
@@ -411,9 +413,16 @@ export function GenerateButtons() {
       const { systemPrompt, userPrompt } = buildPrompt(true)
       const anonymousId = !isLoggedIn ? getOrCreateAnonymousId() : undefined
 
+      // V2.5: 多段模式 header
+      const headers: Record<string, string> = { "Content-Type": "application/json" }
+      if (targetSegments > 1 && !isContinue) {
+        headers['x-multi-segment'] = 'true'
+        headers['x-target-segments'] = String(targetSegments)
+      }
+
       const response = await fetch("/api/generate-story", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({
           systemPrompt,
           userPrompt,
@@ -459,6 +468,16 @@ export function GenerateButtons() {
 
             try {
               const parsed = JSON.parse(data)
+
+              // V2.5: 處理分段事件
+              if (parsed.segmentStart) {
+                setCurrentSegment(parsed.segmentIndex)
+                continue
+              }
+              if (parsed.segmentDone) {
+                console.log(`[分段 ${parsed.segmentIndex}] 完成，累積字數：${parsed.totalWords}`)
+                continue
+              }
 
               if (parsed.error) {
                 if (parsed.errorType === "free_quota_exceeded") {
@@ -508,6 +527,34 @@ export function GenerateButtons() {
   return (
     <>
       <div className="space-y-2">
+        {/* V2.5: 分段選擇器 */}
+        {!hasOutput && (
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-xs nyx-text-secondary">分段：</span>
+            <div className="flex gap-1">
+              {[1, 2, 3].map(seg => (
+                <button
+                  key={seg}
+                  onClick={() => setTargetSegments(seg)}
+                  disabled={isGenerating}
+                  className={`px-2 py-1 text-xs rounded ${
+                    targetSegments === seg 
+                      ? 'bg-purple-600 text-white' 
+                      : 'nyx-surface-2 nyx-text-secondary hover:nyx-text-primary'
+                  }`}
+                >
+                  {seg}段
+                </button>
+              ))}
+            </div>
+            {isGenerating && currentSegment > 0 && (
+              <span className="text-xs text-purple-400">
+                第{currentSegment}段生成中...
+              </span>
+            )}
+          </div>
+        )}
+
         {!hasOutput ? (
           // 未有故事：顯示「開始創作」
           <Button
@@ -516,9 +563,9 @@ export function GenerateButtons() {
             className="w-full bg-blue-600 hover:bg-blue-700"
           >
             {isGenerating ? (
-              <><Loader2 className="w-4 h-4 mr-2 animate-spin" />生成中...</>
+              <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{currentSegment > 0 ? `第${currentSegment}段...` : '生成中...'}</>
             ) : (
-              <><Sparkles className="w-4 h-4 mr-2" />開始創作</>
+              <><Sparkles className="w-4 h-4 mr-2" />{targetSegments > 1 ? `開始創作（${targetSegments}段）` : '開始創作'}</>
             )}
           </Button>
         ) : (

@@ -200,6 +200,28 @@ export async function POST(req: NextRequest) {
     }
 
     // ============================================================
+    // V2.5: 多段生成模式
+    // ============================================================
+    const enableMultiSegment = req.headers.get('x-multi-segment') === 'true'
+    const targetSegments = parseInt(req.headers.get('x-target-segments') || '2', 10)
+    
+    // 多段模式只用於首次生成，不適用於續寫
+    if (enableMultiSegment) {
+      return handleMultiSegmentGeneration(req, {
+        systemPrompt: enrichedSystemPrompt,
+        userPrompt,
+        model,
+        targetSegments: Math.min(Math.max(targetSegments, 2), 4),
+        isLoggedIn,
+        session,
+        anonymousId,
+        currentWordCount,
+        supabase,
+        isAnonymous
+      })
+    }
+
+    // ============================================================
     // 建立 Streaming Response
     // ============================================================
     const startTime = Date.now()
@@ -387,6 +409,255 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     )
   }
+}
+
+// ============================================================
+// V2.5: 多段生成處理函數
+// ============================================================
+async function handleMultiSegmentGeneration(
+  req: NextRequest,
+  options: {
+    systemPrompt: string
+    userPrompt: string
+    model: string
+    targetSegments: number
+    isLoggedIn: boolean
+    session: any
+    anonymousId?: string
+    currentWordCount: number
+    supabase: ReturnType<typeof createAdminClient>
+    isAnonymous: boolean
+  }
+) {
+  const { 
+    systemPrompt, 
+    userPrompt, 
+    model, 
+    targetSegments,
+    isLoggedIn,
+    session,
+    anonymousId,
+    currentWordCount,
+    supabase,
+    isAnonymous
+  } = options
+
+  const encoder = new TextEncoder()
+  const apiKey = process.env.OPENROUTER_API_KEY
+  
+  if (!apiKey) {
+    return NextResponse.json({ error: "API 配置錯誤" }, { status: 500 })
+  }
+
+  // 上下文狀態
+  let contextState = {
+    previousContent: '',
+    segmentIndex: 0,
+    totalWordsUsed: 0
+  }
+
+  const stream = new ReadableStream({
+    async start(controller) {
+      try {
+        for (let seg = 0; seg < targetSegments; seg++) {
+          contextState.segmentIndex = seg
+          
+          // 構建該段的 prompt
+          let segmentUserPrompt: string
+          if (seg === 0) {
+            segmentUserPrompt = userPrompt
+          } else {
+            // 後續段：提取上下文並注入
+            const context = extractContextForSegment(contextState.previousContent)
+            segmentUserPrompt = `${context}\n\n請繼續保持上述風格、人物設定和節奏，直接輸出故事正文。`
+          }
+
+          // 發送分段開始信號
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ 
+            segmentStart: true, 
+            segmentIndex: seg + 1, 
+            totalSegments: targetSegments 
+          })}\n\n`))
+
+          // 調用 OpenRouter
+          const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${apiKey}`,
+              "HTTP-Referer": "https://nyx-ai-woad.vercel.app",
+              "X-Title": "NyxAI"
+            },
+            body: JSON.stringify({
+              model,
+              messages: [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: segmentUserPrompt }
+              ],
+              max_tokens: 4000,
+              stream: true
+            })
+          })
+
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: `API 錯誤: ${response.status}`, details: errorData })}\n\n`))
+            controller.close()
+            return
+          }
+
+          if (!response.body) {
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: "無法讀取回應" })}\n\n`))
+            controller.close()
+            return
+          }
+
+          let segmentContent = ""
+          const reader = response.body.getReader()
+          const decoder = new TextDecoder()
+
+          while (true) {
+            const { done, value } = await reader.read()
+            if (done) break
+
+            const chunk = decoder.decode(value)
+            const lines = chunk.split('\n')
+
+            for (const line of lines) {
+              if (line.startsWith('data: ')) {
+                const data = line.slice(6)
+
+                if (data === '[DONE]') {
+                  // 該段完成
+                  // 移除重疊內容
+                  const cleanedSegment = removeOverlap(contextState.previousContent, segmentContent)
+                  contextState.previousContent += cleanedSegment
+                  contextState.totalWordsUsed += cleanedSegment.length
+                  
+                  controller.enqueue(encoder.encode(`data: ${JSON.stringify({ 
+                    segmentDone: true, 
+                    segmentIndex: seg + 1,
+                    segmentWords: cleanedSegment.length,
+                    totalWords: contextState.totalWordsUsed
+                  })}\n\n`))
+                  break
+                }
+
+                try {
+                  const parsed = JSON.parse(data)
+                  const content = parsed.choices?.[0]?.delta?.content || ''
+                  if (content) {
+                    segmentContent += content
+                    controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content })}\n\n`))
+                  }
+                } catch {
+                  // Skip invalid JSON
+                }
+              }
+            }
+          }
+
+          // 檢查是否完成（字數足夠或是最後一段）
+          if (contextState.totalWordsUsed >= currentWordCount * 0.9 || seg === targetSegments - 1) {
+            break
+          }
+        }
+
+        // 全部完成：扣除字數
+        const wordsUsed = Math.ceil(contextState.totalWordsUsed * 0.8)
+        
+        if (isLoggedIn) {
+          await supabase
+            .from("profiles")
+            .update({ word_count: Math.max(0, currentWordCount - wordsUsed) })
+            .eq("id", session.user.id)
+        } else if (anonymousId) {
+          const { data: existing } = await supabase
+            .from("anonymous_usage")
+            .select("words_used")
+            .eq("anonymous_id", anonymousId)
+            .maybeSingle()
+
+          await supabase
+            .from("anonymous_usage")
+            .upsert({
+              anonymous_id: anonymousId,
+              words_used: (existing?.words_used ?? 0) + wordsUsed,
+              words_limit: FREE_WORD_LIMIT
+            }, { onConflict: 'anonymous_id' })
+        }
+
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+          done: true,
+          wordsUsed,
+          remaining: currentWordCount - wordsUsed,
+          isAnonymous,
+          totalSegments: targetSegments,
+          finalWordCount: contextState.totalWordsUsed
+        })}\n\n`))
+
+        controller.close()
+
+      } catch (error) {
+        console.error("[multi-segment] Error:", error)
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: error instanceof Error ? error.message : "多段生成失敗" })}\n\n`))
+        controller.close()
+      }
+    }
+  })
+
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+    },
+  })
+}
+
+// 從前段內容提取上下文
+function extractContextForSegment(previousContent: string): string {
+  if (!previousContent) return ''
+
+  // 取前段末尾300字作為上下文
+  const tail = previousContent.slice(-300)
+  
+  // 找最近的段落結構
+  const paragraphs = tail.split('\n\n')
+  const lastPara = paragraphs[paragraphs.length - 1] || ''
+  
+  // 找角色名（簡單規則）
+  const namePattern = /「([^」]{2,4})」|([^\s，。]{2,4})(說|喊|喘|叫|嬌)/g
+  const names = new Set<string>()
+  let match
+  while ((match = namePattern.exec(previousContent)) !== null) {
+    const name = match[1] || match[2]
+    if (name && !/[我你他她它]/.test(name)) {
+      names.add(name)
+    }
+  }
+
+  let context = '【上文輪廓】\n'
+  if (names.size > 0) {
+    context += `涉及角色：${Array.from(names).slice(0, 3).join('、')}\n`
+  }
+  context += `最新情節：${lastPara.slice(0, 100)}`
+
+  return context
+}
+
+// 移除重疊內容
+function removeOverlap(previous: string, next: string): string {
+  if (!previous || !next) return next
+
+  const prevTail = previous.slice(-200)
+  for (let len = Math.min(200, next.length); len > 30; len -= 20) {
+    const nextHead = next.slice(0, len)
+    if (prevTail.includes(nextHead)) {
+      return next.slice(len)
+    }
+  }
+  return next
 }
 
 // ============================================================
