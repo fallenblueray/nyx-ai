@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify({
         model: OPENROUTER_MODEL,
         messages: [
-          { role: 'system', content: '你是專業的小說結構規劃師，擅長設計緊湊的三幕式故事大綱。' },
+          { role: 'system', content: '你是專業的小說結構規劃師，擅長設計緊湊的兩幕式故事大綱。' },
           { role: 'user', content: outlinePrompt }
         ],
         temperature: 0.7,
@@ -108,10 +108,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate outline structure
-    if (!outline.scenes || outline.scenes.length !== 3) {
+    // Validate outline structure - accept 2 or more scenes
+    if (!outline.scenes || outline.scenes.length < 2) {
+      console.error('Invalid outline structure, scenes:', outline?.scenes);
       return NextResponse.json(
-        { error: '大綱格式錯誤' },
+        { error: '大綱格式錯誤：需要至少2章' },
         { status: 500 }
       );
     }
@@ -120,8 +121,8 @@ export async function POST(request: NextRequest) {
       success: true,
       outline,
       metadata: {
-        total_scenes: 3,
-        estimated_total_words: 6000,
+        total_scenes: outline.scenes.length,
+        estimated_total_words: outline.scenes.length * 3000,
       }
     });
 
