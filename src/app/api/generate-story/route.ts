@@ -153,8 +153,9 @@ export async function POST(req: NextRequest) {
     // ============================================================
     // 如果 skipCache 為 true，則跳過緩存層，強制重新生成
     let cached = null
+    let cacheKey: string | null = null
     if (!skipCache) {
-      const cacheKey = buildCacheKey({ model, systemPrompt: enrichedSystemPrompt, userPrompt })
+      cacheKey = buildCacheKey({ model, systemPrompt: enrichedSystemPrompt, userPrompt })
       cached = await getCachedStory(cacheKey)
     }
 
@@ -313,7 +314,9 @@ export async function POST(req: NextRequest) {
                   // ============================================================
                   // 緩存層：異步寫入 Redis（不阻塞串流）
                   // ============================================================
-                  setCachedStory(cacheKey, fullContent, model).catch(console.warn)
+            if (cacheKey) {
+              setCachedStory(cacheKey, fullContent, model).catch(console.warn)
+            }
 
                   // ============================================================
                   // 評估層：異步記錄 + 質量評估（不阻塞串流）
