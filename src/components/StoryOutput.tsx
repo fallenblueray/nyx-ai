@@ -145,6 +145,7 @@ export function GenerateButtons() {
     showRechargePrompt,
     setShowRechargePrompt,
     shouldRegenerate,
+    extractCharacters,
     setShouldRegenerate,
   } = useAppStore()
 
@@ -312,6 +313,13 @@ export function GenerateButtons() {
                   setAnonymousWordsLeft(parsed.remaining)
                 }
                 // 更新登入用戶字數（由 UserMenu 自行刷新）
+                
+                
+                // V2: 後台異步提取角色（不阻塞用戶）
+                const currentStory = useAppStore.getState().storyOutput
+                if (currentStory.length > 100) {
+                  extractCharacters(currentStory)
+                }
               }
             } catch {
               // skip invalid JSON

@@ -45,6 +45,10 @@ interface AppState {
   addCharacter: (character: Character) => void
   updateCharacter: (id: string, character: Partial<Character>) => void
   deleteCharacter: (id: string) => void
+  
+  // V2: 後台異步角色提取
+  isExtractingCharacters: boolean
+  extractCharacters: (storyText: string) => Promise<void>
 
   // 匿名用戶額度
   anonymousWordsLeft: number
@@ -104,17 +108,59 @@ export const useAppStore = create<AppState>()(
 
       // Characters
       characters: [],
-      addCharacter: (character) => set((state) => ({
-        characters: [...state.characters, character]
+      addCharacter: (character) => set((state) => ({ 
+        characters: [...state.characters, character] 
       })),
       updateCharacter: (id, updates) => set((state) => ({
         characters: state.characters.map((c) =>
           c.id === id ? { ...c, ...updates } : c
         )
       })),
-      deleteCharacter: (id) => set((state) => ({
-        characters: state.characters.filter((c) => c.id !== id)
+      deleteCharacter: (id) => set((state) => ({ 
+        characters: state.characters.filter((c) => c.id !== id) 
       })),
+      
+      // V2: 後台異步角色提取
+      isExtractingCharacters: false,
+      extractCharacters: async (storyText: string) => {
+        set({ isExtractingCharacters: true })
+        try {
+          const response = await fetch('/api/extract-characters', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ storyText })
+          })
+          if (!response.ok) {
+            console.warn('[extractCharacters] API error:', response.status)
+            return // 失敗靜默處理
+          }
+          const data = await response.json()
+          const newCharacters = data.characters || []
+          if (newCharacters.length === 0) return
+          
+          // 合併新角色（按名字去重）
+          set((state) => {
+            const existingNames = new Set(state.characters.map(c => c.name))
+            const uniqueNewChars: Character[] = newCharacters
+              .filter((c: { name: string }) => !existingNames.has(c.name))
+              .map((c: { name: string; description?: string; traits?: string[] }) => ({
+                ...c,
+                id: `extracted-${c.name}-${Date.now()}`,
+                description: c.description || '故事中提取的角色',
+                traits: Array.isArray(c.traits) ? c.traits : []
+              }))
+            if (uniqueNewChars.length === 0) return {}
+            return {
+              characters: [...state.characters, ...uniqueNewChars].slice(0, 10)
+            }
+          })
+        } catch (err) {
+          console.warn('[extractCharacters] Failed:', err)
+          // 後台提取失敗不影響用戶體驗
+        } finally {
+          set({ isExtractingCharacters: false })
+        }
+      },
 
       // 匿名用戶
       anonymousWordsLeft: FREE_WORD_LIMIT,

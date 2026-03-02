@@ -18,7 +18,7 @@ import { useTranslation } from "@/components/TranslationContext"
 
 export function CharacterManager() {
   const translations = useTranslation()
-  const { characters, addCharacter, updateCharacter, deleteCharacter } = useAppStore()
+  const { characters, addCharacter, updateCharacter, deleteCharacter, isExtractingCharacters } = useAppStore()
   const [isOpen, setIsOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState({ name: "", description: "", traits: "" })
@@ -116,6 +116,13 @@ export function CharacterManager() {
         </DialogContent>
       </Dialog>
       
+      {/* 提取中指示器 */}
+      {isExtractingCharacters && (
+        <div className="text-xs nyx-text-muted flex items-center gap-1 py-1">
+          <span className="animate-pulse">🤖 AI 提取角色中...</span>
+        </div>
+      )}
+
       {/* 角色列表 */}
       <div className="space-y-2">
         {characters.map((char) => (
