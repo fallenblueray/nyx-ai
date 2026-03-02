@@ -413,12 +413,8 @@ export function GenerateButtons() {
       const { systemPrompt, userPrompt } = buildPrompt(true)
       const anonymousId = !isLoggedIn ? getOrCreateAnonymousId() : undefined
 
-      // V2.5: 多段模式 header
+      // V2.5: 續寫不使用多段模式（只用單段生成）
       const headers: Record<string, string> = { "Content-Type": "application/json" }
-      if (targetSegments > 1 && !isContinue) {
-        headers['x-multi-segment'] = 'true'
-        headers['x-target-segments'] = String(targetSegments)
-      }
 
       const response = await fetch("/api/generate-story", {
         method: "POST",
