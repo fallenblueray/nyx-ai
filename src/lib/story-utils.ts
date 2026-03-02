@@ -135,7 +135,7 @@ export async function extractDynamicContext(
 
     const mergedKeyItems = Array.from(new Set([
       ...existingContext.keyItems,
-      ...(data.keyItems || [])
+      ...(data.key_items || data.keyItems || [])
     ]))
 
     return {

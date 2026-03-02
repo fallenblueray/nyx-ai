@@ -3,7 +3,7 @@ import { getToken } from 'next-auth/jwt';
 import { createAdminClient } from '@/lib/supabase-admin';
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
-const OPENROUTER_MODEL = 'moonshotai/kimi-k2.5';
+const OPENROUTER_MODEL = 'deepseek/deepseek-r1-0528';
 const NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET;
 
 interface SceneOutline {
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
       ?.map((c: any) => `${c.name}：${c.description}`)
       .join('\n') || '';
 
-    const outlinePrompt = `根據故事開頭生成三幕式大綱（純 JSON 輸出）：
+    const outlinePrompt = `根據故事開頭生成兩幕式大綱（純 JSON 輸出）：
 
 【開頭】${story_start.slice(0, 200)}
 
@@ -55,13 +55,12 @@ export async function POST(request: NextRequest) {
 {
   "overall_arc": "故事主線",
   "scenes": [
-    {"scene_index": 1, "setting": "場景1", "key_event": "事件1", "mood": "情緒", "characters_involved": ["角色A"], "word_count_target": 2000},
-    {"scene_index": 2, "setting": "場景2", "key_event": "事件2", "mood": "情緒", "characters_involved": ["角色A"], "word_count_target": 2000},
-    {"scene_index": 3, "setting": "場景3", "key_event": "事件3", "mood": "情緒", "characters_involved": ["角色A"], "word_count_target": 2000}
+    {"scene_index": 1, "setting": "場景1", "key_event": "事件1", "mood": "情緒", "characters_involved": ["角色A"], "word_count_target": 3000},
+    {"scene_index": 2, "setting": "場景2", "key_event": "事件2", "mood": "情緒", "characters_involved": ["角色A"], "word_count_target": 3000}
   ]
 }
 
-規則：三段合計約6000字，段間有連貫，只定義骨架不寫細節。`;
+規則：兩段合計約6000字，第1章鋪墊發展，第2章高潮收尾，段間有連貫，只定義骨架不寫細節。`;
 
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',

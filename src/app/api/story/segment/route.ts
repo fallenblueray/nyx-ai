@@ -3,7 +3,7 @@ import { getToken } from 'next-auth/jwt';
 import { createAdminClient } from '@/lib/supabase-admin';
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
-const OPENROUTER_MODEL = 'moonshotai/kimi-k2.5';
+const OPENROUTER_MODEL = 'deepseek/deepseek-r1-0528';
 const NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET;
 
 interface SceneContext {
@@ -84,9 +84,9 @@ ${previousEnding}
 
 【動態上下文】
 ${dynamic_context ? `
-角色狀態：${dynamic_context.characters.map((c: any) => `${c.name}(${c.mood || '情緒正常'})`).join('、')}
-關係發展：${dynamic_context.relationships.join('；') || '無重大變化'}
-關鍵道具：${dynamic_context.key_items.join('、') || '無'}
+角色狀態：${dynamic_context.characters?.map((c: any) => `${c.name}(${c.mood || '情緒正常'})`).join('、') || '無'}
+關係發展：${dynamic_context.relationships?.join('；') || '無重大變化'}
+關鍵道具：${dynamic_context.key_items?.join('、') || dynamic_context.keyItems?.join('、') || '無'}
 ` : '無'}`;
     }
 
