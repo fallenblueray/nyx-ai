@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import { createAdminClient } from '@/lib/supabase-admin';
+import { SYSTEM_PROMPT } from './system_prompt';
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const OPENROUTER_MODEL = 'deepseek/deepseek-r1-0528';
@@ -126,10 +127,7 @@ ${isFirstScene ? '5. 從故事開頭自然延續，不要重複開頭內容' : '
       body: JSON.stringify({
         model: OPENROUTER_MODEL,
         messages: [
-          { 
-            role: 'system', 
-            content: '你是專業小說家，擅長長篇敘事與細膩描寫。每次寫作都要保持風格一致、情節連貫。' 
-          },
+          { role: 'system', content: SYSTEM_PROMPT },
           { role: 'user', content: segmentPrompt }
         ],
         temperature: 0.85,
