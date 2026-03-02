@@ -343,7 +343,6 @@ export function GenerateButtons() {
       if (!outline) {
         throw new Error("無法生成故事大綱，請檢查 API 連接或重新整理頁面")
       }
-      }
 
       setStoryOutline(outline)
       const totalScenes = outline.scenes.length

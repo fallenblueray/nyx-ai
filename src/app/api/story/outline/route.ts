@@ -144,7 +144,6 @@ ${characterContext || '無特定角色'}
       metadata: {
         total_scenes: 3,
         estimated_total_words: 6000,
-        user_id: user.id
       }
     });
 

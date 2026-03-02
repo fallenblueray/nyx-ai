@@ -167,7 +167,6 @@ ${isFirstScene ? '5. 從故事開頭自然延續，不要重複開頭內容' : '
         word_count: segmentText.length
       },
       metadata: {
-        user_id: user.id,
         timestamp: new Date().toISOString()
       }
     });
