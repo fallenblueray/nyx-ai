@@ -156,42 +156,42 @@ export async function POST(req: NextRequest) {
 
     if (cached) {
       // 緩存命中：扣字數 + 直接以 SSE 返回
-      const wordsUsed = cached.content.length
-      if (currentWordCount < wordsUsed) {
-        return NextResponse.json({
-          error: "字數不足",
-          errorType: isAnonymous ? "free_quota_exceeded" : "insufficient_words",
-          remaining: currentWordCount,
-          required: wordsUsed
-        }, { status: 402 })
-      }
-
-      // 扣字數
-      if (isLoggedIn) {
-        await supabase.from("profiles").update({ word_count: currentWordCount - wordsUsed }).eq("id", session!.user.id)
-        updateUserPreferencesAsync(supabase, session!.user.id, wordsUsed).catch(console.warn)
-      } else if (anonymousId) {
-        const { data: ex } = await supabase.from("anonymous_usage").select("words_used").eq("anonymous_id", anonymousId).maybeSingle()
-        await supabase.from("anonymous_usage").upsert({ anonymous_id: anonymousId, words_used: (ex?.words_used ?? 0) + wordsUsed, words_limit: FREE_WORD_LIMIT }, { onConflict: 'anonymous_id' })
-      }
-
-      // 流式輸出緩存內容
-      const encoder2 = new TextEncoder()
-      const cachedStream = new ReadableStream({
-        start(ctrl) {
-          // 分塊發送，模擬流式體驗
-          const chunkSize = 50
-          for (let i = 0; i < cached.content.length; i += chunkSize) {
-            const chunk = cached.content.slice(i, i + chunkSize)
-            ctrl.enqueue(encoder2.encode(`data: ${JSON.stringify({ content: chunk })}\n\n`))
-          }
-          ctrl.enqueue(encoder2.encode(`data: ${JSON.stringify({ done: true, wordsUsed, remaining: currentWordCount - wordsUsed, isAnonymous, fromCache: true })}\n\n`))
-          ctrl.close()
+      // 注意：cached.content.length 是字元數，currentWordCount 是剩餘字數
+      // 評估時用字元數 * 0.8 轉換為字數（保守估計）
+      const estimatedWords = Math.ceil(cached.content.length * 0.8)
+      const remainingAfterCache = currentWordCount - estimatedWords
+      
+      if (remainingAfterCache < 0) {
+        console.warn(`[generate-story] Cache hit but insufficient words: have ${currentWordCount}, need ~${estimatedWords}`)
+        // 字數不足，跳過緩存，讓用戶生成新故事
+      } else {
+        // 扣字數
+        if (isLoggedIn) {
+          await supabase.from("profiles").update({ word_count: remainingAfterCache }).eq("id", session!.user.id)
+          updateUserPreferencesAsync(supabase, session!.user.id, estimatedWords).catch(console.warn)
+        } else if (anonymousId) {
+          const { data: ex } = await supabase.from("anonymous_usage").select("words_used").eq("anonymous_id", anonymousId).maybeSingle()
+          await supabase.from("anonymous_usage").upsert({ anonymous_id: anonymousId, words_used: (ex?.words_used ?? 0) + estimatedWords, words_limit: FREE_WORD_LIMIT }, { onConflict: 'anonymous_id' })
         }
-      })
-      return new Response(cachedStream, {
-        headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive' }
-      })
+
+        // 流式輸出緩存內容
+        const encoder2 = new TextEncoder()
+        const cachedStream = new ReadableStream({
+          start(ctrl) {
+            // 分塊發送，模擬流式體驗
+            const chunkSize = 50
+            for (let i = 0; i < cached.content.length; i += chunkSize) {
+              const chunk = cached.content.slice(i, i + chunkSize)
+              ctrl.enqueue(encoder2.encode(`data: ${JSON.stringify({ content: chunk })}\n\n`))
+            }
+            ctrl.enqueue(encoder2.encode(`data: ${JSON.stringify({ done: true, wordsUsed: estimatedWords, remaining: remainingAfterCache, isAnonymous, fromCache: true })}\n\n`))
+            ctrl.close()
+          }
+        })
+        return new Response(cachedStream, {
+          headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive' }
+        })
+      }
     }
 
     // ============================================================
@@ -249,11 +249,13 @@ export async function POST(req: NextRequest) {
                 const data = line.slice(6)
 
                 if (data === '[DONE]') {
-                  const wordsUsed = fullContent.length
+                  // 字數估算：使用字元數 * 0.8 轉換為字數（中文約等於）
+                  const wordsUsed = Math.ceil(fullContent.length * 0.8)
 
                   // 字數不足檢查
                   if (currentWordCount < wordsUsed) {
                     const errorType = isAnonymous ? "free_quota_exceeded" : "insufficient_words"
+                    console.warn(`[generate-story] Generated story too long: have ${currentWordCount}, need ~${wordsUsed}`)
                     controller.enqueue(encoder.encode(`data: ${JSON.stringify({
                       error: "字數不足",
                       errorType,
