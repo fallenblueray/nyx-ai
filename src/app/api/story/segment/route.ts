@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '../../auth/[...nextauth]/route';
+import { getToken } from 'next-auth/jwt';
 import { createAdminClient } from '@/lib/supabase-admin';
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const OPENROUTER_MODEL = 'nvai/moonshotai/kimi-k2.5';
+const NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET;
 
 interface SceneContext {
   scene_index: number;
@@ -43,15 +43,14 @@ export async function POST(request: NextRequest) {
 
     const { scene_index, total_scenes, outline, previous_segment, dynamic_context } = scene_context;
 
-    // Check authentication using NextAuth
-    const session = await getServerSession(authOptions);
+    // Check authentication using JWT token
+    const token = await getToken({ 
+      req: request, 
+      secret: NEXTAUTH_SECRET 
+    });
     
-    if (!session?.user) {
-      return NextResponse.json(
-        { error: '請先登入' },
-        { status: 401 }
-      );
-    }
+    // Allow anonymous users (consistent with generate-story API)
+    const isLoggedIn = !!token?.sub;
 
     // Build prompt based on scene position
     const isFirstScene = scene_index === 1;
