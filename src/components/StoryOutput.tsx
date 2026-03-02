@@ -319,89 +319,136 @@ export function GenerateButtons() {
     updateDynamicContext(result)
   }
 
-  // V3: 新故事生成流程（分段式）
-  const generateStoryV3 = async (skipCache: boolean = false) => {
-    console.log('[V3] generateStoryV3 started, canGenerate:', canGenerate)
-    if (!canGenerate) {
-      console.log('[V3] cannot generate, returning')
-      return
-    }
+  // V2.5: 直接多段生成（跳過大綱）
+  const generateStoryDirect = async () => {
+    console.log('[V2.5] generateStoryDirect started, canGenerate:', canGenerate, 'targetSegments:', targetSegments)
+    if (!canGenerate) return
 
-    // 初始化流式狀態
-    const { setStreamingState, resetStreaming, appendSegment, setStoryOutline } = useAppStore.getState()
+    const { resetStreaming } = useAppStore.getState()
     resetStreaming()
     setIsGenerating(true)
     setError(null)
     setStoryOutput("")
-    console.log('[V3] initialized streaming state')
 
     try {
-      // Step 1: 生成隱形大綱
-      console.log('[V3] Step 1: generating outline...')
-      setStreamingState({ isStreaming: true, currentSceneIndex: 0 })
-      const outline = await generateOutline()
-      console.log('[V3] outline result:', outline)
-      
-      if (!outline) {
-        throw new Error("無法生成故事大綱，請檢查 API 連接或重新整理頁面")
+      const { systemPrompt, userPrompt } = buildPrompt(false)
+      const anonymousId = !isLoggedIn ? getOrCreateAnonymousId() : undefined
+
+      // V2.5: 多段模式 header
+      const headers: Record<string, string> = { "Content-Type": "application/json" }
+      if (targetSegments > 1) {
+        headers['x-multi-segment'] = 'true'
+        headers['x-target-segments'] = String(targetSegments)
+        console.log('[V2.5] Using multi-segment with', targetSegments, 'segments')
       }
 
-      setStoryOutline(outline)
-      const totalScenes = outline.scenes.length
-      setStreamingState({ totalScenes })
+      const response = await fetch("/api/generate-story", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          systemPrompt,
+          userPrompt,
+          model: "deepseek/deepseek-r1-0528",
+          topics: selectedTopics,
+          characters,
+          ...(anonymousId && { anonymousId }),
+        })
+      })
 
-      // Step 2-4: 逐段生成
-      let previousSegment = ""
-      
-      for (let i = 0; i < totalScenes; i++) {
-        const sceneIndex = i + 1
-        setStreamingState({ currentSceneIndex: sceneIndex })
-        
-        const outlineScene = outline.scenes[i]
-        const segmentText = await generateSegment(
-          sceneIndex,
-          totalScenes,
-          outlineScene,
-          previousSegment || undefined
-        )
-
-        if (!segmentText) {
-          throw new Error(`第 ${sceneIndex} 段生成失敗`)
+      if (!response.ok) {
+        const result = await response.json()
+        if (result.errorType === "free_quota_exceeded") {
+          setShowSignupPrompt(true)
+          return
         }
-
-        // 立即顯示到畫面
-        appendSegment(segmentText)
-        previousSegment = segmentText
-
-        // 後台異步提取動態上下文（最後一段不需要）
-        if (i < totalScenes - 1) {
-          updateDynamicContextAsync(segmentText)
+        if (result.errorType === "insufficient_words") {
+          const info = await getUserWordCount()
+          setWordInfo(info)
+          setShowRechargePrompt(true)
+          return
         }
-
-        // 檢查字數限制
-        const currentOutput = useAppStore.getState().storyOutput
-        if (skipCache) {
-          // 重新生成時的檢查
-          // ...
-        }
+        throw new Error(result.error || `API 錯誤: ${response.status}`)
       }
 
-      // 完成：異步提取完整角色
-      const finalStory = useAppStore.getState().storyOutput
-      if (finalStory.length > 100) {
-        extractCharacters(finalStory)
-      }
+      // SSE 流式回應
+      const reader = response.body!.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ""
 
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() || ""
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6).trim()
+            if (!data) continue
+
+            try {
+              const parsed = JSON.parse(data)
+
+              // V2.5: 處理分段事件
+              if (parsed.segmentStart) {
+                setCurrentSegment(parsed.segmentIndex)
+                console.log('[V2.5] Segment', parsed.segmentIndex, 'started')
+                continue
+              }
+              if (parsed.segmentDone) {
+                console.log('[V2.5] Segment', parsed.segmentIndex, 'done, total:', parsed.totalWords)
+                continue
+              }
+
+              if (parsed.error) {
+                if (parsed.errorType === "free_quota_exceeded") {
+                  setShowSignupPrompt(true)
+                  return
+                }
+                if (parsed.errorType === "insufficient_words") {
+                  const info = await getUserWordCount()
+                  setWordInfo(info)
+                  setShowRechargePrompt(true)
+                  return
+                }
+                setError(parsed.error)
+                return
+              }
+
+              if (parsed.content) {
+                appendStoryOutput(parsed.content)
+              }
+
+              if (parsed.done) {
+                if (parsed.isAnonymous && parsed.remaining !== undefined) {
+                  setAnonymousWordsLeft(parsed.remaining)
+                }
+                const finalStory = useAppStore.getState().storyOutput
+                if (finalStory.length > 100) {
+                  extractCharacters(finalStory)
+                }
+              }
+            } catch {
+              // skip invalid JSON
+            }
+          }
+        }
+      }
     } catch (err) {
-      console.error('[V3] Generation error:', err)
-      const errorMsg = err instanceof Error ? err.message : "生成失敗，請重試"
-      setError(errorMsg)
-      console.log('[V3] Error set:', errorMsg)
+      console.error('[V2.5] Generation error:', err)
+      setError(err instanceof Error ? err.message : "生成失敗，請重試")
     } finally {
-      console.log('[V3] Cleaning up...')
       setIsGenerating(false)
-      setStreamingState({ isStreaming: false, currentSceneIndex: 0 })
+      setCurrentSegment(0)
     }
+  }
+
+  // V3: 舊的故事生成流程（已棄用，改用 generateStoryDirect）
+  const generateStoryV3 = async (skipCache: boolean = false) => {
+    // 直接調用 V2.5 版本
+    await generateStoryDirect()
   }
 
   // V1/V2: 續寫流程（保持原有邏輯）
