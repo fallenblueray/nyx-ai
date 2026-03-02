@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const session = await getServerSession(authOptions)
-    const { systemPrompt, userPrompt, model = "deepseek/deepseek-r1-0528", anonymousId, topics, characters } = await req.json()
+    const { systemPrompt, userPrompt, model = "deepseek/deepseek-r1-0528", anonymousId, topics, characters, skipCache = false } = await req.json()
 
     if (!systemPrompt || !userPrompt) {
       return NextResponse.json({ error: "缺少 prompt" }, { status: 400 })
@@ -151,10 +151,14 @@ export async function POST(req: NextRequest) {
     // ============================================================
     // 緩存層：命中則直接返回，跳過 OpenRouter 調用
     // ============================================================
-    const cacheKey = buildCacheKey({ model, systemPrompt: enrichedSystemPrompt, userPrompt })
-    const cached = await getCachedStory(cacheKey)
+    // 如果 skipCache 為 true，則跳過緩存層，強制重新生成
+    let cached = null
+    if (!skipCache) {
+      const cacheKey = buildCacheKey({ model, systemPrompt: enrichedSystemPrompt, userPrompt })
+      cached = await getCachedStory(cacheKey)
+    }
 
-    if (cached) {
+    if (cached && !skipCache) {
       // 緩存命中：扣字數 + 直接以 SSE 返回
       // 注意：cached.content.length 是字元數，currentWordCount 是剩餘字數
       // 評估時用字元數 * 0.8 轉換為字數（保守估計）

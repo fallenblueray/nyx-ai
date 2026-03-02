@@ -161,9 +161,10 @@ export function GenerateButtons() {
       setStoryOutput("")
       setError(null)
       setShouldRegenerate(false)
-      generateStory(false)
+      // 傳入 true 表示這是重新生成，不使用緩存
+      generateStory(false, true)
     }
-  }, [shouldRegenerate, canGenerate, isGenerating])
+  }, [shouldRegenerate, canGenerate, isGenerating, storyOutput])
 
   // 初始化：獲取匿名用戶剩餘字數
   useEffect(() => {
@@ -219,7 +220,7 @@ export function GenerateButtons() {
     return { systemPrompt, userPrompt }
   }
 
-  const generateStory = async (isContinue: boolean = false) => {
+  const generateStory = async (isContinue: boolean = false, skipCache: boolean = false) => {
     if (!canGenerate && !isContinue) return
 
     setIsGenerating(true)
@@ -240,6 +241,7 @@ export function GenerateButtons() {
           model: "deepseek/deepseek-r1-0528",
           topics: selectedTopics,
           characters,
+          skipCache, // 傳遞跳過緩存的標記
           ...(anonymousId && { anonymousId }),
         })
       })
