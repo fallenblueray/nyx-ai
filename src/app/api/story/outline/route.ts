@@ -45,57 +45,23 @@ export async function POST(request: NextRequest) {
       ?.map((c: any) => `${c.name}：${c.description}`)
       .join('\n') || '';
 
-    const outlinePrompt = `你是一位專業小說編輯。請根據以下故事開頭，生成一個三幕式（3 scenes）的隱形大綱。
+    const outlinePrompt = `根據故事開頭生成三幕式大綱（純 JSON 輸出）：
 
-【故事開頭】
-${story_start}
+【開頭】${story_start.slice(0, 200)}
 
-【角色設定】
-${characterContext || '無特定角色'}
+【角色】${characterContext || '自由創作'}
 
-【風格】
-類型：${genre || '一般'}
-文風：${style || '流暢自然'}
-
-【輸出格式】
-請輸出純 JSON，不要有任何 markdown 標記或其他文字：
+輸出格式：
 {
-  "overall_arc": "整體故事弧線簡述（30字內）",
+  "overall_arc": "故事主線",
   "scenes": [
-    {
-      "scene_index": 1,
-      "setting": "場景設定（時間、地點、氛圍）",
-      "key_event": "本段核心事件（必須發生的劇情點）",
-      "mood": "情緒基調",
-      "characters_involved": ["角色A", "角色B"],
-      "word_count_target": 2000
-    },
-    {
-      "scene_index": 2,
-      "setting": "...",
-      "key_event": "...",
-      "mood": "...",
-      "characters_involved": ["..."],
-      "word_count_target": 2000
-    },
-    {
-      "scene_index": 3,
-      "setting": "...",
-      "key_event": "...",
-      "mood": "...",
-      "characters_involved": ["..."],
-      "word_count_target": 2000
-    }
+    {"scene_index": 1, "setting": "場景1", "key_event": "事件1", "mood": "情緒", "characters_involved": ["角色A"], "word_count_target": 2000},
+    {"scene_index": 2, "setting": "場景2", "key_event": "事件2", "mood": "情緒", "characters_involved": ["角色A"], "word_count_target": 2000},
+    {"scene_index": 3, "setting": "場景3", "key_event": "事件3", "mood": "情緒", "characters_involved": ["角色A"], "word_count_target": 2000}
   ]
 }
 
-【重要規則】
-1. 三段合計約 6000 字，每段 1800-2200 字
-2. 段與段之間要有自然的劇情連貫，scene 2 要承接 scene 1，scene 3 要承接 scene 2
-3. 不要寫出具體對話或細節描寫，只定義「骨架」
-4. 場景描述要足夠具體，讓後續寫作時知道該發生什麼
-5. 可以在後段引入新角色，但要標明為 NEW
-6. 確保三段構成完整的故事起承轉合`;
+規則：三段合計約6000字，段間有連貫，只定義骨架不寫細節。`;
 
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
@@ -112,8 +78,9 @@ ${characterContext || '無特定角色'}
           { role: 'user', content: outlinePrompt }
         ],
         temperature: 0.7,
-        max_tokens: 2000
-      })
+        max_tokens: 2500
+      }),
+      signal: AbortSignal.timeout(55000)
     });
 
     if (!response.ok) {
