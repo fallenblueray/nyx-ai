@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
-const OPENROUTER_MODEL = 'nvai/moonshotai/kimi-k2.5';
+const OPENROUTER_MODEL = 'moonshotai/kimi-k2.5';
 
 export async function POST(request: NextRequest) {
   try {
