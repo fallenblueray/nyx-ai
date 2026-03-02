@@ -67,16 +67,47 @@ ${existingCharacters.join('、') || '無'}
     }
 
     const data = await response.json();
+    
+    // 防禦：檢查回應結構
+    if (!data?.choices?.[0]?.message?.content) {
+      console.warn('Empty or invalid API response:', data);
+      return NextResponse.json({
+        characters: [],
+        relationships: [],
+        keyItems: []
+      });
+    }
+    
     let content = data.choices[0].message.content;
     
-    // Remove markdown code blocks if present
-    content = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    // 防禦：檢查 content 是否為空或太短
+    if (!content || content.length < 10) {
+      console.warn('Empty or too short content');
+      return NextResponse.json({
+        characters: [],
+        relationships: [],
+        keyItems: []
+      });
+    }
+    
+    // 更積極地移除 markdown 標記
+    content = content
+      .replace(/```json\s*/gi, '')
+      .replace(/```[\s\S]*$/gi, '')  // Remove trailing markdown
+      .replace(/```/gi, '')
+      .trim();
+    
+    // 如果還有殘留的 markdown 格式，再次清理
+    if (content.match(/```/)) {
+      content = content.replace(/```[\w]*\n?/g, '').trim();
+    }
     
     let result;
     try {
       result = JSON.parse(content);
     } catch (parseError) {
-      console.warn('Dynamic context JSON parse failed:', parseError);
+      console.warn('Dynamic context JSON parse failed. Content:', content.substring(0, 200));
+      console.warn('Parse error:', parseError);
       return NextResponse.json({
         characters: [],
         relationships: [],

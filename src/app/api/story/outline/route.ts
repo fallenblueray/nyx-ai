@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
-const OPENROUTER_MODEL = 'deepseek/deepseek-r1-0528';
+const OPENROUTER_MODEL = 'moonshotai/kimi-k2.5';
 const NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET;
 
 interface SceneOutline {
