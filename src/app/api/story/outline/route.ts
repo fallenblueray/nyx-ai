@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
-import { createAdminClient } from '@/lib/supabase-admin';
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const OPENROUTER_MODEL = 'deepseek/deepseek-r1-0528';
@@ -45,22 +44,29 @@ export async function POST(request: NextRequest) {
       ?.map((c: any) => `${c.name}：${c.description}`)
       .join('\n') || '';
 
-    const outlinePrompt = `根據故事開頭生成兩幕式大綱（純 JSON 輸出）：
+    const outlinePrompt = `【絕對重要】根據故事開頭生成大綱，必須嚴格遵守以下規則：
 
 【開頭】${story_start.slice(0, 200)}
 
 【角色】${characterContext || '自由創作'}
 
-輸出格式：
+【強制規則 - 必須100%遵守】
+1. 只能生成 **2個場景**（scene_index: 1 和 2），禁止生成第3個場景
+2. 第1場景：鋪墊發展，約3000字
+3. 第2場景：高潮收尾，約3000字
+4. 兩場景合計約6000字
+5. 只定義骨架（場景、核心事件、情緒），不寫具體細節
+
+輸出格式（純 JSON，只輸出這個 JSON，不要有其他內容）：
 {
-  "overall_arc": "故事主線",
+  "overall_arc": "故事主線一句話描述",
   "scenes": [
-    {"scene_index": 1, "setting": "場景1", "key_event": "事件1", "mood": "情緒", "characters_involved": ["角色A"], "word_count_target": 3000},
-    {"scene_index": 2, "setting": "場景2", "key_event": "事件2", "mood": "情緒", "characters_involved": ["角色A"], "word_count_target": 3000}
+    {"scene_index": 1, "setting": "場景1描述", "key_event": "核心事件1", "mood": "情緒基調", "characters_involved": ["角色A"], "word_count_target": 3000},
+    {"scene_index": 2, "setting": "場景2描述", "key_event": "核心事件2", "mood": "情緒基調", "characters_involved": ["角色A"], "word_count_target": 3000}
   ]
 }
 
-規則：兩段合計約6000字，第1章鋪墊發展，第2章高潮收尾，段間有連貫，只定義骨架不寫細節。`;
+警告：如果生成超過2個場景，系統會報錯。只輸出2個場景的JSON。`;
 
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
@@ -73,11 +79,11 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify({
         model: OPENROUTER_MODEL,
         messages: [
-          { role: 'system', content: '你是專業的小說結構規劃師，擅長設計緊湊的兩幕式故事大綱。' },
+          { role: 'system', content: '你是專業的小說結構規劃師。你必須嚴格遵守用戶的規則，只生成2個場景，絕對不能多。' },
           { role: 'user', content: outlinePrompt }
         ],
-        temperature: 0.7,
-        max_tokens: 2500
+        temperature: 0.5,
+        max_tokens: 2000
       }),
       signal: AbortSignal.timeout(55000)
     });
@@ -108,21 +114,34 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate outline structure - accept 2 or more scenes
+    // Validate: must have exactly 2 scenes
     if (!outline.scenes || outline.scenes.length < 2) {
       console.error('Invalid outline structure, scenes:', outline?.scenes);
       return NextResponse.json(
-        { error: '大綱格式錯誤：需要至少2章' },
+        { error: '大綱格式錯誤：需要2章' },
         { status: 500 }
       );
     }
+
+    // SAFETY: Truncate to exactly 2 scenes if AI generated more
+    if (outline.scenes.length > 2) {
+      console.warn(`AI generated ${outline.scenes.length} scenes, truncating to 2`);
+      outline.scenes = outline.scenes.slice(0, 2);
+    }
+
+    // Ensure scene indices are correct
+    outline.scenes = outline.scenes.map((scene, idx) => ({
+      ...scene,
+      scene_index: idx + 1,
+      word_count_target: 3000
+    }));
 
     return NextResponse.json({
       success: true,
       outline,
       metadata: {
-        total_scenes: outline.scenes.length,
-        estimated_total_words: outline.scenes.length * 3000,
+        total_scenes: 2,
+        estimated_total_words: 6000,
       }
     });
 
