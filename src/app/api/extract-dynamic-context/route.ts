@@ -54,8 +54,7 @@ ${existingCharacters.join('、') || '無'}
           { role: 'user', content: prompt }
         ],
         temperature: 0.3,
-        max_tokens: 800,
-        response_format: { type: 'json_object' }
+        max_tokens: 1000
       })
     });
 
@@ -68,7 +67,22 @@ ${existingCharacters.join('、') || '無'}
     }
 
     const data = await response.json();
-    const result = JSON.parse(data.choices[0].message.content);
+    let content = data.choices[0].message.content;
+    
+    // Remove markdown code blocks if present
+    content = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    
+    let result;
+    try {
+      result = JSON.parse(content);
+    } catch (parseError) {
+      console.warn('Dynamic context JSON parse failed:', parseError);
+      return NextResponse.json({
+        characters: [],
+        relationships: [],
+        keyItems: []
+      });
+    }
 
     return NextResponse.json({
       characters: result.characters || [],

@@ -112,8 +112,7 @@ ${characterContext || '無特定角色'}
           { role: 'user', content: outlinePrompt }
         ],
         temperature: 0.7,
-        max_tokens: 1500,
-        response_format: { type: 'json_object' }
+        max_tokens: 2000
       })
     });
 
@@ -127,7 +126,21 @@ ${characterContext || '無特定角色'}
     }
 
     const data = await response.json();
-    const outline: StoryOutline = JSON.parse(data.choices[0].message.content);
+    let content = data.choices[0].message.content;
+    
+    // Remove markdown code blocks if present
+    content = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    
+    let outline: StoryOutline;
+    try {
+      outline = JSON.parse(content);
+    } catch (parseError) {
+      console.error('JSON parse error:', parseError, 'Content:', content);
+      return NextResponse.json(
+        { error: '大綱格式解析失敗' },
+        { status: 500 }
+      );
+    }
 
     // Validate outline structure
     if (!outline.scenes || outline.scenes.length !== 3) {
