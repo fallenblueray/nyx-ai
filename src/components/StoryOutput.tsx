@@ -13,12 +13,12 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Loader2, Sparkles, RotateCcw, Edit2, Eye, RefreshCw } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { summarizeStory } from "@/lib/story-utils"
+import { summarizeStory, extractDynamicContext } from "@/lib/story-utils"
 
 const MAX_CHARS = 5000
 
 export function StoryOutput() {
-  const { storyOutput, error } = useAppStore()
+  const { storyOutput, error, isGenerating, currentSceneIndex, totalScenes, isStreaming } = useAppStore()
   const [isEditing, setIsEditing] = useState(false)
   const [editContent, setEditContent] = useState("")
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -50,7 +50,15 @@ export function StoryOutput() {
     <Card className="nyx-surface nyx-border h-full flex flex-col">
       <CardHeader className="pb-2 border-b nyx-border">
         <div className="flex items-center justify-between">
-          <CardTitle className="nyx-text-primary text-base">故事輸出</CardTitle>
+          <div className="flex items-center gap-2">
+            <CardTitle className="nyx-text-primary text-base">故事輸出</CardTitle>
+            {isStreaming && (
+              <span className="flex items-center gap-1 text-xs text-purple-400">
+                <Loader2 className="w-3 h-3 animate-spin" />
+                生成中 第 {currentSceneIndex}/{totalScenes} 段
+              </span>
+            )}
+          </div>
           <div className="flex items-center gap-2">
             {storyOutput && (
               <>
@@ -156,16 +164,15 @@ export function GenerateButtons() {
   const hasOutput = storyOutput.trim().length > 0
   const isLoggedIn = !!session?.user
 
-  // 監聽 shouldRegenerate 標記，觸發重新生成
+  // V3: 監聽 shouldRegenerate 標記，觸發重新生成
   useEffect(() => {
     if (shouldRegenerate && canGenerate && !isGenerating) {
-      setStoryOutput("")
       setError(null)
       setShouldRegenerate(false)
-      // 傳入 true 表示這是重新生成，不使用緩存
-      generateStory(false, true)
+      // V3: 使用分段生成流程
+      generateStoryV3(true)
     }
-  }, [shouldRegenerate, canGenerate, isGenerating, storyOutput])
+  }, [shouldRegenerate, canGenerate, isGenerating])
 
   // 初始化：獲取匿名用戶剩餘字數
   useEffect(() => {
@@ -221,16 +228,176 @@ export function GenerateButtons() {
     return { systemPrompt, userPrompt }
   }
 
-  const generateStory = async (isContinue: boolean = false, skipCache: boolean = false) => {
-    if (!canGenerate && !isContinue) return
+  // V3: 生成隱形大綱
+  const generateOutline = async (): Promise<any | null> => {
+    try {
+      const response = await fetch("/api/story/outline", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          story_start: storyInput,
+          characters,
+          genre: selectedTopics.map(t => t.category).join('、'),
+          style: "流暢細膩、長篇敘事"
+        })
+      })
 
+      if (!response.ok) {
+        const result = await response.json()
+        if (result.errorType === "free_quota_exceeded") {
+          setShowSignupPrompt(true)
+          return null
+        }
+        if (result.errorType === "insufficient_words") {
+          setShowRechargePrompt(true)
+          return null
+        }
+        throw new Error(result.error || "大綱生成失敗")
+      }
+
+      const data = await response.json()
+      return data.outline
+    } catch (err) {
+      console.error('Outline generation failed:', err)
+      return null
+    }
+  }
+
+  // V3: 生成單段
+  const generateSegment = async (
+    sceneIndex: number,
+    totalScenes: number,
+    outlineScene: any,
+    previousSegment?: string
+  ): Promise<string | null> => {
+    try {
+      const response = await fetch("/api/story/segment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          story_start: storyInput,
+          scene_context: {
+            scene_index: sceneIndex,
+            total_scenes: totalScenes,
+            outline: outlineScene,
+            previous_segment: previousSegment,
+            dynamic_context: useAppStore.getState().dynamicContext
+          },
+          characters,
+          genre: selectedTopics.map(t => t.category).join('、'),
+          style: "流暢細膩、長篇敘事"
+        })
+      })
+
+      if (!response.ok) {
+        const result = await response.json()
+        if (result.errorType === "free_quota_exceeded") {
+          setShowSignupPrompt(true)
+          return null
+        }
+        if (result.errorType === "insufficient_words") {
+          setShowRechargePrompt(true)
+          return null
+        }
+        throw new Error(result.error || `第 ${sceneIndex} 段生成失敗`)
+      }
+
+      const data = await response.json()
+      return data.segment?.text || null
+    } catch (err) {
+      console.error(`Segment ${sceneIndex} generation failed:`, err)
+      return null
+    }
+  }
+
+  // V3: 異步提取動態上下文
+  const updateDynamicContextAsync = async (segmentText: string) => {
+    const { dynamicContext, updateDynamicContext } = useAppStore.getState()
+    const result = await extractDynamicContext(segmentText, dynamicContext)
+    updateDynamicContext(result)
+  }
+
+  // V3: 新故事生成流程（分段式）
+  const generateStoryV3 = async (skipCache: boolean = false) => {
+    if (!canGenerate) return
+
+    // 初始化流式狀態
+    const { setStreamingState, resetStreaming, appendSegment, setStoryOutline } = useAppStore.getState()
+    resetStreaming()
+    setIsGenerating(true)
+    setError(null)
+    setStoryOutput("")
+
+    try {
+      // Step 1: 生成隱形大綱
+      setStreamingState({ isStreaming: true, currentSceneIndex: 0 })
+      const outline = await generateOutline()
+      
+      if (!outline) {
+        throw new Error("無法生成故事大綱")
+      }
+
+      setStoryOutline(outline)
+      const totalScenes = outline.scenes.length
+      setStreamingState({ totalScenes })
+
+      // Step 2-4: 逐段生成
+      let previousSegment = ""
+      
+      for (let i = 0; i < totalScenes; i++) {
+        const sceneIndex = i + 1
+        setStreamingState({ currentSceneIndex: sceneIndex })
+        
+        const outlineScene = outline.scenes[i]
+        const segmentText = await generateSegment(
+          sceneIndex,
+          totalScenes,
+          outlineScene,
+          previousSegment || undefined
+        )
+
+        if (!segmentText) {
+          throw new Error(`第 ${sceneIndex} 段生成失敗`)
+        }
+
+        // 立即顯示到畫面
+        appendSegment(segmentText)
+        previousSegment = segmentText
+
+        // 後台異步提取動態上下文（最後一段不需要）
+        if (i < totalScenes - 1) {
+          updateDynamicContextAsync(segmentText)
+        }
+
+        // 檢查字數限制
+        const currentOutput = useAppStore.getState().storyOutput
+        if (skipCache) {
+          // 重新生成時的檢查
+          // ...
+        }
+      }
+
+      // 完成：異步提取完整角色
+      const finalStory = useAppStore.getState().storyOutput
+      if (finalStory.length > 100) {
+        extractCharacters(finalStory)
+      }
+
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "生成失敗，請重試")
+    } finally {
+      setIsGenerating(false)
+      setStreamingState({ isStreaming: false, currentSceneIndex: 0 })
+    }
+  }
+
+  // V1/V2: 續寫流程（保持原有邏輯）
+  const continueStory = async () => {
     setIsGenerating(true)
     setError(null)
 
     try {
-      const { systemPrompt, userPrompt } = buildPrompt(isContinue)
-
-      // 匿名用戶傳入 anonymousId
+      const { systemPrompt, userPrompt } = buildPrompt(true)
       const anonymousId = !isLoggedIn ? getOrCreateAnonymousId() : undefined
 
       const response = await fetch("/api/generate-story", {
@@ -242,15 +409,12 @@ export function GenerateButtons() {
           model: "deepseek/deepseek-r1-0528",
           topics: selectedTopics,
           characters,
-          skipCache, // 傳遞跳過緩存的標記
           ...(anonymousId && { anonymousId }),
         })
       })
 
       if (!response.ok) {
         const result = await response.json()
-
-        // 處理字數不足的特殊錯誤
         if (result.errorType === "free_quota_exceeded") {
           setShowSignupPrompt(true)
           return
@@ -261,16 +425,13 @@ export function GenerateButtons() {
           setShowRechargePrompt(true)
           return
         }
-
         throw new Error(result.error || `API 錯誤: ${response.status}`)
       }
 
-      // 處理 SSE 流式回應
+      // SSE 流式回應
       const reader = response.body!.getReader()
       const decoder = new TextDecoder()
       let buffer = ""
-
-      if (!isContinue) setStoryOutput("")
 
       while (true) {
         const { done, value } = await reader.read()
@@ -312,10 +473,8 @@ export function GenerateButtons() {
                 if (parsed.isAnonymous && parsed.remaining !== undefined) {
                   setAnonymousWordsLeft(parsed.remaining)
                 }
-                // 更新登入用戶字數（由 UserMenu 自行刷新）
                 
-                
-                // V2: 後台異步提取角色（不阻塞用戶）
+                // 後台異步提取角色
                 const currentStory = useAppStore.getState().storyOutput
                 if (currentStory.length > 100) {
                   extractCharacters(currentStory)
@@ -341,7 +500,7 @@ export function GenerateButtons() {
         {!hasOutput ? (
           // 未有故事：顯示「開始創作」
           <Button
-            onClick={() => generateStory(false)}
+            onClick={() => generateStoryV3(false)}
             disabled={!canGenerate || isGenerating}
             className="w-full bg-blue-600 hover:bg-blue-700"
           >
@@ -355,7 +514,7 @@ export function GenerateButtons() {
           // 已有故事：「繼續創作」+ 「再寫一次」並排
           <div className="flex gap-2">
             <Button
-              onClick={() => generateStory(true)}
+              onClick={() => continueStory()}
               disabled={isGenerating}
               className="flex-1 bg-purple-600 hover:bg-purple-700"
             >

@@ -70,3 +70,119 @@ export function extractCharacterNames(fullText: string): string[] {
 
   return Array.from(names).slice(0, 5) // 最多返回 5 個角色
 }
+
+/**
+ * V3: 提取動態上下文（異步進行）
+ * 
+ * 分析新故事段落，提取：
+ * - 新出現的角色（帶情緒狀態）
+ * - 關係發展變化
+ * - 關鍵道具/線索
+ * 
+ * 此函數在後台調用，不阻塞用戶體驗
+ */
+export interface DynamicContext {
+  characters: {
+    name: string
+    mood: string
+    status: string
+    isNew: boolean
+  }[]
+  relationships: string[]
+  keyItems: string[]
+}
+
+export async function extractDynamicContext(
+  newSegment: string,
+  existingContext: DynamicContext
+): Promise<DynamicContext> {
+  try {
+    const response = await fetch('/api/extract-dynamic-context', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        segment: newSegment,
+        existingCharacters: existingContext.characters.map(c => c.name)
+      })
+    })
+
+    if (!response.ok) {
+      // 失敗時返回現有上下文，不影響流程
+      return existingContext
+    }
+
+    const data = await response.json()
+    
+    // 合併新舊角色（保持原有角色的最新狀態）
+    const mergedCharacters = [...existingContext.characters]
+    
+    for (const newChar of data.characters || []) {
+      const existingIndex = mergedCharacters.findIndex(c => c.name === newChar.name)
+      if (existingIndex >= 0) {
+        // 更新現有角色狀態
+        mergedCharacters[existingIndex] = { ...mergedCharacters[existingIndex], ...newChar, isNew: false }
+      } else {
+        // 添加新角色
+        mergedCharacters.push({ ...newChar, isNew: true })
+      }
+    }
+
+    // 合併關係和道具（去重）
+    const mergedRelationships = Array.from(new Set([
+      ...existingContext.relationships,
+      ...(data.relationships || [])
+    ]))
+
+    const mergedKeyItems = Array.from(new Set([
+      ...existingContext.keyItems,
+      ...(data.keyItems || [])
+    ]))
+
+    return {
+      characters: mergedCharacters.slice(0, 8), // 最多 8 個角色
+      relationships: mergedRelationships.slice(0, 10),
+      keyItems: mergedKeyItems.slice(0, 6)
+    }
+  } catch (err) {
+    console.warn('[extractDynamicContext] Failed:', err)
+    // 失敗靜默處理，返回原上下文
+    return existingContext
+  }
+}
+
+/**
+ * V3: 快速規則摘要（用於段間銜接）
+ * 提取段落的關鍵信息，用於下一段的 prompt
+ */
+export function extractSegmentSummary(segmentText: string): {
+  endingSnippet: string
+  mood: string
+  keyEvents: string[]
+} {
+  // 提取最後 300 字作為銜接引子
+  const endingSnippet = segmentText.slice(-300)
+  
+  // 簡單情緒檢測
+  const moodKeywords: Record<string, string[]> = {
+    '緊張': ['緊張', '焦慮', '急促', '慌張', '危險'],
+    '浪漫': ['溫柔', '愛意', '凝視', '親吻', '擁抱'],
+    '悲傷': ['淚水', '哭泣', '絕望', '心痛', '離別'],
+    '興奮': ['興奮', '激動', '喜悅', '歡呼', '期待'],
+    '恐懼': ['恐懼', '害怕', '顫抖', '恐怖', '驚嚇'],
+    '平靜': ['平靜', '安靜', '輕鬆', '舒適', '溫馨']
+  }
+  
+  let detectedMood = '平穩'
+  for (const [mood, keywords] of Object.entries(moodKeywords)) {
+    if (keywords.some(kw => segmentText.includes(kw))) {
+      detectedMood = mood
+      break
+    }
+  }
+  
+  return {
+    endingSnippet,
+    mood: detectedMood,
+    keyEvents: [] // LLM 提取更準確
+  }
+}

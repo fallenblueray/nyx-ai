@@ -64,6 +64,34 @@ interface AppState {
   // 重新生成標記（用戶按「再寫一次」時觸發）
   shouldRegenerate: boolean
   setShouldRegenerate: (v: boolean) => void
+
+  // V3: 流式分段生成狀態
+  streamingSegments: string[]
+  currentSceneIndex: number
+  totalScenes: number
+  isStreaming: boolean
+  streamingError: string | null
+  setStreamingState: (state: {
+    segments?: string[]
+    currentSceneIndex?: number
+    totalScenes?: number
+    isStreaming?: boolean
+    streamingError?: string | null
+  }) => void
+  appendSegment: (text: string) => void
+  resetStreaming: () => void
+  
+  // V3: 隱形大綱（用戶不可見）
+  storyOutline: any | null
+  setStoryOutline: (outline: any) => void
+  
+  // V3: 動態上下文
+  dynamicContext: {
+    characters: any[]
+    relationships: string[]
+    keyItems: string[]
+  }
+  updateDynamicContext: (context: Partial<AppState['dynamicContext']>) => void
 }
 
 export const FREE_WORD_LIMIT = 8000
@@ -176,16 +204,61 @@ export const useAppStore = create<AppState>()(
       // 重新生成標記
       shouldRegenerate: false,
       setShouldRegenerate: (v) => set({ shouldRegenerate: v }),
+
+      // V3: 流式分段生成
+      streamingSegments: [],
+      currentSceneIndex: 0,
+      totalScenes: 3,
+      isStreaming: false,
+      streamingError: null,
+      setStreamingState: (newState) => set((state) => ({
+        streamingSegments: newState.segments ?? state.streamingSegments,
+        currentSceneIndex: newState.currentSceneIndex ?? state.currentSceneIndex,
+        totalScenes: newState.totalScenes ?? state.totalScenes,
+        isStreaming: newState.isStreaming ?? state.isStreaming,
+        streamingError: newState.streamingError ?? state.streamingError,
+      })),
+      appendSegment: (text) => set((state) => ({
+        streamingSegments: [...state.streamingSegments, text],
+        currentSceneIndex: state.currentSceneIndex + 1,
+        storyOutput: state.storyOutput + (state.storyOutput ? '\n\n' : '') + text,
+      })),
+      resetStreaming: () => set({
+        streamingSegments: [],
+        currentSceneIndex: 0,
+        isStreaming: false,
+        streamingError: null,
+      }),
+
+      // V3: 隱形大綱
+      storyOutline: null,
+      setStoryOutline: (outline) => set({ storyOutline: outline }),
+
+      // V3: 動態上下文
+      dynamicContext: {
+        characters: [],
+        relationships: [],
+        keyItems: [],
+      },
+      updateDynamicContext: (context) => set((state) => ({
+        dynamicContext: {
+          characters: context.characters ?? state.dynamicContext.characters,
+          relationships: context.relationships ?? state.dynamicContext.relationships,
+          keyItems: context.keyItems ?? state.dynamicContext.keyItems,
+        },
+      })),
     }),
     {
       name: 'nyx-ai-storage',
-      // 不持久化彈窗狀態
+      // 不持久化彈窗狀態和流式狀態
       partialize: (state) => ({
         isPanelCollapsed: state.isPanelCollapsed,
         storyInput: state.storyInput,
         storyOutput: state.storyOutput,
         selectedTopics: state.selectedTopics,
         characters: state.characters,
+        storyOutline: state.storyOutline,
+        dynamicContext: state.dynamicContext,
       }),
     }
   )
