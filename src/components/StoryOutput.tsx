@@ -319,7 +319,11 @@ export function GenerateButtons() {
 
   // V3: 新故事生成流程（分段式）
   const generateStoryV3 = async (skipCache: boolean = false) => {
-    if (!canGenerate) return
+    console.log('[V3] generateStoryV3 started, canGenerate:', canGenerate)
+    if (!canGenerate) {
+      console.log('[V3] cannot generate, returning')
+      return
+    }
 
     // 初始化流式狀態
     const { setStreamingState, resetStreaming, appendSegment, setStoryOutline } = useAppStore.getState()
@@ -327,14 +331,18 @@ export function GenerateButtons() {
     setIsGenerating(true)
     setError(null)
     setStoryOutput("")
+    console.log('[V3] initialized streaming state')
 
     try {
       // Step 1: 生成隱形大綱
+      console.log('[V3] Step 1: generating outline...')
       setStreamingState({ isStreaming: true, currentSceneIndex: 0 })
       const outline = await generateOutline()
+      console.log('[V3] outline result:', outline)
       
       if (!outline) {
-        throw new Error("無法生成故事大綱")
+        throw new Error("無法生成故事大綱，請檢查 API 連接或重新整理頁面")
+      }
       }
 
       setStoryOutline(outline)
@@ -384,8 +392,12 @@ export function GenerateButtons() {
       }
 
     } catch (err) {
-      setError(err instanceof Error ? err.message : "生成失敗，請重試")
+      console.error('[V3] Generation error:', err)
+      const errorMsg = err instanceof Error ? err.message : "生成失敗，請重試"
+      setError(errorMsg)
+      console.log('[V3] Error set:', errorMsg)
     } finally {
+      console.log('[V3] Cleaning up...')
       setIsGenerating(false)
       setStreamingState({ isStreaming: false, currentSceneIndex: 0 })
     }
