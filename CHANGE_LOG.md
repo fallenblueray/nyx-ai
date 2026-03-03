@@ -17,6 +17,24 @@
 
 ## 變更記錄
 
+### [2026-03-03] 修復字數負數仍可生成的安全漏洞
+
+**變更類型**: 安全修復  
+**相關文件**: `generate-story/route.ts`, `segment/route.ts`, `StoryOutput.tsx`
+
+**問題描述**: 用戶關閉「字數用完」提示後，仍可繼續生成故事
+
+**修復內容**:
+1. generate-story/route.ts: 在進入生成流程前檢查 `currentWordCount <= 0`
+2. segment/route.ts: 添加字數檢查，從 header 讀取匿名 ID
+3. StoryOutput.tsx: generateSegment 函數傳遞 `x-anonymous-id` header
+
+**同步更新**:
+- ✅ SYSTEM.md: 已更新「已知問題」部分，移除此漏洞
+- ✅ DECISIONS.md: 已記錄「為什麼在前端和後端都檢查字數」
+
+---
+
 ### [2026-03-03] 支持1/2/3段動態字數與大綱生成
 
 **變更類型**: 功能改進  
