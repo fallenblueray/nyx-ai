@@ -7,6 +7,7 @@ import { CharacterManager } from "@/components/CharacterManager"
 import { StoryOutput, GenerateButtons } from "@/components/StoryOutput"
 import { HistoryDrawer } from "@/components/HistoryDrawer"
 import { UserMenu } from "@/components/UserMenu"
+import { TemplateSelector } from "@/components/TemplateSelector"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
@@ -259,6 +260,7 @@ export default function AppPage() {
               <label className="text-sm font-medium nyx-text-secondary">
                 {translations.app?.storyStart || "劇情起點"}
               </label>
+              <TemplateSelector />
               <Textarea
                 value={storyInput}
                 onChange={(e) => setStoryInput(e.target.value)}
