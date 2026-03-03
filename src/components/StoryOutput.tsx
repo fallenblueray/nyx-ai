@@ -194,10 +194,14 @@ export function GenerateButtons() {
     }
   }, [isLoggedIn, setAnonymousWordsLeft])
 
-  const buildPrompt = (isContinue: boolean = false) => {
+  const buildPrompt = (isContinue: boolean = false, segmentCount: number = targetSegments) => {
     // V2.7: 統一使用官方 System Prompt
     const systemPrompt = OFFICIAL_SYSTEM_PROMPT
 
+    // V2.8: 動態計算字數要求
+    const wordsPerSegment = 2500
+    const totalWords = segmentCount * wordsPerSegment
+    
     let userPrompt = ""
     if (isContinue && storyOutput) {
       // V2.7：優化續寫prompt，明確要求2500字並強化風格錨定
@@ -212,7 +216,7 @@ export function GenerateButtons() {
         ? characters.map(c => `${c.name}：${c.description}`).join('\n')
         : '（沿用前文角色）'
       
-      userPrompt = `【續寫任務 - 必須生成2500~3000字】
+      userPrompt = `【續寫任務 - 必須生成${wordsPerSegment}~${wordsPerSegment + 500}字】
 
 【角色設定】（必須沿用，不可新增或遺漏）
 ${characterList}
@@ -224,7 +228,7 @@ ${styleSample.slice(0, 500)}
 ${ending}
 
 【強制要求】
-1. 字數：嚴格控制2500~3000字之間，只許多不許少
+1. 字數：嚴格控制${wordsPerSegment}~${wordsPerSegment + 500}字之間，只許多不許少
 2. 承接：從上文結尾下一秒開始，自然過渡，絕對禁止重複前文任何句子
 3. 人物：只能使用【角色設定】中的角色，不得新增角色，不得遺漏既有角色
 4. 劇情：延續前文情節發展，推動故事向更深層次推進
@@ -236,13 +240,24 @@ ${ending}
     } else {
       const topicStr = selectedTopics.map(t => `${t.category}: ${t.item}`).join("、")
       const charStr = characters.map(c => `${c.name}：${c.description}（${c.traits.join("、")}）`).join("\n")
+      
+      // V2.8: 根據段數動態生成字數要求
+      let segmentDescription = ""
+      if (segmentCount === 1) {
+        segmentDescription = `單段完整故事，約 ${wordsPerSegment} 字`
+      } else if (segmentCount === 2) {
+        segmentDescription = `分 2 段，每段約 ${wordsPerSegment} 字，合計約 ${totalWords} 字`
+      } else {
+        segmentDescription = `分 ${segmentCount} 段，每段約 ${wordsPerSegment} 字，合計約 ${totalWords} 字`
+      }
+      
       userPrompt = `用戶設定：
 - 故事起點：${storyInput || "（自由創作）"}
 - 題材：${topicStr || "（自由發揮）"}
 - 角色：
 ${charStr || "（自由創作）"}
 
-【強制要求】字數：每段必須生成 2300-2500 字，合計約 5000 字，嚴格遵守，不可縮短。`
+【強制要求】字數：${segmentDescription}。每段必須生成 ${wordsPerSegment - 200}-${wordsPerSegment} 字，嚴格遵守，不可縮短。`
     }
 
     return { systemPrompt, userPrompt }
