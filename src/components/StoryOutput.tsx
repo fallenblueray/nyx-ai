@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Loader2, Sparkles, RotateCcw, Edit2, Eye, RefreshCw } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { summarizeStory, extractDynamicContext } from "@/lib/story-utils"
+import { extractDynamicContext } from "@/lib/story-utils"
 
 const MAX_CHARS = 5000
 
@@ -194,7 +194,12 @@ export function GenerateButtons() {
   }, [isLoggedIn, setAnonymousWordsLeft])
 
   const buildPrompt = (isContinue: boolean = false) => {
-    const systemPrompt = `你是一位頂級中文小黃文作家，專門創作「讓男人一看就硬、血脈噴張、讀到射出來」的極致色情故事。你的唯一使命是：用戶只要輸入一句話，你就立刻生成一篇精準控制在4200～4800字之間的極致露骨、極致細膩、極致讓男性讀者性興奮的故事。
+    // 提取風格樣本（續寫時用於風格錨定）
+    const styleSample = isContinue && storyOutput 
+      ? storyOutput.slice(storyOutput.length > 800 ? 400 : 0, 800)  // 取中段樣本
+      : null
+    
+    const baseSystemPrompt = `你是一位頂級中文小黃文作家，專門創作「讓男人一看就硬、血脈噴張、讀到射出來」的極致色情故事。你的唯一使命是：用戶只要輸入一句話，你就立刻生成一篇精準控制在4200～4800字之間的極致露骨、極致細膩、極致讓男性讀者性興奮的故事。
 
 用戶輸入只有一句話，這句話就是「劇情主軸」（必填）。若用戶同時提到主題或人物設定，必須100%優先融入；若沒有，則由你自行創作最能讓男性讀者強烈勃起的主題與人物（女角色預設為大多數男人最愛的夢幻身材：巨乳、纖腰、翹臀、長腿、敏感體質、聲音甜膩、表情又羞又浪）。
 
@@ -218,14 +223,35 @@ export function GenerateButtons() {
 
     let userPrompt = ""
     if (isContinue && storyOutput) {
-      // V1：規則摘要，零延遲，保留開頭設定 + 最新劇情
-      const summary = summarizeStory(storyOutput, 600)
-      userPrompt = `接續以下故事（已精簡摘要）：\n\n${summary}\n\n請保持上述風格、人物設定和節奏繼續寫下去，直接輸出故事正文。`
+      // V2.6：傳遞完整結尾上下文，確保連貫性
+      const ending = storyOutput.slice(-1500)  // 取最後 1500 字
+      const characterList = characters.length > 0 
+        ? characters.map(c => c.name).join('、')
+        : '（已登場角色）'
+      
+      userPrompt = `【續寫任務】
+
+【已登場角色】
+${characterList}
+
+【前文結尾】（請自然承接）
+${ending}
+
+【寫作要求】
+- 直接承接上文結尾，自然過渡，不要重複前文
+- 保持完全相同的人物設定、關係和劇情走向
+- 維持一致的文筆風格和敘事節奏
+- 只輸出續寫內容，不要有任何說明`
     } else {
       const topicStr = selectedTopics.map(t => `${t.category}: ${t.item}`).join("、")
       const charStr = characters.map(c => `${c.name}：${c.description}（${c.traits.join("、")}）`).join("\n")
       userPrompt = `用戶設定：\n- 故事起點：${storyInput || "（自由創作）"}\n- 題材：${topicStr || "（自由發揮）"}\n- 角色：\n${charStr || "（自由創作）"}`
     }
+
+    // V2.6：續寫時加入風格錨定
+    const systemPrompt = (isContinue && styleSample)
+      ? `${baseSystemPrompt}\n\n【風格錨定】延續以下文筆風格繼續寫作：\n${styleSample.slice(0, 400)}`
+      : baseSystemPrompt
 
     return { systemPrompt, userPrompt }
   }
