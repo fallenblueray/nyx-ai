@@ -236,7 +236,13 @@ ${ending}
     } else {
       const topicStr = selectedTopics.map(t => `${t.category}: ${t.item}`).join("、")
       const charStr = characters.map(c => `${c.name}：${c.description}（${c.traits.join("、")}）`).join("\n")
-      userPrompt = `用戶設定：\n- 故事起點：${storyInput || "（自由創作）"}\n- 題材：${topicStr || "（自由發揮）"}\n- 角色：\n${charStr || "（自由創作）"}`
+      userPrompt = `用戶設定：
+- 故事起點：${storyInput || "（自由創作）"}
+- 題材：${topicStr || "（自由發揮）"}
+- 角色：
+${charStr || "（自由創作）"}
+
+【強制要求】字數：每段必須生成 2300-2500 字，合計約 5000 字，嚴格遵守，不可縮短。`
     }
 
     return { systemPrompt, userPrompt }
