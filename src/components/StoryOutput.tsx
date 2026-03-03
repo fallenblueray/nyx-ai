@@ -82,7 +82,9 @@ function ExportButtons({ content, title }: { content: string; title?: string }) 
   }
   
   const handleDownloadTxt = () => {
-    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' })
+    // 添加 UTF-8 BOM 幫助 Windows 識別編碼
+    const BOM = '\uFEFF'
+    const blob = new Blob([BOM + content], { type: 'text/plain;charset=utf-8' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
@@ -95,7 +97,9 @@ function ExportButtons({ content, title }: { content: string; title?: string }) 
   
   const handleDownloadMd = () => {
     const mdContent = `# ${title || '無標題故事'}\n\n${content}`
-    const blob = new Blob([mdContent], { type: 'text/markdown;charset=utf-8' })
+    // 添加 UTF-8 BOM 幫助 Windows 識別編碼
+    const BOM = '\uFEFF'
+    const blob = new Blob([BOM + mdContent], { type: 'text/markdown;charset=utf-8' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
@@ -492,8 +496,10 @@ ${charStr || "（自由創作）"}
     console.log('[V2.5] generateStoryDirect started, canGenerate:', canGenerate, 'targetSegments:', targetSegments)
     if (!canGenerate) return
 
-    const { resetStreaming } = useAppStore.getState()
+    const { resetStreaming, setStreamingState } = useAppStore.getState()
     resetStreaming()
+    // 設置流式狀態，啟動進度條
+    setStreamingState({ isStreaming: true, currentSceneIndex: 0, totalScenes: targetSegments })
     setIsGenerating(true)
     setError(null)
     setStoryOutput("")
@@ -562,6 +568,9 @@ ${charStr || "（自由創作）"}
               // V2.5: 處理分段事件
               if (parsed.segmentStart) {
                 setCurrentSegment(parsed.segmentIndex)
+                // 更新 store 中的流式狀態
+                const { setStreamingState } = useAppStore.getState()
+                setStreamingState({ currentSceneIndex: parsed.segmentIndex })
                 console.log('[V2.5] Segment', parsed.segmentIndex, 'started')
                 continue
               }
@@ -610,6 +619,9 @@ ${charStr || "（自由創作）"}
     } finally {
       setIsGenerating(false)
       setCurrentSegment(0)
+      // 結束流式狀態
+      const { setStreamingState } = useAppStore.getState()
+      setStreamingState({ isStreaming: false })
     }
   }
 
@@ -621,6 +633,9 @@ ${charStr || "（自由創作）"}
 
   // V1/V2: 續寫流程（保持原有邏輯）
   const continueStory = async () => {
+    const { setStreamingState } = useAppStore.getState()
+    // 設置流式狀態，啟動進度條（續寫顯示為第 1/1 段）
+    setStreamingState({ isStreaming: true, currentSceneIndex: 1, totalScenes: 1 })
     setIsGenerating(true)
     setError(null)
 
@@ -732,6 +747,9 @@ ${charStr || "（自由創作）"}
       setError(err instanceof Error ? err.message : "生成失敗，請重試")
     } finally {
       setIsGenerating(false)
+      // 結束流式狀態
+      const { setStreamingState } = useAppStore.getState()
+      setStreamingState({ isStreaming: false })
     }
   }
 

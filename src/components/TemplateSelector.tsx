@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useAppStore } from "@/store/useAppStore"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
@@ -92,8 +92,8 @@ export function TemplateSelector() {
     selectedTopics
   } = useAppStore()
   
-  // 從 localStorage 載入儲存模板
-  useState(() => {
+  // 從 localStorage 載入儲存模板（只在客戶端執行）
+  useEffect(() => {
     const saved = localStorage.getItem("nyx-ai-templates")
     if (saved) {
       try {
@@ -102,7 +102,7 @@ export function TemplateSelector() {
         console.error("Failed to load templates:", e)
       }
     }
-  })
+  }, [])
   
   const handleApplyTemplate = (template: StoryTemplate) => {
     setStoryInput(template.storyInput)
