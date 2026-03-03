@@ -81,6 +81,10 @@ interface AppState {
   appendSegment: (text: string) => void
   resetStreaming: () => void
   
+  // V2.8: 目標分段數（1/2/3段）
+  targetSegments: number
+  setTargetSegments: (n: number) => void
+  
   // V3: 隱形大綱（用戶不可見）
   storyOutline: any | null
   setStoryOutline: (outline: any) => void
@@ -229,6 +233,10 @@ export const useAppStore = create<AppState>()(
         isStreaming: false,
         streamingError: null,
       }),
+      
+      // V2.8: 目標分段數
+      targetSegments: 2,
+      setTargetSegments: (n) => set({ targetSegments: Math.min(Math.max(n, 1), 3) }),
 
       // V3: 隱形大綱
       storyOutline: null,

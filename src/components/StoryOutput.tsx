@@ -11,12 +11,133 @@ import { getOrCreateAnonymousId } from "@/lib/anonymous"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Loader2, Sparkles, RotateCcw, Edit2, Eye, RefreshCw } from "lucide-react"
+import { Loader2, Sparkles, RotateCcw, Edit2, Eye, RefreshCw, Download, FileText, Copy, Check, BookOpen, Wand2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { extractDynamicContext } from "@/lib/story-utils"
 import { SYSTEM_PROMPT as OFFICIAL_SYSTEM_PROMPT } from "@/app/api/story/segment/system_prompt"
 
 const MAX_CHARS = 5000
+
+// 生成進度條組件
+function GenerationProgress({ 
+  isGenerating, 
+  currentSegment, 
+  totalSegments, 
+  segmentProgress = 0 
+}: { 
+  isGenerating: boolean
+  currentSegment: number
+  totalSegments: number
+  segmentProgress?: number
+}) {
+  if (!isGenerating) return null
+
+  // 計算總進度：大綱(5%) + 各段(每段佔剩餘比例的均分) + 清理(5%)
+  const outlineWeight = 5
+  const cleanupWeight = 5
+  const segmentWeight = (100 - outlineWeight - cleanupWeight) / totalSegments
+  
+  let totalProgress = 0
+  
+  if (currentSegment === 0) {
+    // 大綱生成階段
+    totalProgress = Math.min(outlineWeight, segmentProgress * outlineWeight / 100)
+  } else if (currentSegment > totalSegments) {
+    // 清理階段
+    totalProgress = 100 - cleanupWeight + (segmentProgress * cleanupWeight / 100)
+  } else {
+    // 段落生成階段
+    totalProgress = outlineWeight + (currentSegment - 1) * segmentWeight + (segmentProgress * segmentWeight / 100)
+  }
+
+  return (
+    <div className="w-full space-y-1">
+      <div className="flex justify-between text-xs text-purple-400">
+        <span className="flex items-center gap-1">
+          <Loader2 className="w-3 h-3 animate-spin" />
+          {currentSegment === 0 ? "生成大綱..." : 
+           currentSegment > totalSegments ? "整理輸出..." : 
+           `生成第 ${currentSegment}/${totalSegments} 段...`}
+        </span>
+        <span>{Math.round(totalProgress)}%</span>
+      </div>
+      <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+        <div 
+          className="h-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all duration-300 ease-out"
+          style={{ width: `${Math.min(100, totalProgress)}%` }}
+        />
+      </div>
+    </div>
+  )
+}
+
+// 導出功能組件
+function ExportButtons({ content, title }: { content: string; title?: string }) {
+  const [copied, setCopied] = useState(false)
+  
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(content)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+  
+  const handleDownloadTxt = () => {
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${title || 'story'}_${new Date().toISOString().slice(0,10)}.txt`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+  
+  const handleDownloadMd = () => {
+    const mdContent = `# ${title || '無標題故事'}\n\n${content}`
+    const blob = new Blob([mdContent], { type: 'text/markdown;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${title || 'story'}_${new Date().toISOString().slice(0,10)}.md`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+  
+  return (
+    <div className="flex items-center gap-1">
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={handleCopy}
+        className="h-7 px-2 nyx-text-muted hover:nyx-text-primary"
+        title="複製全文"
+      >
+        {copied ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
+      </Button>
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={handleDownloadTxt}
+        className="h-7 px-2 nyx-text-muted hover:nyx-text-primary"
+        title="下載 TXT"
+      >
+        <FileText className="w-3 h-3" />
+      </Button>
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={handleDownloadMd}
+        className="h-7 px-2 nyx-text-muted hover:nyx-text-primary"
+        title="下載 Markdown"
+      >
+        <Download className="w-3 h-3" />
+      </Button>
+    </div>
+  )
+}
 
 export function StoryOutput() {
   const { storyOutput, error, isGenerating, currentSceneIndex, totalScenes, isStreaming } = useAppStore()
@@ -46,6 +167,10 @@ export function StoryOutput() {
 
   const charCount = storyOutput.length
   const remainingChars = MAX_CHARS - charCount
+  
+  // 獲取當前生成狀態
+  const { targetSegments } = useAppStore()
+  const displaySegments = targetSegments || 2
 
   return (
     <Card className="nyx-surface nyx-border h-full flex flex-col">
@@ -53,15 +178,12 @@ export function StoryOutput() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <CardTitle className="nyx-text-primary text-base">故事輸出</CardTitle>
-            {isStreaming && (
-              <span className="flex items-center gap-1 text-xs text-purple-400">
-                <Loader2 className="w-3 h-3 animate-spin" />
-                生成中 第 {currentSceneIndex}/{totalScenes} 段
-              </span>
-            )}
           </div>
           <div className="flex items-center gap-2">
-            {storyOutput && (
+            {storyOutput && !isStreaming && (
+              <ExportButtons content={storyOutput} title={undefined} />
+            )}
+            {storyOutput && !isStreaming && (
               <>
                 <Button
                   variant="ghost"
@@ -93,10 +215,17 @@ export function StoryOutput() {
               "text-xs",
               remainingChars < 0 ? "text-red-400" : "nyx-text-muted"
             )}>
-              {charCount} / {MAX_CHARS} 字
+              {charCount} 字
             </span>
           </div>
         </div>
+        
+        {/* 生成進度條 */}
+        <GenerationProgress 
+          isGenerating={isStreaming} 
+          currentSegment={currentSceneIndex}
+          totalSegments={displaySegments}
+        />
       </CardHeader>
       <CardContent className="flex-1 p-4 overflow-auto">
         {storyOutput ? (
@@ -156,11 +285,12 @@ export function GenerateButtons() {
     shouldRegenerate,
     extractCharacters,
     setShouldRegenerate,
+    targetSegments,
+    setTargetSegments,
   } = useAppStore()
 
   const [rechargeOpen, setRechargeOpen] = useState(false)
   const [wordInfo, setWordInfo] = useState<{ wordCount: number; isFirstPurchase: boolean } | null>(null)
-  const [targetSegments, setTargetSegments] = useState<number>(2)  // V2.5: 目標分段數
   const [currentSegment, setCurrentSegment] = useState<number>(0)   // V2.5: 當前分段
 
   const canGenerate = storyInput.trim().length > 0 || selectedTopics.length > 0 || characters.length > 0
