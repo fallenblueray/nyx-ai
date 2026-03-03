@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase-admin"
 import { detectPromptInjection, validateInput, detectIllegalContent, checkRateLimit } from "@/lib/security"
 import { evaluateStory } from "@/lib/evaluation"
 import { buildCacheKey, getCachedStory, setCachedStory } from "@/lib/redis-cache"
+import { cleanGeneratedContent, extractPureStoryContent, cleanSegmentTransition } from "@/lib/content-cleaner"
 import crypto from "crypto"
 
 export const runtime = 'nodejs'
@@ -529,8 +530,13 @@ async function handleMultiSegmentGeneration(
 
                 if (data === '[DONE]') {
                   // 該段完成
+                  // 清理內容：移除 AI 思考內容和分段標記
+                  let cleanedSegment = cleanGeneratedContent(segmentContent)
+                  cleanedSegment = extractPureStoryContent(cleanedSegment)
+                  cleanedSegment = cleanSegmentTransition(cleanedSegment)
+                  
                   // 移除重疊內容
-                  const cleanedSegment = removeOverlap(contextState.previousContent, segmentContent)
+                  cleanedSegment = removeOverlap(contextState.previousContent, cleanedSegment)
                   contextState.previousContent += cleanedSegment
                   contextState.totalWordsUsed += cleanedSegment.length
                   

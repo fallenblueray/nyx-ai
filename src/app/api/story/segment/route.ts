@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import { createAdminClient } from '@/lib/supabase-admin';
 import { SYSTEM_PROMPT } from './system_prompt';
+import { cleanGeneratedContent, extractPureStoryContent } from '@/lib/content-cleaner';
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const OPENROUTER_MODEL = 'deepseek/deepseek-r1-0528';
@@ -145,7 +146,11 @@ ${isFirstScene ? '5. 從故事開頭自然延續，不要重複開頭內容' : '
     }
 
     const data = await response.json();
-    const segmentText = data.choices[0].message.content.trim();
+    const rawSegmentText = data.choices[0].message.content.trim();
+
+    // 清理內容：移除 AI 思考內容和分段標記
+    let segmentText = cleanGeneratedContent(rawSegmentText);
+    segmentText = extractPureStoryContent(segmentText);
 
     // Validate output
     if (segmentText.length < 500) {
