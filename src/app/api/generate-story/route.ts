@@ -470,7 +470,11 @@ async function handleMultiSegmentGeneration(
           } else {
             // 後續段：提取上下文並注入
             const context = extractContextForSegment(contextState.previousContent)
-            segmentUserPrompt = `${context}\n\n請繼續保持上述風格、人物設定和節奏，直接輸出故事正文。`
+            segmentUserPrompt = `${context}
+
+【任務】繼續保持上述風格、人物設定和節奏，直接輸出故事正文。
+【字數要求】約 2300-2500 字，嚴格遵守，不可超過。
+【禁止】重複前文內容、使用分段標記、輸出思考過程。`
           }
 
           // 發送分段開始信號
@@ -495,7 +499,7 @@ async function handleMultiSegmentGeneration(
                 { role: "system", content: systemPrompt },
                 { role: "user", content: segmentUserPrompt }
               ],
-              max_tokens: 4000,
+              max_tokens: 4500,
               stream: true
             })
           })
@@ -534,6 +538,12 @@ async function handleMultiSegmentGeneration(
                   let cleanedSegment = cleanGeneratedContent(segmentContent)
                   cleanedSegment = extractPureStoryContent(cleanedSegment)
                   cleanedSegment = cleanSegmentTransition(cleanedSegment)
+                  
+                  // 硬截斷：確保每段不超過 2800 字（目標 2500）
+                  const MAX_SEGMENT_LENGTH = 2800
+                  if (cleanedSegment.length > MAX_SEGMENT_LENGTH) {
+                    cleanedSegment = truncateToTarget(cleanedSegment, 2500)
+                  }
                   
                   // 移除重疊內容
                   cleanedSegment = removeOverlap(contextState.previousContent, cleanedSegment)
@@ -621,35 +631,80 @@ async function handleMultiSegmentGeneration(
   })
 }
 
-// 從前段內容提取上下文
+// 從前段內容提取上下文（V2.5 改進版）
 function extractContextForSegment(previousContent: string): string {
   if (!previousContent) return ''
 
-  // 取前段末尾300字作為上下文
-  const tail = previousContent.slice(-300)
+  // 取中段 300 字作為風格樣本（比結尾更能代表整體風格）
+  const midPoint = Math.floor(previousContent.length / 2)
+  const midSample = previousContent.slice(midPoint - 150, midPoint + 150)
   
-  // 找最近的段落結構
-  const paragraphs = tail.split('\n\n')
-  const lastPara = paragraphs[paragraphs.length - 1] || ''
+  // 取末尾 400 字作為銜接點
+  const tail = previousContent.slice(-400)
   
-  // 找角色名（簡單規則）
-  const namePattern = /「([^」]{2,4})」|([^\s，。]{2,4})(說|喊|喘|叫|嬌)/g
-  const names = new Set<string>()
+  // 找角色名（從全文中提取，不只尾巴）
+  const namePattern = /「([^」]{2,4})」|([^\s，。]{2,4})(說|喊|喘|叫|嬌|呻吟|扭動|抱|親|摸)/g
+  const names = new Map<string, number>()
   let match
   while ((match = namePattern.exec(previousContent)) !== null) {
     const name = match[1] || match[2]
-    if (name && !/[我你他她它]/.test(name)) {
-      names.add(name)
+    if (name && !/[我你他她它這那麼的在是了就]/.test(name)) {
+      names.set(name, (names.get(name) || 0) + 1)
     }
   }
+  
+  // 按出現頻率排序，取前 3
+  const topNames = Array.from(names.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([name]) => name)
 
-  let context = '【上文輪廓】\n'
-  if (names.size > 0) {
-    context += `涉及角色：${Array.from(names).slice(0, 3).join('、')}\n`
+  let context = '【前文輪廓】\n'
+  if (topNames.length > 0) {
+    context += `主要角色：${topNames.join('、')}\n`
   }
-  context += `最新情節：${lastPara.slice(0, 100)}`
+  context += `累計進度：約 ${Math.floor(previousContent.length / 100) / 10} 千字\n\n`
+  
+  context += '【風格樣本】（維持此風格）\n'
+  context += midSample.slice(0, 200) + '\n\n'
+  
+  context += '【銜接點】（直接接續）\n'
+  context += tail.slice(-150)
 
   return context
+}
+
+// 硬截斷到目標長度
+function truncateToTarget(content: string, targetLength: number): string {
+  if (content.length <= targetLength) return content
+  
+  // 找目標長度附近的句子結束點
+  const searchStart = Math.floor(targetLength * 0.9)
+  const searchEnd = Math.min(content.length, targetLength + 200)
+  const searchRange = content.slice(searchStart, searchEnd)
+  
+  // 找最近的自然斷點
+  const sentenceEnds: RegExpExecArray[] = []
+  const pattern = /[。！？][^」』）)]/g
+  let matchResult: RegExpExecArray | null
+  while ((matchResult = pattern.exec(searchRange)) !== null) {
+    sentenceEnds.push(matchResult)
+  }
+  
+  if (sentenceEnds.length > 0) {
+    const targetPos = targetLength - searchStart
+    const bestMatch = sentenceEnds.reduce((closest, match) => {
+      const matchPos = match.index ?? 0
+      const closestPos = closest.index ?? 0
+      return Math.abs(matchPos - targetPos) < Math.abs(closestPos - targetPos) ? match : closest
+    })
+    
+    const cutPoint = searchStart + (bestMatch.index ?? 0) + 1
+    return content.slice(0, cutPoint)
+  }
+  
+  // 找不到斷點，硬切
+  return content.slice(0, targetLength)
 }
 
 // 移除重疊內容

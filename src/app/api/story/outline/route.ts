@@ -52,17 +52,17 @@ export async function POST(request: NextRequest) {
 
 【強制規則 - 必須100%遵守】
 1. 只能生成 **2個場景**（scene_index: 1 和 2），禁止生成第3個場景
-2. 第1場景：鋪墊發展，約3000字
-3. 第2場景：高潮收尾，約3000字
-4. 兩場景合計約6000字
+2. 第1場景：鋪墊發展，約2500字（嚴格限制）
+3. 第2場景：高潮收尾，約2500字（嚴格限制）
+4. 兩場景合計約5000-6000字
 5. 只定義骨架（場景、核心事件、情緒），不寫具體細節
 
 輸出格式（純 JSON，只輸出這個 JSON，不要有其他內容）：
 {
   "overall_arc": "故事主線一句話描述",
   "scenes": [
-    {"scene_index": 1, "setting": "場景1描述", "key_event": "核心事件1", "mood": "情緒基調", "characters_involved": ["角色A"], "word_count_target": 3000},
-    {"scene_index": 2, "setting": "場景2描述", "key_event": "核心事件2", "mood": "情緒基調", "characters_involved": ["角色A"], "word_count_target": 3000}
+    {"scene_index": 1, "setting": "場景1描述", "key_event": "核心事件1", "mood": "情緒基調", "characters_involved": ["角色A"], "word_count_target": 2500},
+    {"scene_index": 2, "setting": "場景2描述", "key_event": "核心事件2", "mood": "情緒基調", "characters_involved": ["角色A"], "word_count_target": 2500}
   ]
 }
 
@@ -133,7 +133,7 @@ export async function POST(request: NextRequest) {
     outline.scenes = outline.scenes.map((scene, idx) => ({
       ...scene,
       scene_index: idx + 1,
-      word_count_target: 3000
+      word_count_target: 2500
     }));
 
     return NextResponse.json({

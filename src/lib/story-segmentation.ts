@@ -172,7 +172,38 @@ export function extractStyleSample(text: string, length: number = 200): string {
 }
 
 /**
- * 構建上下文摘要
+ * 提取關鍵事件列表（改進版）
+ */
+export function extractKeyEvents(text: string): string[] {
+  const events: string[] = []
+  const eventPatterns = [
+    /(?:讓|使|把|讓)([^，。！]{3,20})(高潮|射|潮吹|噴|軟|爽|昏迷|睡著|昏過去)/,
+    /(?:插入|進入|捅進|挺進|插進)([^，。！]{3,15})/,
+    /(?:脫|扒|撕|解開)([^，。！]{3,15}衣服|內衣|內褲|裙子)/,
+    /(?:抱著|壓著|按著|捆綁|綁著)([^，。！]{3,10})/,
+    /(?:換成|變成|變為)([^，。！]{3,15}姿勢|體位|動作)/,
+  ]
+
+  // 從全文中提取事件，按出現順序
+  for (const pattern of eventPatterns) {
+    const matches = text.match(new RegExp(pattern.source, 'g'))
+    if (matches) {
+      events.push(...matches.slice(0, 2)) // 每種類型最多取 2 個
+    }
+  }
+
+  // 去重並限制數量
+  const uniqueEvents: string[] = []
+  for (const event of events) {
+    if (!uniqueEvents.includes(event)) {
+      uniqueEvents.push(event)
+    }
+  }
+  return uniqueEvents.slice(0, 5)
+}
+
+/**
+ * 構建上下文摘要（V2.5 改進版）
  */
 export function buildContextSummary(
   generatedText: string,
@@ -182,14 +213,26 @@ export function buildContextSummary(
   const scene = extractScene(generatedText)
   const mood = extractMood(generatedText)
   const criticalPlot = extractCriticalPlot(generatedText)
-  const lastStyleSample = extractStyleSample(generatedText)
+  
+  // 改進：取中段作為風格樣本，而非結尾
+  const midPoint = Math.floor(generatedText.length / 2)
+  const lastStyleSample = generatedText.slice(midPoint - 100, midPoint + 100)
+  
+  // 新增：提取關鍵事件
+  const keyEvents = extractKeyEvents(generatedText)
   
   // 合併之前的上下文
+  const mergedCharacters = characters.length > 0 
+    ? characters 
+    : (previousSummary?.characters || [])
+  
   return {
-    characters: characters.length > 0 ? characters : (previousSummary?.characters || []),
+    characters: mergedCharacters,
     scene,
     mood,
-    criticalPlot,
+    criticalPlot: keyEvents.length > 0 
+      ? keyEvents.join(' → ') 
+      : criticalPlot,
     lastStyleSample,
     totalWordCount: generatedText.length + (previousSummary?.totalWordCount || 0)
   }

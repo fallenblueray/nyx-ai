@@ -76,20 +76,27 @@ ${story_start}
 【角色卡】
 ${characters?.map((c: any) => `- ${c.name}：${c.description}`).join('\n') || '無特定角色'}`;
     } else {
-      // Subsequent scenes: continue from previous segment
-      const previousEnding = previous_segment?.slice(-500) || '';
+      // Subsequent scenes: improved context injection
+      const previousEnding = previous_segment?.slice(-400) || '';
+      const previousMid = previous_segment?.slice(
+        Math.max(0, Math.floor(previous_segment.length / 2) - 200),
+        Math.floor(previous_segment.length / 2) + 200
+      ) || '';
       
       segmentPrompt = `【任務】承接前文，自然流暢地寫作第 ${scene_index}/${total_scenes} 段。
 
-【前文結尾】（最後約500字）
-${previousEnding}
-
-【動態上下文】
+【前文輪廓】
 ${dynamic_context ? `
 角色狀態：${dynamic_context.characters?.map((c: any) => `${c.name}(${c.mood || '情緒正常'})`).join('、') || '無'}
 關係發展：${dynamic_context.relationships?.join('；') || '無重大變化'}
 關鍵道具：${dynamic_context.key_items?.join('、') || dynamic_context.keyItems?.join('、') || '無'}
-` : '無'}`;
+` : '無'}
+
+【風格樣本】（前文中段，維持風格一致）
+${previousMid}
+
+【上文銜接】（直接接續此處）
+${previousEnding}`;
     }
 
     // Common prompt suffix
@@ -102,12 +109,11 @@ ${dynamic_context ? `
 涉及角色：${outline.characters_involved.join('、')}
 
 【寫作要求】
-1. 字數：1800-2200 字（約 3-4 個標準段落）
+1. 字數：2300-2500 字（嚴格遵守，不可超過）
 2. 語言：${language}
 3. 風格：${style || '流暢自然，有畫面感'}
 4. 類型：${genre || '一般小說'}
-5. 
-${isFirstScene ? '5. 從故事開頭自然延續，不要重複開頭內容' : '5. 承接前文結尾，自然過渡，不要重複前文'}
+5. ${isFirstScene ? '從故事開頭自然延續，不要重複開頭內容' : '承接前文結尾，自然過渡，不要重複前文'}
 6. 專注描寫「${outline.key_event}」這個核心事件
 7. 保持「${outline.mood}」的情緒基調
 8. ${isLastScene ? '本段需要為故事畫上句點，給出滿意的結局或開放式餘韻' : '本段結尾要為下一段留下自然的銜接點'}
@@ -132,7 +138,7 @@ ${isFirstScene ? '5. 從故事開頭自然延續，不要重複開頭內容' : '
           { role: 'user', content: segmentPrompt }
         ],
         temperature: 0.85,
-        max_tokens: 3500
+        max_tokens: 4500
       })
     });
 
@@ -151,6 +157,39 @@ ${isFirstScene ? '5. 從故事開頭自然延續，不要重複開頭內容' : '
     // 清理內容：移除 AI 思考內容和分段標記
     let segmentText = cleanGeneratedContent(rawSegmentText);
     segmentText = extractPureStoryContent(segmentText);
+
+    // 硬截斷：確保不超過 2800 字（給 2500 目標留緩衝）
+    const MAX_SEGMENT_LENGTH = 2800;
+    if (segmentText.length > MAX_SEGMENT_LENGTH) {
+      // 找目標長度附近的句子結束點
+      const searchStart = Math.floor(MAX_SEGMENT_LENGTH * 0.85);
+      const searchEnd = Math.min(segmentText.length, Math.floor(MAX_SEGMENT_LENGTH * 1.05));
+      const searchRange = segmentText.slice(searchStart, searchEnd);
+      
+      // 找最近的自然斷點（。！？）
+      const sentenceEnds: RegExpExecArray[] = [];
+      const pattern = /[。！？][^」』）)]/g;
+      let matchResult: RegExpExecArray | null;
+      while ((matchResult = pattern.exec(searchRange)) !== null) {
+        sentenceEnds.push(matchResult);
+      }
+      
+      if (sentenceEnds.length > 0) {
+        // 找最接近 2500 字的斷點
+        const targetPos = 2500 - searchStart;
+        const bestMatch = sentenceEnds.reduce((closest, match) => {
+          const matchPos = (match.index ?? 0);
+          const closestPos = (closest.index ?? 0);
+          return Math.abs(matchPos - targetPos) < Math.abs(closestPos - targetPos) ? match : closest;
+        });
+        
+        const cutPoint = searchStart + (bestMatch.index ?? 0) + 1;
+        segmentText = segmentText.slice(0, cutPoint);
+      } else {
+        // 找不到句子結束，硬切
+        segmentText = segmentText.slice(0, MAX_SEGMENT_LENGTH);
+      }
+    }
 
     // Validate output
     if (segmentText.length < 500) {
