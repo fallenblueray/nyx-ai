@@ -306,9 +306,14 @@ ${charStr || "（自由創作）"}
     previousSegment?: string
   ): Promise<string | null> => {
     try {
+      const anonymousId = !isLoggedIn ? getOrCreateAnonymousId() : undefined
+      
       const response = await fetch("/api/story/segment", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          ...(anonymousId && { "x-anonymous-id": anonymousId })
+        },
         body: JSON.stringify({
           story_start: storyInput,
           scene_context: {

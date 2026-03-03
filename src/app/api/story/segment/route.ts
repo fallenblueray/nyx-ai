@@ -53,6 +53,46 @@ export async function POST(request: NextRequest) {
     
     // Allow anonymous users (consistent with generate-story API)
     const isLoggedIn = !!token?.sub;
+    const supabase = createAdminClient();
+    const FREE_WORD_LIMIT = 8000;
+
+    // ============================================================
+    // 字數額度檢查
+    // ============================================================
+    let currentWordCount = 0;
+
+    if (isLoggedIn) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("word_count")
+        .eq("id", token.sub)
+        .single();
+      currentWordCount = profile?.word_count ?? 0;
+    } else {
+      // 從 header 獲取匿名 ID
+      const anonymousId = request.headers.get('x-anonymous-id');
+      if (anonymousId) {
+        const { data: usage } = await supabase
+          .from("anonymous_usage")
+          .select("words_used, words_limit")
+          .eq("anonymous_id", anonymousId)
+          .maybeSingle();
+        const wordsUsed = usage?.words_used ?? 0;
+        const wordsLimit = usage?.words_limit ?? FREE_WORD_LIMIT;
+        currentWordCount = Math.max(0, wordsLimit - wordsUsed);
+      }
+    }
+
+    // 字數不足時禁止生成
+    if (currentWordCount <= 0) {
+      return NextResponse.json(
+        { 
+          error: '字數已用完，請充值或登入',
+          errorType: isLoggedIn ? 'insufficient_words' : 'free_quota_exceeded'
+        },
+        { status: 403 }
+      );
+    }
 
     // Build prompt based on scene position
     const isFirstScene = scene_index === 1;

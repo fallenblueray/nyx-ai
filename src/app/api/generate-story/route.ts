@@ -126,6 +126,26 @@ export async function POST(req: NextRequest) {
     }
 
     // ============================================================
+    // 字數不足檢查：負數或零時禁止生成
+    // ============================================================
+    if (currentWordCount <= 0) {
+      console.warn(`[generate-story] Insufficient words: ${currentWordCount}`)
+      if (isAnonymous) {
+        return NextResponse.json({ 
+          error: "免費字數已用完，請註冊或登入", 
+          errorType: "free_quota_exceeded",
+          remaining: 0 
+        }, { status: 403 })
+      } else {
+        return NextResponse.json({ 
+          error: "字數已用完，請充值", 
+          errorType: "insufficient_words",
+          remaining: 0 
+        }, { status: 403 })
+      }
+    }
+
+    // ============================================================
     // 記憶層：為已登入用戶注入偏好（類 Agent RAG-like）
     // ============================================================
     let enrichedSystemPrompt = systemPrompt
