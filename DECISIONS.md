@@ -87,6 +87,29 @@
 
 ---
 
+### [2026-03-04] 為什麼提取自定義 hooks？
+
+**決策**：將 StoryOutput.tsx 中的生成邏輯提取到 `useStoryGeneration` hook。
+
+**原因**：
+1. StoryOutput.tsx 已經超過 800 行，難以維護
+2. 生成邏輯與 UI 渲染混在一起，違反單一職責原則
+3. 提取後可以獨立測試生成邏輯
+4. 其他組件可以復用這些邏輯
+
+**提取內容**：
+- SSE 數據處理邏輯
+- 狀態管理（currentSegment, wordInfo 等）
+- API 錯誤處理
+- 生成流程控制（prepareGeneration, finishGeneration）
+
+**預期收益**：
+- StoryOutput.tsx 減少約 40% 代碼
+- 生成邏輯可獨立測試
+- 未來可以支持更多生成模式（如批量生成）
+
+---
+
 ### [2026-03-03] 為什麼刪除 system prompt 的字數限制？
 
 **決策**：從 system_prompt.ts 刪除「精準控制在4200～4800字之間的」這段描述。

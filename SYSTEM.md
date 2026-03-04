@@ -33,12 +33,16 @@ src/
 │   ├── story/segment/route.ts           # 單段生成（DeepSeek R1）
 │   ├── story/segment/system_prompt.ts   # ⚠️ 核心 prompt，輕易不要動
 │   └── generate-story/route.ts          # Legacy多段流式生成
+├── hooks/
+│   └── useStoryGeneration.ts            # 故事生成邏輯封裝
 ├── lib/
 │   ├── content-cleaner.ts               # 清理 AI 思考標記、分段標記
 │   ├── story-segmentation.ts            # 上下文提取、分段邏輯
 │   └── story-utils.ts                   # 工具函數
 └── components/
-    └── StoryOutput.tsx                  # 前端：故事生成/顯示/續寫
+    ├── StoryOutput.tsx                  # 前端：故事生成/顯示/續寫
+    ├── TemplateSelector.tsx             # 故事模板選擇
+    └── TopicSelector.tsx                # 題材選擇
 ```
 
 ---
