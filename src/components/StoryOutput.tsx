@@ -143,6 +143,110 @@ function ExportButtons({ content, title }: { content: string; title?: string }) 
   )
 }
 
+// 空狀態引導組件
+function EmptyState({ 
+  hasInput, 
+  isGenerating 
+}: { 
+  hasInput: boolean
+  isGenerating: boolean
+}) {
+  if (isGenerating) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center nyx-text-muted">
+        <Loader2 className="w-8 h-8 animate-spin mb-4 text-purple-400" />
+        <p className="text-sm">正在準備生成...</p>
+      </div>
+    )
+  }
+  
+  if (hasInput) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center">
+        <div className="text-center space-y-3">
+          <div className="w-16 h-16 mx-auto rounded-full nyx-surface-2 flex items-center justify-center">
+            <Wand2 className="w-8 h-8 text-purple-400" />
+          </div>
+          <div>
+            <p className="nyx-text-primary font-medium">準備就緒</p>
+            <p className="text-sm nyx-text-muted mt-1">設定已完成，點擊「開始創作」生成故事</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+  
+  return (
+    <div className="h-full flex flex-col items-center justify-center">
+      <div className="text-center space-y-4 max-w-xs">
+        <div className="w-20 h-20 mx-auto rounded-2xl nyx-surface-2 flex items-center justify-center border border-purple-500/20">
+          <BookOpen className="w-10 h-10 text-purple-400" />
+        </div>
+        <div>
+          <p className="nyx-text-primary font-medium text-lg">開始你的創作</p>
+          <p className="text-sm nyx-text-muted mt-2">輸入劇情起點、選擇題材或角色，然後點擊「開始創作」</p>
+        </div>
+        <div className="flex gap-2 justify-center text-xs nyx-text-muted">
+          <span className="px-2 py-1 nyx-surface-2 rounded">💡 提示支援</span>
+          <span className="px-2 py-1 nyx-surface-2 rounded">🎭 角色設定</span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// 空狀態引導組件
+function EmptyState({ 
+  hasInput, 
+  isGenerating 
+}: { 
+  hasInput: boolean
+  isGenerating: boolean
+}) {
+  if (isGenerating) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center nyx-text-muted">
+        <Loader2 className="w-8 h-8 animate-spin mb-4 text-purple-400" />
+        <p className="text-sm">正在準備生成...</p>
+      </div>
+    )
+  }
+  
+  if (hasInput) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center">
+        <div className="text-center space-y-3">
+          <div className="w-16 h-16 mx-auto rounded-full nyx-surface-2 flex items-center justify-center">
+            <Wand2 className="w-8 h-8 text-purple-400" />
+          </div>
+          <div>
+            <p className="nyx-text-primary font-medium">準備就緒</p>
+            <p className="text-sm nyx-text-muted mt-1">設定已完成，點擊「開始創作」生成故事</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+  
+  return (
+    <div className="h-full flex flex-col items-center justify-center">
+      <div className="text-center space-y-4 max-w-xs">
+        <div className="w-20 h-20 mx-auto rounded-2xl nyx-surface-2 flex items-center justify-center border border-purple-500/20">
+          <BookOpen className="w-10 h-10 text-purple-400" />
+        </div>
+        <div>
+          <p className="nyx-text-primary font-medium text-lg">開始你的創作</p>
+          <p className="text-sm nyx-text-muted mt-2">輸入劇情起點、選擇題材或角色，然後點擊「開始創作」</p>
+        </div>
+        <div className="flex gap-2 justify-center text-xs nyx-text-muted">
+          <span className="px-2 py-1 nyx-surface-2 rounded">💡 提示支援</span>
+          <span className="px-2 py-1 nyx-surface-2 rounded">🎭 角色設定</span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function StoryOutput() {
   const { storyOutput, error, isGenerating, currentSceneIndex, totalScenes, isStreaming } = useAppStore()
   const [isEditing, setIsEditing] = useState(false)
@@ -254,9 +358,10 @@ export function StoryOutput() {
             </div>
           )
         ) : (
-          <div className="h-full flex items-center justify-center nyx-text-muted text-sm">
-            點擊「開始創作」生成故事
-          </div>
+          <EmptyState 
+            hasInput={storyInput.trim().length > 0 || selectedTopics.length > 0 || characters.length > 0}
+            isGenerating={isGenerating}
+          />
         )}
 
         {error && (

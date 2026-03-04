@@ -66,4 +66,25 @@
 
 ---
 
+### [2026-03-03] UI/UX 改進：進度條、導出功能、模板系統
+
+**變更類型**: 功能改進與 Bug 修復  
+**相關文件**: `StoryOutput.tsx`, `TemplateSelector.tsx` (新增), `useAppStore.ts`
+
+**新增功能**:
+1. 生成進度條：支持 1/2/3 段動態進度計算（大綱 5% + 各段均分 + 清理 5%）
+2. 導出功能：複製全文、下載 TXT、下載 Markdown（帶 UTF-8 BOM）
+3. 模板系統：5 個預設模板 + 用戶可儲存自定義模板
+
+**Bug 修復**:
+1. 修復進度條不顯示：正確設置 `isStreaming` 狀態
+2. 修復導出亂碼：添加 UTF-8 BOM 幫助 Windows 識別編碼
+3. 修復 localStorage SSR 錯誤：改用 `useEffect` 在客戶端載入
+
+**同步更新**:
+- ✅ SYSTEM.md: 已更新「文件地圖」添加 TemplateSelector
+- ✅ DECISIONS.md: 已記錄「為什麼導出需要 UTF-8 BOM」
+
+---
+
 *使用方式：複製上方模板，在每次重要變更後記錄於此。*
