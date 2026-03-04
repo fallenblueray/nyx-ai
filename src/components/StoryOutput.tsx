@@ -11,12 +11,67 @@ import { getOrCreateAnonymousId } from "@/lib/anonymous"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Loader2, Sparkles, RotateCcw, Edit2, Eye, RefreshCw, Download, FileText, Copy, Check, BookOpen, Wand2 } from "lucide-react"
+import { Loader2, Sparkles, RotateCcw, Edit2, Eye, RefreshCw, Download, FileText, Copy, Check, BookOpen, Wand2, AlertCircle, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { extractDynamicContext } from "@/lib/story-utils"
 import { SYSTEM_PROMPT as OFFICIAL_SYSTEM_PROMPT } from "@/app/api/story/segment/system_prompt"
 
 const MAX_CHARS = 5000
+
+// 錯誤顯示組件
+function ErrorDisplay({ 
+  error, 
+  onDismiss 
+}: { 
+  error: string
+  onDismiss: () => void
+}) {
+  // 根據錯誤類型顯示不同的圖標和建議
+  const getErrorInfo = (err: string) => {
+    if (err.includes('字數') || err.includes('quota') || err.includes('額度')) {
+      return {
+        icon: <AlertCircle className="w-5 h-5 text-orange-400" />,
+        title: '字數不足',
+        action: '充值或登入以繼續使用'
+      }
+    }
+    if (err.includes('network') || err.includes('連線') || err.includes('timeout')) {
+      return {
+        icon: <AlertCircle className="w-5 h-5 text-yellow-400" />,
+        title: '連線問題',
+        action: '檢查網絡後重試'
+      }
+    }
+    return {
+      icon: <AlertCircle className="w-5 h-5 text-red-400" />,
+      title: '生成失敗',
+      action: '請重試或稍後再試'
+    }
+  }
+  
+  const info = getErrorInfo(error)
+  
+  return (
+    <div className="mt-4 p-4 bg-red-900/20 border border-red-800/50 rounded-lg">
+      <div className="flex items-start gap-3">
+        {info.icon}
+        <div className="flex-1">
+          <div className="flex items-center justify-between">
+            <p className="font-medium text-red-300">{info.title}</p>
+            <button 
+              onClick={onDismiss}
+              className="text-red-400 hover:text-red-300 transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <p className="text-sm text-red-400/80 mt-1">{error}</p>
+          <p className="text-xs text-red-400/60 mt-2">{info.action}</p>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 // 生成進度條組件
 function GenerationProgress({ 
@@ -313,9 +368,10 @@ export function StoryOutput() {
         )}
 
         {error && (
-          <div className="mt-4 p-3 bg-red-900/30 border border-red-800 rounded text-red-400 text-sm">
-            {error}
-          </div>
+          <ErrorDisplay 
+            error={error} 
+            onDismiss={() => useAppStore.getState().setError(null)}
+          />
         )}
       </CardContent>
     </Card>
