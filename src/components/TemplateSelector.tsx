@@ -88,6 +88,7 @@ export function TemplateSelector() {
     setSelectedTopics, 
     characters, 
     addCharacter,
+    setCharacters,
     storyInput,
     selectedTopics
   } = useAppStore()
@@ -108,7 +109,8 @@ export function TemplateSelector() {
     setStoryInput(template.storyInput)
     setSelectedTopics(template.topics)
     
-    // 清除現有角色並添加模板角色
+    // V4.2: 先清除現有角色，再添加模板角色
+    setCharacters([])
     template.characters.forEach(char => {
       addCharacter(char)
     })
