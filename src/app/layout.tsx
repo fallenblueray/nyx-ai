@@ -14,8 +14,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "NyxAI - 五秒開展故事",
-  description: "AI 故事生成平台",
+  title: "NyxAI - 輸入一句話，AI為你寫完整故事",
+  description: "NyxAI 是一個 AI 故事生成器。輸入一句開頭，AI 立即生成完整劇情。無需登入，免費體驗 8000 字。每天都有數萬篇 AI 故事在 NyxAI 誕生。",
+  keywords: "AI故事, AI生成, 故事創作, 小說生成, AI寫作",
 };
 
 // 網頁版本號 - 每次新增功能或修改內容 +0.001

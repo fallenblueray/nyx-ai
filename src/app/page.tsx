@@ -5,82 +5,60 @@ import { ParticleField } from "@/components/particle-field";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
-import { ChevronRight, Sparkles, Zap, BookOpen, Users, Clock, PenTool, Layers, Download } from "lucide-react";
+import { ChevronRight, Sparkles, Zap, BookOpen, Users, Clock, PenTool, Layers, Download, Play } from "lucide-react";
+import { useState } from "react";
 
 const NYX_GRADIENT = ["#1e1b4b", "#3730a3", "#6d28d9", "#8b5cf6", "#a78bfa"];
 
-// Feature 數據
-const FEATURES = [
-  {
-    icon: Zap,
-    title: "⚡ 一句生成故事",
-    bullets: [
-      "輸入一句話即可開始",
-      "AI 自動延展完整劇情",
-      "5 秒內展開故事"
-    ],
-    color: "text-yellow-400"
-  },
-  {
-    icon: Layers,
-    title: "📚 海量題材 + 模板",
-    bullets: [
-      "多種預設成人題材",
-      "熱門故事模板可選",
-      "支援自定劇情方向"
-    ],
-    color: "text-purple-400"
-  },
-  {
-    icon: Users,
-    title: "🎭 角色卡系統",
-    bullets: [
-      "建立專屬人物設定",
-      "持續延伸劇情發展",
-      "登入後可保存成長"
-    ],
-    color: "text-blue-400"
-  },
-  {
-    icon: PenTool,
-    title: "🔓 無需登入體驗",
-    bullets: [
-      "立即獲得 8000 字",
-      "打開即創作",
-      "註冊後可保存歷史"
-    ],
-    color: "text-green-400"
-  },
-  {
-    icon: Clock,
-    title: "🕒 歷史記錄保存",
-    bullets: [
-      "隨時回顧與續寫",
-      "支援下載分享",
-      "作品永久保存"
-    ],
-    color: "text-pink-400"
-  },
-  {
-    icon: Download,
-    title: "📥 Word 導出",
-    bullets: [
-      "一鍵導出 Word 文檔",
-      "格式完整保留",
-      "方便存檔與分享"
-    ],
-    color: "text-cyan-400"
-  }
+// 熱門題材數據
+const HOT_TOPICS = [
+  { title: "女上司", desc: "今晚加班的人只有你。", color: "from-purple-500/20 to-pink-500/20" },
+  { title: "人妻誘惑", desc: "她望向我的眼神，帶著說不清的意味。", color: "from-rose-500/20 to-orange-500/20" },
+  { title: "青梅竹馬", desc: "從小到大，我們之間總有些说不清。", color: "from-blue-500/20 to-cyan-500/20" },
+  { title: "同學會重逢", desc: "多年不見，她變得不太一樣了。", color: "from-indigo-500/20 to-purple-500/20" },
+  { title: "偶像邂逅", desc: "沒想到會在這裡遇見她。", color: "from-pink-500/20 to-rose-500/20" },
+  { title: "鄰居姐姐", desc: "她總是在深夜才有空。", color: "from-amber-500/20 to-orange-500/20" },
+  { title: "秘密戀情", desc: "這段關係，不能被任何人知道。", color: "from-red-500/20 to-pink-500/20" },
+  { title: "酒店邂逅", desc: "電梯裡的偶遇改變了一切。", color: "from-violet-500/20 to-purple-500/20" },
+];
+
+// NyxAI 能力
+const CAPABILITIES = [
+  { icon: Zap, title: "輸入一句話生成完整故事", desc: "AI 自動延展劇情" },
+  { icon: Layers, title: "AI 自動推進劇情", desc: "劇情自然流暢" },
+  { icon: Users, title: "角色對話自然流暢", desc: "人物性格鮮明" },
+  { icon: BookOpen, title: "預設題材與模板", desc: "熱門題材一鍵生成" },
+  { icon: Clock, title: "保存歷史故事", desc: "隨時回顧續寫" },
 ];
 
 // 3 步流程
 const STEPS = [
-  { step: "①", title: "輸入一句靈感", desc: "任何題材，任何風格" },
-  { step: "②", title: "選擇 1–3 段生成", desc: "預設 3 段，沉浸體驗" },
-  { step: "③", title: "即刻展開沉浸式劇情", desc: "AI 自動延展完整故事" }
+  { step: "①", title: "輸入一句故事開頭", desc: "任何題材，任何風格" },
+  { step: "②", title: "AI 生成完整故事", desc: "智能延展劇情" },
+  { step: "③", title: "繼續創作你的劇情", desc: "隨心所欲發展" },
+];
+
+// 價格方案
+const PRICING = [
+  { words: "5萬字", price: "29.9", popular: false },
+  { words: "10萬字", price: "39.9", popular: true },
+  { words: "35萬字", price: "109", popular: false },
+  { words: "100萬字", price: "249", popular: false },
+  { words: "300萬字", price: "666", popular: false },
 ];
 
 export default function Home() {
+  const [demoInput] = useState("深夜加班時，女上司忽然鎖上辦公室的門");
+  const [demoOutput] = useState(`她慢慢走向我桌前。
+
+高跟鞋在地板上發出輕微的聲響。
+
+「今晚加班的人只有你。」
+
+她靠近我耳邊，聲音低得像是在說一個秘密。
+
+「陪我多待一會，好嗎？」`);
+
   return (
     <div className="relative min-h-dvh w-full bg-slate-950 overflow-hidden">
       {/* Deep gradient overlay */}
@@ -116,7 +94,7 @@ export default function Home() {
       {/* ==================== HERO SECTION ==================== */}
       <main className="relative z-10 overflow-x-hidden">
         <section>
-          <div className="py-24 md:py-32 lg:py-40">
+          <div className="py-20 md:py-28 lg:py-36">
             <div className="relative mx-auto flex max-w-4xl flex-col px-6 lg:px-12">
               <div className="mx-auto max-w-3xl text-center">
                 
@@ -124,40 +102,36 @@ export default function Home() {
                 <div className="inline-flex items-center gap-2.5 rounded-full border border-white/[0.08] bg-white/5 px-5 py-2 backdrop-blur-md">
                   <Sparkles className="h-3.5 w-3.5 text-purple-400" />
                   <span className="text-sm font-medium tracking-wider text-white/75">
-                    夜色AI · 無限制 AI 劇情生成
+                    每天都有數萬篇 AI 故事在 NyxAI 誕生
                   </span>
                 </div>
 
-                {/* Main headline - 優化版本 */}
+                {/* Main headline - 藍圖優化版 */}
                 <h1
-                  className="mt-8 text-balance text-4xl font-bold leading-[1.1] tracking-tight sm:text-5xl md:text-6xl lg:text-[4.5rem]"
+                  className="mt-8 text-balance text-4xl font-bold leading-[1.1] tracking-tight sm:text-5xl md:text-6xl lg:text-[4rem]"
                   style={{
                     color: "#FFFFFF",
                     textShadow: "0 4px 30px rgba(0,0,0,0.6), 0 2px 8px rgba(0,0,0,0.4)",
                   }}
                 >
-                  一句話，立即展開你的專屬劇情。
+                  輸入一句話<br />
+                  <span className="bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-400">
+                    AI 為你寫完整故事
+                  </span>
                 </h1>
 
-                {/* Subheadline */}
-                <div className="mx-auto mt-6 max-w-lg space-y-1">
+                {/* Subheadline - 藍圖版 */}
+                <div className="mx-auto mt-6 max-w-lg space-y-2">
                   <p className="text-pretty text-base leading-relaxed text-white/65 md:text-lg">
-                    專為成人打造的 AI 劇情生成平台。
+                    NyxAI 是一個 AI 故事生成器
+                  </p>
+                  <p className="text-pretty text-base leading-relaxed text-white/50 md:text-base">
+                    輸入一句開頭，AI 立即生成完整劇情
                   </p>
                 </div>
 
-                {/* 🔥 8000 字免費標籤 */}
-                <div className="mt-8 flex justify-center">
-                  <Badge 
-                    className="bg-gradient-to-r from-orange-500 via-pink-500 to-purple-500 text-white border-0 px-6 py-2 text-base font-bold shadow-lg shadow-orange-500/25 animate-pulse"
-                  >
-                    <Zap className="w-4 h-4 mr-2" />
-                    無需登入，立即獲得 8000 字免費創作額度
-                  </Badge>
-                </div>
-
-                {/* CTAs - 強化版本 */}
-                <div className="mt-8 flex flex-col items-center justify-center gap-3.5 sm:flex-row">
+                {/* CTA Buttons - 藍圖版 */}
+                <div className="mt-10 flex flex-col items-center justify-center gap-3.5 sm:flex-row">
                   <Button
                     asChild
                     size="lg"
@@ -168,56 +142,140 @@ export default function Home() {
                     }}
                   >
                     <Link href="/app">
-                      <span className="text-nowrap">🔥 立即免費生成</span>
+                      <span className="text-nowrap">立即免費開始</span>
                       <ChevronRight className="ml-1 h-5 w-5" />
                     </Link>
                   </Button>
-                  <Button
-                    asChild
-                    size="lg"
-                    variant="ghost"
-                    className="h-14 rounded-full border border-white/[0.1] bg-white/5 px-10 text-base font-medium text-white/70 backdrop-blur-lg transition-all duration-300 hover:border-white/20 hover:bg-white/10 hover:text-white/90"
-                  >
-                    <Link href="/app">
-                      <span className="text-nowrap">直接體驗 8000 字</span>
-                    </Link>
-                  </Button>
                 </div>
 
-                {/* 即開即用提示 */}
+                {/* 即開即用提示 - 藍圖版 */}
                 <p className="mt-4 text-sm font-medium text-white/50">
-                  ⚡ 打開即用 · 無需註冊
+                  無需登入 · 立即免費體驗 8000 字
                 </p>
-
-                {/* 社會證明 - 強化 */}
-                <div className="mt-6 flex flex-col items-center justify-center gap-3">
-                  <div className="flex items-center justify-center gap-2">
-                    <div className="flex -space-x-2">
-                      {[0.7, 0.6, 0.5, 0.55, 0.65].map((opacity, i) => (
-                        <div
-                          key={i}
-                          className="h-6 w-6 rounded-full border-2 border-slate-950"
-                          style={{
-                            background: `linear-gradient(135deg, rgba(${120 + i * 20}, ${60 + i * 15}, ${220 + i * 10}, ${opacity}), rgba(${80 + i * 30}, ${40 + i * 20}, ${180 + i * 15}, ${opacity}))`,
-                          }}
-                        />
-                      ))}
-                    </div>
-                    <span className="text-sm text-white/60">
-                      <span className="font-bold text-white">已生成數萬篇</span> 沉浸式故事
-                    </span>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
         </section>
 
-        {/* ==================== 3 步流程區 ==================== */}
+        {/* ==================== 即時生成示例（轉化核心）==================== */}
+        <section className="relative z-10 py-16 px-4">
+          <div className="mx-auto max-w-5xl">
+            <h2 className="text-2xl md:text-3xl font-bold text-center text-white mb-3">
+              看看 AI 怎樣寫故事
+            </h2>
+            <p className="text-center text-white/50 mb-10 max-w-xl mx-auto">
+              輸入一句開場，AI 自動生成沉浸式劇情
+            </p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* 左側：輸入 */}
+              <div className="rounded-xl border border-white/10 bg-black/40 p-6 backdrop-blur-sm">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-3 h-3 rounded-full bg-red-500/80" />
+                  <div className="w-3 h-3 rounded-full bg-yellow-500/80" />
+                  <div className="w-3 h-3 rounded-full bg-green-500/80" />
+                  <span className="ml-2 text-sm text-white/40">輸入</span>
+                </div>
+                <div className="text-white/80 text-base leading-relaxed font-medium">
+                  「{demoInput}」
+                </div>
+              </div>
+              
+              {/* 右側：生成 */}
+              <div className="rounded-xl border border-purple-500/30 bg-gradient-to-br from-purple-900/20 to-black/40 p-6 backdrop-blur-sm relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-3">
+                  <Badge className="bg-purple-500/20 text-purple-300 border-purple-500/30 text-xs">
+                    AI 生成
+                  </Badge>
+                </div>
+                <div className="text-white/90 text-base leading-relaxed whitespace-pre-line font-mono">
+                  {demoOutput}
+                </div>
+              </div>
+            </div>
+            
+            {/* 示例下方 CTA */}
+            <div className="mt-8 text-center">
+              <Button
+                asChild
+                variant="outline"
+                className="rounded-full border-white/20 bg-white/5 text-white hover:bg-white/10 hover:border-white/30 px-8"
+              >
+                <Link href="/app">
+                  <Play className="w-4 h-4 mr-2 text-purple-400" />
+                  試試看 AI 會怎樣寫你的故事
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </section>
+
+        {/* ==================== 熱門故事題材 ==================== */}
+        <section className="relative z-10 py-16 px-4">
+          <div className="mx-auto max-w-5xl">
+            <h2 className="text-2xl md:text-3xl font-bold text-center text-white mb-3">
+              熱門故事題材
+            </h2>
+            <p className="text-center text-white/50 mb-10">
+              點擊進入，自動填寫提示詞
+            </p>
+            
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {HOT_TOPICS.map((topic, idx) => (
+                <Link
+                  key={idx}
+                  href={`/app?topic=${encodeURIComponent(topic.title)}&prompt=${encodeURIComponent(topic.desc)}`}
+                  className="group"
+                >
+                  <div className={`rounded-xl border border-white/10 bg-gradient-to-br ${topic.color} p-5 backdrop-blur-sm transition-all duration-300 hover:border-white/30 hover:scale-[1.02] h-full`}>
+                    <h3 className="text-lg font-bold text-white mb-2 group-hover:text-purple-300 transition-colors">
+                      {topic.title}
+                    </h3>
+                    <p className="text-sm text-white/60 leading-relaxed">
+                      「{topic.desc}」
+                    </p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ==================== NyxAI 的能力 ==================== */}
         <section className="relative z-10 py-16 px-4">
           <div className="mx-auto max-w-4xl">
             <h2 className="text-2xl md:text-3xl font-bold text-center text-white mb-10">
-              🚀 3 步開始創作
+              NyxAI 可以做到
+            </h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {CAPABILITIES.map((cap, idx) => (
+                <div 
+                  key={idx}
+                  className="flex items-center gap-4 rounded-xl border border-white/10 bg-black/40 p-5 backdrop-blur-sm"
+                >
+                  <div className="p-3 rounded-lg bg-purple-500/10">
+                    <cap.icon className="w-6 h-6 text-purple-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-semibold text-white">
+                      {cap.title}
+                    </h3>
+                    <p className="text-sm text-white/50">
+                      {cap.desc}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ==================== 使用流程（簡單）==================== */}
+        <section className="relative z-10 py-16 px-4 bg-gradient-to-b from-transparent via-purple-900/5 to-transparent">
+          <div className="mx-auto max-w-4xl">
+            <h2 className="text-2xl md:text-3xl font-bold text-center text-white mb-10">
+              3 步開始創作
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {STEPS.map((item, idx) => (
@@ -225,7 +283,7 @@ export default function Home() {
                   key={idx} 
                   className="relative group"
                 >
-                  <div className="rounded-xl border border-white/10 bg-white/[0.03] p-6 backdrop-blur-sm text-center transition-all duration-300 group-hover:bg-white/[0.06] group-hover:border-white/20">
+                  <div className="rounded-xl border border-white/10 bg-black/40 p-6 backdrop-blur-sm text-center">
                     <div className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400 mb-3">
                       {item.step}
                     </div>
@@ -247,39 +305,72 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ==================== FEATURES SECTION - 2欄高密度 ==================== */}
-        <section className="relative z-10 py-16 px-4">
-          <div className="mx-auto max-w-5xl">
-            <h2 className="text-2xl md:text-3xl font-bold text-center text-white mb-4">
-              強大功能，沉浸創作
+        {/* ==================== 免費體驗區 ==================== */}
+        <section className="relative z-10 py-20 px-4">
+          <div className="mx-auto max-w-3xl text-center">
+            <Badge className="bg-orange-500/20 text-orange-300 border-orange-500/30 mb-6 px-4 py-1.5">
+              <Zap className="w-4 h-4 mr-1.5" />
+              免費開始
+            </Badge>
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+              免費開始你的第一篇故事
             </h2>
-            <p className="text-center text-white/50 mb-10 max-w-2xl mx-auto">
-              專為成人內容優化的 AI 故事生成平台
+            <p className="text-white/60 mb-2 text-lg">
+              每位用戶可免費生成約 8000 字故事
+            </p>
+            <p className="text-white/40 mb-8">
+              打開即用 · 無需登入
             </p>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {FEATURES.map((feature, idx) => (
-                <div 
+            <Button
+              asChild
+              size="lg"
+              className="h-14 rounded-full px-12 text-base font-semibold transition-all duration-300 hover:scale-[1.04] shadow-xl shadow-purple-500/30"
+              style={{
+                background: "linear-gradient(135deg, #6d28d9, #8b5cf6)",
+                color: "#FFFFFF",
+              }}
+            >
+              <Link href="/app">
+                <span>立即免費開始</span>
+                <ChevronRight className="ml-2 h-5 w-5" />
+              </Link>
+            </Button>
+          </div>
+        </section>
+
+        {/* ==================== 價格區 ==================== */}
+        <section className="relative z-10 py-16 px-4">
+          <div className="mx-auto max-w-5xl">
+            <h2 className="text-2xl md:text-3xl font-bold text-center text-white mb-3">
+              字數充值
+            </h2>
+            <p className="text-center text-white/50 mb-10 text-sm">
+              小字：首次充值半價
+            </p>
+            
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              {PRICING.map((plan, idx) => (
+                <div
                   key={idx}
-                  className="group rounded-xl border border-white/10 bg-white/[0.03] p-5 backdrop-blur-sm transition-all duration-300 hover:bg-white/[0.06] hover:border-white/20"
+                  className={`relative rounded-xl border p-5 text-center transition-all duration-300 ${
+                    plan.popular
+                      ? "border-purple-500/50 bg-purple-900/10"
+                      : "border-white/10 bg-black/40 hover:border-white/20"
+                  }`}
                 >
-                  <div className="flex items-start gap-4">
-                    <div className={`p-2.5 rounded-lg bg-white/5 ${feature.color}`}>
-                      <feature.icon className="w-5 h-5" />
+                  {plan.popular && (
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                      <Badge className="bg-purple-500 text-white border-0 text-xs">
+                        最受歡迎
+                      </Badge>
                     </div>
-                    <div className="flex-1">
-                      <h3 className="text-base font-semibold text-white mb-2">
-                        {feature.title}
-                      </h3>
-                      <ul className="space-y-1">
-                        {feature.bullets.map((bullet, bidx) => (
-                          <li key={bidx} className="text-sm text-white/50 flex items-start gap-2">
-                            <span className="text-purple-400 mt-0.5">•</span>
-                            {bullet}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
+                  )}
+                  <div className="text-2xl font-bold text-white mb-1">
+                    {plan.words}
+                  </div>
+                  <div className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400 mb-1">
+                    ¥{plan.price}
                   </div>
                 </div>
               ))}
@@ -287,27 +378,24 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ==================== 轉化推動區 ==================== */}
+        {/* ==================== 最後 CTA ==================== */}
         <section className="relative z-10 py-20 px-4">
           <div className="mx-auto max-w-3xl text-center">
-            <p className="text-xl md:text-2xl font-medium text-white/80 mb-2">
-              你的故事還未結束。
-            </p>
-            <p className="text-white/50 mb-8">
-              超過 23,000+ 篇故事已在此誕生
-            </p>
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-8">
+              今晚開始你的第一篇故事
+            </h2>
             
             <Button
               asChild
               size="lg"
-              className="h-16 rounded-full px-12 text-lg font-semibold transition-all duration-300 hover:scale-[1.04] shadow-xl shadow-purple-500/30"
+              className="h-16 rounded-full px-14 text-lg font-semibold transition-all duration-300 hover:scale-[1.04] shadow-2xl shadow-purple-500/40"
               style={{
                 background: "linear-gradient(135deg, #6d28d9, #8b5cf6)",
                 color: "#FFFFFF",
               }}
             >
               <Link href="/app">
-                <span>🔥 立即開始創作</span>
+                <span>免費生成故事</span>
                 <ChevronRight className="ml-2 h-5 w-5" />
               </Link>
             </Button>
@@ -320,9 +408,23 @@ export default function Home() {
 
         {/* ==================== FOOTER ==================== */}
         <footer className="relative z-10 py-8 px-4 border-t border-white/5">
-          <div className="mx-auto max-w-4xl text-center">
-            <p className="text-sm text-white/30">
-              © 2026 NyxAI · 夜色AI · 無限制 AI 劇情生成平台
+          <div className="mx-auto max-w-4xl">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="text-center md:text-left">
+                <p className="text-lg font-bold text-white/80">NyxAI</p>
+                <p className="text-sm text-white/40">AI Story Generator</p>
+              </div>
+              <div className="flex gap-6 text-sm text-white/40">
+                <Link href="/privacy" className="hover:text-white/60 transition-colors">
+                  隱私政策
+                </Link>
+                <Link href="/terms" className="hover:text-white/60 transition-colors">
+                  服務條款
+                </Link>
+              </div>
+            </div>
+            <p className="text-xs text-white/20 text-center mt-6">
+              © 2026 NyxAI · 每天都有數萬篇 AI 故事在此誕生
             </p>
           </div>
         </footer>
