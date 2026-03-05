@@ -1,6 +1,8 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
+const FREE_WORD_LIMIT = 8000
+
 export interface Character {
   id: string
   name: string
