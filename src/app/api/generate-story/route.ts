@@ -224,7 +224,7 @@ export async function POST(req: NextRequest) {
     // V4: 簡化單段生成模式（放棄多段生成）
     // ============================================================
     // 固定 max_tokens: 3500 tokens ≈ 2000-2500 中文字
-    const MAX_TOKENS = 2800  // 降低以减少超長生成
+    const MAX_TOKENS = 4500  // V4.3: 恢復到4500以确保能输出2500字故事（DeepSeek R1思考过程占用tokens）
     const MAX_STORY_LENGTH = 2500  // 硬截斷上限：2500 字
     const MIN_WORDS_REQUIRED = 1000  // 最小生成門檻：需要至少1000字才能生成
 
@@ -426,6 +426,54 @@ export async function POST(req: NextRequest) {
                         truncated: true
                       })}\n\n`))
                       controller.close()
+                      return
+                    }
+                    
+                    // V4.3: 實時硬截斷 - 如果內容超過上限，停止接收但仍返回已生成內容
+                    if (fullContent.length > MAX_STORY_LENGTH) {
+                      console.warn(`[generate-story] Real-time truncation: ${fullContent.length} > ${MAX_STORY_LENGTH}`)
+                      // 找最近的句子結束點
+                      const searchStart = Math.floor(MAX_STORY_LENGTH * 0.9)
+                      const searchRange = fullContent.slice(searchStart, MAX_STORY_LENGTH + 100)
+                      const sentenceEnd = searchRange.search(/[。！？][^」』）)]/)
+                      if (sentenceEnd !== -1) {
+                        fullContent = fullContent.slice(0, searchStart + sentenceEnd + 1)
+                      } else {
+                        fullContent = fullContent.slice(0, MAX_STORY_LENGTH)
+                      }
+                      
+                      // 發送截斷後的內容（只發送新增的部分）
+                      // 注意：這裡簡化處理，直接結束流
+                      const wordsUsed = Math.ceil(fullContent.length * 0.8)
+                      controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+                        done: true,
+                        wordsUsed,
+                        remaining: currentWordCount - wordsUsed,
+                        isAnonymous,
+                        truncated: true
+                      })}\n\n`))
+                      controller.close()
+                      
+                      // 扣除字數
+                      if (isLoggedIn) {
+                        await supabase
+                          .from("profiles")
+                          .update({ word_count: currentWordCount - wordsUsed })
+                          .eq("id", session!.user.id)
+                      } else if (anonymousId) {
+                        const { data: existing } = await supabase
+                          .from("anonymous_usage")
+                          .select("words_used")
+                          .eq("anonymous_id", anonymousId)
+                          .maybeSingle()
+                        await supabase
+                          .from("anonymous_usage")
+                          .upsert({
+                            anonymous_id: anonymousId,
+                            words_used: (existing?.words_used ?? 0) + wordsUsed,
+                            words_limit: FREE_WORD_LIMIT
+                          }, { onConflict: 'anonymous_id' })
+                      }
                       return
                     }
                     
