@@ -109,7 +109,7 @@ interface AppState {
   // V4.4: 人稱視角（第一人稱/第三人稱）
   perspective: 'first-person' | 'third-person'
   setPerspective: (perspective: 'first-person' | 'third-person') => void
-
+}
 
 export const useAppStore = create<AppState>()(
   persist(
