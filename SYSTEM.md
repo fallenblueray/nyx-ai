@@ -1,89 +1,131 @@
-# NyxAI 系統說明書
+# NyxAI 系統說明書 (V4 單段生成)
 
 > **千螢維護協議**：每次開始任何 NyxAI 工作前，必須先完整讀取此文件。
-> 昨天花了一天沒解決的問題，今天讀了這份文件後一次成功。
 
 ---
 
-## 🗺️ 系統架構速覽
+## 🗺️ 系統架構速覽 (V4 單段生成)
 
 ```
-用戶輸入（一句話）
+用戶輸入（一句話/模板）
     ↓
-[outline/route.ts]   ← Kimi K2.5 生成2場景大綱 (JSON)
+[generate-story/route.ts]   ← DeepSeek R1 單段生成 (~2000字)
     ↓
-[segment/route.ts]   ← DeepSeek R1 生成第1段 (~2500字)
-    ↓
-[segment/route.ts]   ← DeepSeek R1 生成第2段 (~2500字，注入上下文)
-    ↓
-合併 → 前端 SSE 流式輸出（StoryOutput.tsx）
+SSE 流式輸出 → StoryOutput.tsx
 ```
 
-**替代路徑（Legacy）**：`generate-story/route.ts` 的 `handleMultiSegmentGeneration`
-— 前端通過 `x-multi-segment: true` header 觸發
+**V4 重大變更**：
+- ❌ 移除了多段生成模式（原本 2-3 段大綱 + 分段生成）
+- ✅ 簡化為單段生成，直接調用 DeepSeek R1
+- ✅ 強制 `skipCache: true`，避免緩存命中導致重複內容
 
 ---
 
-## 📁 文件地圖（只記最重要的）
+## 📁 文件地圖（V4 現狀）
 
 ```
 src/
 ├── app/api/
-│   ├── story/outline/route.ts           # 大綱生成（Kimi K2.5）
-│   ├── story/segment/route.ts           # 單段生成（DeepSeek R1）
-│   ├── story/segment/system_prompt.ts   # ⚠️ 核心 prompt，輕易不要動
-│   └── generate-story/route.ts          # Legacy多段流式生成
-├── hooks/
-│   └── useStoryGeneration.ts            # 故事生成邏輯封裝
+│   ├── story/outline/route.ts           # 大綱生成（Kimi K2.5）- 僅備用
+│   ├── story/segment/route.ts           # 單段生成（DeepSeek R1）- 僅備用
+│   ├── story/segment/system_prompt.ts   # 核心 prompt（只讀，勿改）
+│   └── generate-story/route.ts          # ✅ 主生成入口（V4 單段模式）
+├── app/app/page.tsx                     # 主界面（含「新建」按鈕）
+├── components/
+│   ├── StoryOutput.tsx                  # 故事顯示 + 生成按鈕邏輯
+│   └── TemplateSelector.tsx             # 模板選擇
 ├── lib/
-│   ├── content-cleaner.ts               # 清理 AI 思考標記、分段標記
-│   ├── story-segmentation.ts            # 上下文提取、分段邏輯
+│   ├── content-cleaner.ts               # 清理 AI 思考標籤
 │   └── story-utils.ts                   # 工具函數
-└── components/
-    ├── StoryOutput.tsx                  # 前端：故事生成/顯示/續寫
-    ├── TemplateSelector.tsx             # 故事模板選擇
-    └── TopicSelector.tsx                # 題材選擇
+└── store/
+    └── useAppStore.ts                   # 全局狀態（含 shouldRegenerate）
 ```
 
 ---
 
-## ⚙️ 當前生成參數（V2.5，2026-03-03）
+## ⚙️ 當前生成參數（V4，2026-03-05）
 
 | 參數 | 值 | 說明 |
 |------|----|------|
-| 大綱模型 | `moonshotai/kimi-k2.5` | 規劃大綱用 |
 | 生成模型 | `deepseek/deepseek-r1-0528` | 實際寫故事 |
-| 目標字數/段 | 2500字 | prompt 中明確說明 |
-| 硬截斷上限 | 2800字 | 後處理截斷 |
-| max_tokens | 4500 | 確保能輸出 2500 字 |
-| 場景數量 | **1/2/3 段可選** | 用戶選擇，動態生成 |
-| 總字數範圍 | 2500/5000/7500字 | 依段數動態計算 |
+| max_tokens | 2800 | 降低以減少超長生成 |
+| 硬截斷上限 | 2500 字 | 超過則找句子結束點截斷 |
+| 目標字數 | ~2000 字 | prompt 中說明約 2000 字 |
+| 緩存策略 | 強制跳過 | 所有請求 `skipCache: true` |
+| 段數 | 單段 | 不再分段，自然完結 |
 
 ---
 
-## 🔄 上下文注入機制（解決中後段品質問題）
+## 🔧 核心 API 流程
 
-**原理**：第2段生成時，不只傳「結尾500字」，而是傳結構化信息：
+### 主入口：`/api/generate-story`
 
-```
-【前文輪廓】
-角色狀態：角色A(狀態)、角色B(狀態)
-關係發展：...
-關鍵道具：...
-
-【風格樣本】← 取中段400字（非結尾！避免高潮污染）
-...
-
-【銜接點】← 末尾400字，直接接續
-...
-
-【本段大綱】← 從 outline 取得
-場景：...
-核心事件：...
+```typescript
+// V4 單段生成流程
+POST /api/generate-story
+Body: {
+  systemPrompt,    // 官方 system_prompt.ts + 主題風格
+  userPrompt,      // 構建的用戶提示
+  model: "deepseek/deepseek-r1-0528",
+  skipCache: true, // ✅ 強制跳過緩存
+  ...
+}
 ```
 
-**為什麼取中段作風格樣本？**
-如果取結尾，結尾通常是高潮或轉折的頂點，容易讓下一段「重複高潮」或風格失控。中段代表整體基調。
+**處理流程**：
+1. 安全檢查（輸入驗證、Prompt Injection、非法內容、速率限制）
+2. 字數額度檢查（匿名/登入用戶）
+3. 記憶層注入（登入用戶的偏好）
+4. ❌ 緩存層（被 `skipCache: true` 跳過）
+5. 調用 DeepSeek R1 生成
+6. 硬截斷處理（>2500字則找句子結束點）
+7. SSE 流式返回
+
+---
+
+## 🔄 前端生成流程
+
+### StoryOutput.tsx 中的 `generateStoryDirect`
+
+```typescript
+const generateStoryDirect = async () => {
+  // 1. 重置流式狀態
+  resetStreaming()
+  setStoryOutput("")  // 清空舊內容
+  
+  // 2. 構建 prompt（單段模式）
+  const { systemPrompt, userPrompt } = buildPrompt(false)
+  
+  // 3. 發送請求（強制 skipCache）
+  const response = await fetch("/api/generate-story", {
+    body: JSON.stringify({
+      systemPrompt,
+      userPrompt,
+      skipCache: true,  // ✅ 確保不讀緩存
+    })
+  })
+  
+  // 4. SSE 流式處理
+  // ...
+}
+```
+
+### 「再寫一次」邏輯
+
+```typescript
+// 再寫一次按鈕
+onClick={() => {
+  useAppStore.getState().setShouldRegenerate(true)
+}}
+
+// useEffect 監聽
+useEffect(() => {
+  if (shouldRegenerate && canGenerate && !isGenerating) {
+    setShouldRegenerate(false)
+    generateStoryV3(true)  // 調用生成
+  }
+}, [shouldRegenerate])
+```
 
 ---
 
@@ -91,11 +133,9 @@ src/
 
 ```
 原始 AI 輸出
-  → cleanGeneratedContent()     移除 <think> 標籤、分段標記
+  → cleanGeneratedContent()     移除 <think> 標籤
   → extractPureStoryContent()   移除 【】[]() 等非故事行
-  → cleanSegmentTransition()    移除「繼續」「承接」等過渡詞
-  → removeOverlap()             移除前後段重疊內容
-  → truncateToTarget(2500)      硬截斷
+  → 硬截斷（2500字上限）
 ```
 
 ---
@@ -104,12 +144,10 @@ src/
 
 | 問題 | 解決方案 | 日期 |
 |------|---------|------|
-| 字數負數仍可生成 | 前後端都添加 `currentWordCount <= 0` 檢查 | 2026-03-03 |
-| 字數超標（6800字/2段） | 統一目標2500字 + 硬截斷2800字 | 2026-03-03 |
-| 中後段語法崩壞（人設混亂） | 風格樣本取中段 + 結構化上下文 | 2026-03-03 |
+| 選擇相同模板生成相同文章 | 強制 `skipCache: true` | 2026-03-05 |
+| 字數超標 | 硬截斷 2500 字 + max_tokens 2800 | 2026-03-05 |
 | AI 思考標籤出現 | content-cleaner.ts 過濾 | 2026-03-02 |
-| 分段標記（第1段等） | 正則過濾 + prompt 禁止 | 2026-03-02 |
-| 「劇情主線太長」錯誤 | story-utils.ts 規則摘要 | 2026-03-01 |
+| 分段標記 | 正則過濾 + prompt 禁止 | 2026-03-02 |
 
 ---
 
@@ -128,17 +166,16 @@ src/
 # 1. Build 驗證
 npm run build
 
-# 2. 提交
+# 2. 提交（必須更新此文件）
 git add -A && git commit -m "..."
 
 # 3. 推送
 git push origin main
 
 # 4. Vercel 部署
-npx vercel --prod --yes --token $VERCEL_TOKEN
+export VERCEL_TOKEN="..."
+npx vercel --prod --yes --token "$VERCEL_TOKEN"
 ```
-
-**Vercel Token**：存於記憶庫，不在此處記錄
 
 ---
 
@@ -146,36 +183,23 @@ npx vercel --prod --yes --token $VERCEL_TOKEN
 
 遇到故事生成問題，先檢查：
 
-1. **字數問題** → 看 `segment/route.ts` 的 MAX_SEGMENT_LENGTH
-2. **品質崩壞** → 看上下文注入邏輯（previousMid / previousEnding）
-3. **API 錯誤** → 看 OpenRouter key 和模型名稱是否正確
-4. **前端不顯示** → 看 StoryOutput.tsx 的 SSE 處理邏輯
+1. **字數問題** → `MAX_TOKENS = 2800`, `MAX_STORY_LENGTH = 2500`
+2. **緩存問題** → 確認 `skipCache: true` 在請求 body 中
+3. **API 錯誤** → OpenRouter key 和模型名稱
+4. **前端不顯示** → StoryOutput.tsx SSE 處理邏輯
 
 ---
 
-## 📝 待處理（Known Issues）
+## 📝 V4 變更記錄
 
-| 問題 | 優先級 | 狀態 |
-|------|--------|------|
-| 續寫劇情缺乏變化 | 低 | 待規劃 |
-
----
-
-## 🔄 記憶回饋機制
-
-> **這是千螢自我維護的關鍵機制**
-
-每次修改代碼後，必須：
-1. 在 **CHANGE_LOG.md** 記錄變更
-2. 檢查是否需要更新 **SYSTEM.md**（架構變更）或 **DECISIONS.md**（決策變更）
-3. 同步更新頂層 **AGENTS.md**（若影響全局協議）
-
-**為什麼需要這個機制？**
-- 避免「每次新對話都遺忘系統理解」的問題
-- 確保文件始終反映最新代碼狀態
-- 讓未來的千螢能快速接手
+| 日期 | 變更 | 影響 |
+|------|------|------|
+| 2026-03-05 | 簡化為單段生成 | 移除多段模式，強制 skipCache |
+| 2026-03-05 | 緩存強制跳過 | 解決重複生成問題 |
+| 2026-03-04 | 動態 max_tokens | 根據段數調整（已廢棄）|
+| 2026-03-03 | V2.5 上下文注入 | 中段風格樣本（已廢棄）|
 
 ---
 
-*最後更新：2026-03-03 by 千螢*
+*最後更新：2026-03-05 by 千螢*
 *變更記錄：見 CHANGE_LOG.md*
