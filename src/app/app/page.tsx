@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 import { useAppStore } from "@/store/useAppStore"
 import { TopicSelector } from "@/components/TopicSelector"
 import { CharacterManager } from "@/components/CharacterManager"
@@ -28,6 +29,7 @@ interface StoryData {
 
 export default function AppPage() {
   const translations = useTranslation()
+  const searchParams = useSearchParams()
   const { 
     isPanelCollapsed, 
     setPanelCollapsed, 
@@ -47,6 +49,14 @@ export default function AppPage() {
   const [shareCopied, setShareCopied] = useState(false)
   const [title, setTitle] = useState("")
   const [saved, setSaved] = useState(false)
+  
+  // 讀取 URL 參數並填充輸入框
+  useEffect(() => {
+    const promptFromUrl = searchParams.get('prompt')
+    if (promptFromUrl && !storyInput) {
+      setStoryInput(promptFromUrl)
+    }
+  }, [searchParams, setStoryInput, storyInput])
   
   const hasOutput = storyOutput.trim().length > 0
   

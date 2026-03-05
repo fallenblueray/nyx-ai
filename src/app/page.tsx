@@ -5,8 +5,9 @@ import { ParticleField } from "@/components/particle-field";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
-import { ChevronRight, Sparkles, Zap, BookOpen, Users, Clock, PenTool, Layers, Download, Play } from "lucide-react";
+import { ChevronRight, Sparkles, Zap, BookOpen, Users, Clock, PenTool, Layers, Download, Play, Wand2 } from "lucide-react";
 import { useState } from "react";
+import { Input } from "@/components/ui/input";
 
 const NYX_GRADIENT = ["#1e1b4b", "#3730a3", "#6d28d9", "#8b5cf6", "#a78bfa"];
 
@@ -58,6 +59,19 @@ export default function Home() {
 她靠近我耳邊，聲音低得像是在說一個秘密。
 
 「陪我多待一會，好嗎？」`);
+  const [userPrompt, setUserPrompt] = useState("");
+
+  const handleGenerate = () => {
+    if (userPrompt.trim()) {
+      window.location.href = `/app?prompt=${encodeURIComponent(userPrompt.trim())}`;
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && userPrompt.trim()) {
+      handleGenerate();
+    }
+  };
 
   return (
     <div className="relative min-h-dvh w-full bg-slate-950 overflow-hidden">
@@ -194,18 +208,38 @@ export default function Home() {
               </div>
             </div>
             
-            {/* 示例下方 CTA */}
-            <div className="mt-8 text-center">
-              <Button
-                asChild
-                variant="outline"
-                className="rounded-full border-white/20 bg-white/5 text-white hover:bg-white/10 hover:border-white/30 px-8"
-              >
-                <Link href="/app">
-                  <Play className="w-4 h-4 mr-2 text-purple-400" />
-                  試試看 AI 會怎樣寫你的故事
-                </Link>
-              </Button>
+            {/* 即時輸入區 - 最強轉化點 */}
+            <div className="mt-10 max-w-2xl mx-auto">
+              <div className="rounded-2xl border border-purple-500/30 bg-gradient-to-br from-purple-900/20 via-black/60 to-black/40 p-6 backdrop-blur-sm">
+                <label className="block text-sm font-medium text-white/70 mb-3">
+                  輸入一句故事開頭
+                </label>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <Input
+                    type="text"
+                    placeholder="例如：深夜加班時，女上司忽然鎖上辦公室的門..."
+                    value={userPrompt}
+                    onChange={(e) => setUserPrompt(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    className="flex-1 h-12 bg-black/40 border-white/10 text-white placeholder:text-white/30 focus:border-purple-500/50 focus:ring-purple-500/20 rounded-xl"
+                  />
+                  <Button
+                    onClick={handleGenerate}
+                    disabled={!userPrompt.trim()}
+                    className="h-12 px-8 rounded-xl font-semibold transition-all duration-300 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                    style={{
+                      background: "linear-gradient(135deg, #6d28d9, #8b5cf6)",
+                      color: "#FFFFFF",
+                    }}
+                  >
+                    <Wand2 className="w-4 h-4 mr-2" />
+                    立即生成
+                  </Button>
+                </div>
+                <p className="mt-3 text-xs text-white/40">
+                  按下 Enter 或點擊按鈕，立即跳轉生成故事
+                </p>
+              </div>
             </div>
           </div>
         </section>
