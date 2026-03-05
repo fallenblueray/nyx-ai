@@ -434,10 +434,15 @@ export function GenerateButtons() {
   // V4: 簡化為單段生成
   const buildPrompt = (isContinue: boolean = false) => {
     // V4: 統一使用官方 System Prompt
-    const { storyTheme } = useAppStore.getState()
+    const { storyTheme, perspective } = useAppStore.getState()
     const theme = getThemeById(storyTheme)
     const themeAddon = theme ? theme.systemPromptAddon : ''
     const systemPrompt = OFFICIAL_SYSTEM_PROMPT + (themeAddon ? `\n\n【風格要求】${themeAddon}` : '')
+    
+    // V4.4: 人稱視角設定
+    const perspectiveInstruction = perspective === 'first-person' 
+      ? '\n【敘述視角】使用第一人稱（我/我們），以主角視角敘述，增強代入感。'
+      : '\n【敘述視角】使用第三人稱（他/她/他們），全知視角敘述，更全面展現故事。'
 
     // V4: 固定約 2000 字單段生成
     const TARGET_WORDS = 2000
@@ -487,6 +492,7 @@ ${styleSample.slice(0, 300)}
 - 故事起點：${storyInput || "（由 AI 自由發揮精彩開場）"}
 - 題材偏好：${topicStr || "（根據起點自動選擇）"}
 - 角色設定：${charStr || "（由 AI 創作）"}
+${perspectiveInstruction}
 
 【要求】
 1. 根據劇情自然展開、發展、完結

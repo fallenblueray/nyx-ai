@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useAppStore } from "@/store/useAppStore"
 import { TopicSelector } from "@/components/TopicSelector"
 import { CharacterManager } from "@/components/CharacterManager"
+import { PerspectiveSelector } from "@/components/PerspectiveSelector"
 import { StoryOutput, GenerateButtons } from "@/components/StoryOutput"
 import { HistoryDrawer } from "@/components/HistoryDrawer"
 import { UserMenu } from "@/components/UserMenu"
@@ -292,6 +293,13 @@ export default function AppPage() {
                 {translations.app?.characterCard || "角色卡"}
               </label>
               <CharacterManager />
+            </div>
+            
+            <div className="space-y-2">
+              <label className="text-sm font-medium nyx-text-secondary">
+                敘述視角
+              </label>
+              <PerspectiveSelector />
             </div>
             
             <div className="pt-4 border-t nyx-border">

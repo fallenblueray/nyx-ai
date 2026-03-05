@@ -105,9 +105,11 @@ interface AppState {
     keyItems: string[]
   }
   updateDynamicContext: (context: Partial<AppState['dynamicContext']>) => void
-}
+  
+  // V4.4: 人稱視角（第一人稱/第三人稱）
+  perspective: 'first-person' | 'third-person'
+  setPerspective: (perspective: 'first-person' | 'third-person') => void
 
-export const FREE_WORD_LIMIT = 8000
 
 export const useAppStore = create<AppState>()(
   persist(
@@ -273,6 +275,10 @@ export const useAppStore = create<AppState>()(
           keyItems: context.keyItems ?? state.dynamicContext.keyItems,
         },
       })),
+      
+      // V4.4: 人稱視角（預設第一人稱）
+      perspective: 'first-person',
+      setPerspective: (perspective) => set({ perspective }),
     }),
     {
       name: 'nyx-ai-storage',
@@ -285,6 +291,7 @@ export const useAppStore = create<AppState>()(
         characters: state.characters,
         storyOutline: state.storyOutline,
         dynamicContext: state.dynamicContext,
+        perspective: state.perspective,
       }),
     }
   )
