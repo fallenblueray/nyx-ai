@@ -93,7 +93,7 @@ function GenerationProgress({
   // V2.9: 基於實際內容長度計算進度
   // 每段目標約 2500 字，總目標 = 段數 × 2500
   const TARGET_PER_SEGMENT = 2500
-  const totalTarget = totalSegments * TARGET_PER_SEGMENT
+  const totalTarget = TARGET_PER_SEGMENT  // V4: 單段生成，固定 2500 字目標
 
   // 計算進度：實際字數 / 總目標字數，最高 95%（保留 5% 給最後處理）
   let contentProgress = Math.min(95, (contentLength / totalTarget) * 100)
@@ -107,14 +107,12 @@ function GenerationProgress({
   // 確保進度不會倒退
   totalProgress = Math.min(95, Math.max(5, totalProgress))
 
-  // 狀態文字
+  // V4: 簡化狀態文字，移除分段顯示
   let statusText = ""
-  if (currentSegment === 0) {
-    statusText = "準備生成..."
-  } else if (contentLength >= totalTarget * 0.95) {
+  if (contentLength >= totalTarget * 0.95) {
     statusText = "整理輸出..."
   } else {
-    statusText = `第 ${Math.min(currentSegment, totalSegments)}/${totalSegments} 段 · ${contentLength.toLocaleString()} 字`
+    statusText = `已生成 ${contentLength.toLocaleString()} 字`
   }
 
   return (
@@ -433,81 +431,70 @@ export function GenerateButtons() {
     }
   }, [isLoggedIn, setAnonymousWordsLeft])
 
-  const buildPrompt = (isContinue: boolean = false, segmentCount: number = targetSegments) => {
-    // V3.1: 統一使用官方 System Prompt
-    // V3.1: 添加主題風格
+  // V4: 簡化為單段生成
+  const buildPrompt = (isContinue: boolean = false) => {
+    // V4: 統一使用官方 System Prompt
     const { storyTheme } = useAppStore.getState()
     const theme = getThemeById(storyTheme)
     const themeAddon = theme ? theme.systemPromptAddon : ''
     const systemPrompt = OFFICIAL_SYSTEM_PROMPT + (themeAddon ? `\n\n【風格要求】${themeAddon}` : '')
 
-    // V3.1: 調整字數目標 - 避免每段過長
-    const wordsPerSegment = 2200  // 從 2500 降到 2200
-    const totalWords = segmentCount * wordsPerSegment
+    // V4: 固定約 2000 字單段生成
+    const TARGET_WORDS = 2000
     
     let userPrompt = ""
     if (isContinue && storyOutput) {
       // V3.1：優化續寫prompt - 從開頭提取風格樣本避免繼承混亂
-      const ending = storyOutput.slice(-1200)  // 減少到 1200 字
-      // 🎯 CRITICAL: 從第1段開頭提取風格（避免繼承後期凌亂內容）
-      const styleSample = storyOutput.slice(0, 800)  // 取前 800 字而非中間
+      const ending = storyOutput.slice(-600)  // V4: 縮短到 600 字
+      // V4: 從文章開頭取風格樣本（保持原始風格）
+      const styleSample = storyOutput.slice(0, 500)
       
       // 提取出現過的角色（從全文統計）
       const characterList = characters.length > 0 
         ? characters.map(c => `${c.name}：${c.description}`).join('\n')
         : '（沿用前文角色）'
       
-      userPrompt = `【續寫任務】
+      userPrompt = `【續寫任務 - 新章節】
 
-【字數要求】嚴格控制 ${wordsPerSegment}~${wordsPerSegment + 300} 字（約 ${Math.floor(wordsPerSegment/3)}-${Math.floor((wordsPerSegment+300)/3)} 段落）。達到字數後**必須立即停止**，不可強行延長。
+【目標】約 ${TARGET_WORDS} 字，根據劇情自然完結。
 
-【角色設定】（必須沿用，不可新增或遺漏）
+【角色設定】（必須沿用）
 ${characterList}
 
-【原創風格基準】（模仿此風格，而非後文）
-${styleSample.slice(0, 400)}
+【原創風格基準】（模仿開頭風格）
+${styleSample.slice(0, 300)}
 
-【直接承接】（從此處繼續）
-...${ending.slice(-300)}
+【承接點】（從此繼續）
+...${ending.slice(-200)}
 
-【強制要求】
-1. **字數優先**：達到 ${wordsPerSegment} 字後立即停止，無論劇情是否完整
-2. **自然延續**：從承接點下一秒無縫過渡，絕對禁止重複前文任何句子
-3. **風格一致**：完全模仿【原創風格基準】的文筆和節奏
-4. **人物鎖定**：只能使用既有角色，不得新增
-5. **適可而止**：不要強行加入多餘高潮或延長結尾
+【要求】
+1. 自然延續劇情，與前文無縫銜接
+2. 禁止重複前文任何句子
+3. 風格與【原創風格基準】一致
+4. 根據劇情需要自然完結
 
-只輸出故事正文，禁止任何說明或標記。`
+只輸出故事正文。`
     } else {
       const topicStr = selectedTopics.map(t => `${t.category}: ${t.item}`).join("、")
       const charStr = characters.map(c => `${c.name}：${c.description}（${c.traits.join("、")}）`).join("\n")
       
-      // V3.1: 更清晰的字數要求 - 強調每段獨立控制
-      userPrompt = `【故事創作要求】
+      // V4: 單段生成，自然完結
+      userPrompt = `【故事創作】
 
-【總體結構】生成 ${segmentCount} 段故事，每段獨立控制字數。
-【每段目標】${wordsPerSegment}~${wordsPerSegment + 300} 字（約 ${Math.floor(wordsPerSegment/3)}-${Math.floor((wordsPerSegment+300)/3)} 段落）
-【總字數上限】不超過 ${totalWords + 600} 字
+【目標】生成一個完整故事章節，約 ${TARGET_WORDS} 字，根據劇情自然完結。
 
 【用戶輸入】
 - 故事起點：${storyInput || "（由 AI 自由發揮精彩開場）"}
-- 題材偏好：${topicStr || "（根據起點自動選擇最適題材）"}
-- 角色設定：${charStr || "（由 AI 創作魅力角色）"}
+- 題材偏好：${topicStr || "（根據起點自動選擇）"}
+- 角色設定：${charStr || "（由 AI 創作）"}
 
-【分段要求】
-${segmentCount === 2 ? `第 1 段：開場鋪陳 + 首次高潮（${wordsPerSegment}~${wordsPerSegment+300} 字）
-第 2 段：續寫發展 + 最終高潮與收尾（${wordsPerSegment}~${wordsPerSegment+300} 字）` : 
-  segmentCount === 3 ? `第 1 段：開場鋪陳 + 初步互動（${wordsPerSegment}~${wordsPerSegment+300} 字）
-第 2 段：情節升溫 + 關鍵高潮（${wordsPerSegment}~${wordsPerSegment+300} 字）
-第 3 段：延續發展 + 多次高潮與精緻收尾（${wordsPerSegment}~${wordsPerSegment+300} 字）` : 
-  `完整單段故事，約 ${wordsPerSegment}~${wordsPerSegment+300} 字`}
+【要求】
+1. 根據劇情自然展開、發展、完結
+2. 字數約 ${TARGET_WORDS}，可依劇情調整（1800-2500 字）
+3. 禁止機械重複
+4. 文筆流暢自然
 
-【絕對禁止】
-- 嚴禁超過每段字數上限
-- 嚴禁機械重複相同動作或對話
-- 嚴文言堆砌、生硬轉折
-
-【輸出格式】直接輸出故事正文，用兩個換行分隔各段。禁止前言、標題、字數統計或任何說明。`
+直接輸出故事正文，禁止前言或說明。`
     }
 
     return { systemPrompt, userPrompt }
@@ -627,15 +614,10 @@ ${segmentCount === 2 ? `第 1 段：開場鋪陳 + 首次高潮（${wordsPerSegm
       const { systemPrompt, userPrompt } = buildPrompt(false)
       const anonymousId = !isLoggedIn ? getOrCreateAnonymousId() : undefined
 
-      // V2.5: 多段模式 header
+      // V4: 固定單段生成，無需多段 header
       const headers: Record<string, string> = { "Content-Type": "application/json" }
-      if (targetSegments > 1) {
-        headers['x-multi-segment'] = 'true'
-        headers['x-target-segments'] = String(targetSegments)
-        console.log('[V2.5] Using multi-segment with', targetSegments, 'segments')
-      }
 
-      // V2.9: 添加 humanize 標記
+      // humanize 標記
       if (humanizeEnabled) {
         headers['x-humanize'] = 'true'
       }
@@ -650,6 +632,7 @@ ${segmentCount === 2 ? `第 1 段：開場鋪陳 + 首次高潮（${wordsPerSegm
           topics: selectedTopics,
           characters,
           ...(anonymousId && { anonymousId }),
+          skipCache: true,  // V4: 永遠跳過緩存，確保每次生成新內容
         })
       })
 
@@ -774,6 +757,11 @@ ${segmentCount === 2 ? `第 1 段：開場鋪陳 + 首次高潮（${wordsPerSegm
     await generateStoryDirect()
   }
 
+  // V4: 強制跳過緩存的生成（用於「再寫一次」功能）
+  const regenerateStory = async () => {
+    await generateStoryDirect()
+  }
+
   // V1/V2: 續寫流程（保持原有邏輯）
   const continueStory = async () => {
     const { setStreamingState, humanizeEnabled } = useAppStore.getState()
@@ -807,6 +795,7 @@ ${segmentCount === 2 ? `第 1 段：開場鋪陳 + 首次高潮（${wordsPerSegm
           topics: selectedTopics,
           characters,
           ...(anonymousId && { anonymousId }),
+          skipCache: true,  // 續寫永遠生成新內容，不讀緩存
         })
       })
 
@@ -926,33 +915,7 @@ ${segmentCount === 2 ? `第 1 段：開場鋪陳 + 首次高潮（${wordsPerSegm
   return (
     <>
       <div className="space-y-2">
-        {/* V2.5: 分段選擇器 */}
-        {!hasOutput && (
-          <div className="flex items-center gap-1 sm:gap-2 mb-2 flex-wrap">
-            <span className="text-xs nyx-text-secondary whitespace-nowrap">分段：</span>
-            <div className="flex gap-0.5 sm:gap-1">
-              {[1, 2, 3].map(seg => (
-                <button
-                  key={seg}
-                  onClick={() => setTargetSegments(seg)}
-                  disabled={isGenerating}
-                  className={`px-1.5 sm:px-2 py-1 text-xs rounded whitespace-nowrap ${
-                    targetSegments === seg
-                      ? 'bg-purple-600 text-white'
-                      : 'nyx-surface-2 nyx-text-secondary hover:nyx-text-primary'
-                  }`}
-                >
-                  {seg}段
-                </button>
-              ))}
-            </div>
-            {isGenerating && currentSegment > 0 && (
-              <span className="text-xs text-purple-400 whitespace-nowrap">
-                第{currentSegment}段生成中...
-              </span>
-            )}
-          </div>
-        )}
+        {/* V4: 分段選擇器已移除，固定單段生成 */}
 
         {!hasOutput ? (
           // 未有故事：顯示「開始創作」
@@ -962,9 +925,9 @@ ${segmentCount === 2 ? `第 1 段：開場鋪陳 + 首次高潮（${wordsPerSegm
             className="w-full bg-blue-600 hover:bg-blue-700"
           >
             {isGenerating ? (
-              <><Loader2 className="w-4 h-4 mr-1 sm:mr-2 animate-spin" />{currentSegment > 0 ? `第${currentSegment}段...` : '生成中...'}</>
+              <><Loader2 className="w-4 h-4 mr-1 sm:mr-2 animate-spin" />生成中...</>
             ) : (
-              <><Sparkles className="w-4 h-4 mr-1 sm:mr-2" />{targetSegments > 1 ? `開始創作（${targetSegments}段）` : '開始創作'}</>
+              <><Sparkles className="w-4 h-4 mr-1 sm:mr-2" />開始創作</>
             )}
           </Button>
         ) : (
