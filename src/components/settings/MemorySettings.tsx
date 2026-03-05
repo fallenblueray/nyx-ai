@@ -13,7 +13,9 @@ import {
   Brain, RotateCcw, Check, Loader2, BookOpen, Palette, AlignLeft
 } from "lucide-react"
 import { updatePreferredStyles, updatePreferredWordLength, updateStyleNotes, resetPreferences } from "@/app/actions/preferences"
+import { updatePreferredTheme } from "@/app/actions/preferences-theme"
 import type { UserPreferences } from "@/app/actions/preferences"
+import { ThemeSelector } from "./ThemeSelector"
 import { cn } from "@/lib/utils"
 
 const STYLE_OPTIONS = [
@@ -48,9 +50,20 @@ export function MemorySettings({ initialPreferences }: MemorySettingsProps) {
   const [wordLength, setWordLength] = useState<number>(
     initialPreferences.preferred_word_length || 1000
   )
+  const [selectedTheme, setSelectedTheme] = useState<string>(
+    initialPreferences.preferred_theme || 'midnight-passion'
+  )
   const [styleNotes, setStyleNotes] = useState(
     initialPreferences.writing_style_notes || ""
   )
+
+  const handleThemeChange = (themeId: string) => {
+    setSelectedTheme(themeId)
+    startTransition(async () => {
+      await updatePreferredTheme(themeId)
+      showSaved("主題偏好已更新")
+    })
+  }
 
   const showSaved = (msg: string) => {
     setSavedMsg(msg)
@@ -100,40 +113,40 @@ export function MemorySettings({ initialPreferences }: MemorySettingsProps) {
   return (
     <div className="space-y-6">
       {/* 統計摘要 */}
-      <Card className="bg-slate-900 border-slate-700">
+      <Card className="bg-[var(--surface)] border-[var(--border)]">
         <CardHeader className="pb-3">
-          <CardTitle className="text-slate-200 flex items-center gap-2 text-base">
+          <CardTitle className="text-[var(--text-primary)] flex items-center gap-2 text-base">
             <Brain className="w-4 h-4 text-purple-400" />
             AI 記憶摘要
           </CardTitle>
-          <CardDescription className="text-slate-400 text-sm">
+          <CardDescription className="text-[var(--text-secondary)] text-sm">
             AI 透過你的創作歷史自動學習偏好
           </CardDescription>
         </CardHeader>
         <CardContent className="flex gap-6">
           <div className="text-center">
-            <p className="text-2xl font-bold text-white">{total_stories_generated}</p>
-            <p className="text-xs text-slate-400 mt-1">已生成故事</p>
+            <p className="text-2xl font-bold text-[var(--text-primary)]">{total_stories_generated}</p>
+            <p className="text-xs text-[var(--text-muted)] mt-1">已生成故事</p>
           </div>
           <div className="text-center">
-            <p className="text-2xl font-bold text-white">{total_words_generated.toLocaleString()}</p>
-            <p className="text-xs text-slate-400 mt-1">累計生成字數</p>
+            <p className="text-2xl font-bold text-[var(--text-primary)]">{total_words_generated.toLocaleString()}</p>
+            <p className="text-xs text-[var(--text-muted)] mt-1">累計生成字數</p>
           </div>
           <div className="text-center">
             <p className="text-2xl font-bold text-purple-400">{selectedStyles.length}</p>
-            <p className="text-xs text-slate-400 mt-1">設定風格偏好</p>
+            <p className="text-xs text-[var(--text-muted)] mt-1">設定風格偏好</p>
           </div>
         </CardContent>
       </Card>
 
       {/* 風格偏好 */}
-      <Card className="bg-slate-900 border-slate-700">
+      <Card className="bg-[var(--surface)] border-[var(--border)]">
         <CardHeader className="pb-3">
-          <CardTitle className="text-slate-200 flex items-center gap-2 text-base">
+          <CardTitle className="text-[var(--text-primary)] flex items-center gap-2 text-base">
             <Palette className="w-4 h-4 text-blue-400" />
             風格偏好
           </CardTitle>
-          <CardDescription className="text-slate-400 text-sm">
+          <CardDescription className="text-[var(--text-secondary)] text-sm">
             選取後 AI 會自動在生成時注入這些偏好
           </CardDescription>
         </CardHeader>
@@ -147,7 +160,7 @@ export function MemorySettings({ initialPreferences }: MemorySettingsProps) {
                   "cursor-pointer transition-all select-none text-sm px-3 py-1",
                   selectedStyles.includes(style.id)
                     ? "bg-purple-600 hover:bg-purple-700 text-white border-purple-500"
-                    : "border-slate-600 text-slate-400 hover:border-slate-400 hover:text-slate-200"
+                    : "border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--text-muted)] hover:text-[var(--text-primary)]"
                 )}
                 onClick={() => toggleStyle(style.id)}
               >
@@ -159,13 +172,13 @@ export function MemorySettings({ initialPreferences }: MemorySettingsProps) {
       </Card>
 
       {/* 字數偏好 */}
-      <Card className="bg-slate-900 border-slate-700">
+      <Card className="bg-[var(--surface)] border-[var(--border)]">
         <CardHeader className="pb-3">
-          <CardTitle className="text-slate-200 flex items-center gap-2 text-base">
+          <CardTitle className="text-[var(--text-primary)] flex items-center gap-2 text-base">
             <AlignLeft className="w-4 h-4 text-green-400" />
             預設字數長度
           </CardTitle>
-          <CardDescription className="text-slate-400 text-sm">
+          <CardDescription className="text-[var(--text-secondary)] text-sm">
             AI 生成時的目標字數
           </CardDescription>
         </CardHeader>
@@ -180,7 +193,7 @@ export function MemorySettings({ initialPreferences }: MemorySettingsProps) {
                   "justify-start",
                   wordLength === opt.value
                     ? "bg-green-700 hover:bg-green-800 text-white border-green-600"
-                    : "border-slate-600 text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+                    : "border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]"
                 )}
                 onClick={() => handleWordLength(opt.value)}
                 disabled={isPending}
@@ -193,14 +206,17 @@ export function MemorySettings({ initialPreferences }: MemorySettingsProps) {
         </CardContent>
       </Card>
 
+      {/* V2.9: 主題偏好 */}
+      <ThemeSelector value={selectedTheme} onChange={handleThemeChange} />
+
       {/* 個性化指令 */}
-      <Card className="bg-slate-900 border-slate-700">
+      <Card className="bg-[var(--surface)] border-[var(--border)]">
         <CardHeader className="pb-3">
-          <CardTitle className="text-slate-200 flex items-center gap-2 text-base">
+          <CardTitle className="text-[var(--text-primary)] flex items-center gap-2 text-base">
             <BookOpen className="w-4 h-4 text-yellow-400" />
             個性化指令
           </CardTitle>
-          <CardDescription className="text-slate-400 text-sm">
+          <CardDescription className="text-[var(--text-secondary)] text-sm">
             直接告訴 AI 你的特殊要求（每次生成都會注入）
           </CardDescription>
         </CardHeader>
@@ -209,11 +225,11 @@ export function MemorySettings({ initialPreferences }: MemorySettingsProps) {
             value={styleNotes}
             onChange={e => setStyleNotes(e.target.value)}
             placeholder="例如：故事要包含..., 角色性格要..., 喜歡..."
-            className="bg-slate-800 border-slate-700 text-slate-200 placeholder:text-slate-500 min-h-[100px] resize-none"
+            className="bg-[var(--surface-2)] border-[var(--border)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] min-h-[100px] resize-none"
             maxLength={500}
           />
           <div className="flex items-center justify-between">
-            <span className="text-xs text-slate-500">{styleNotes.length}/500</span>
+            <span className="text-xs text-[var(--text-muted)]">{styleNotes.length}/500</span>
             <Button
               size="sm"
               onClick={handleStyleNotes}
@@ -247,7 +263,7 @@ export function MemorySettings({ initialPreferences }: MemorySettingsProps) {
           {isPending ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <RotateCcw className="w-3 h-3 mr-1" />}
           清除所有 AI 記憶
         </Button>
-        <p className="text-xs text-slate-600 mt-2">清除後 AI 會忘記你的所有偏好設定</p>
+        <p className="text-xs text-[var(--text-muted)] mt-2">清除後 AI 會忘記你的所有偏好設定</p>
       </div>
     </div>
   )

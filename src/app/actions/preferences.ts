@@ -9,6 +9,7 @@ export interface UserPreferences {
   preferred_styles: string[]
   preferred_topics: Array<{ category: string; item: string }>
   preferred_word_length: number
+  preferred_theme: string // V2.9: 偏好主題
   saved_characters: Array<{ name: string; description: string; traits: string[] }>
   writing_style_notes: string
   total_stories_generated: number
@@ -41,6 +42,7 @@ export async function getUserPreferences(): Promise<{
         preferred_styles: [],
         preferred_topics: [],
         preferred_word_length: 1000,
+        preferred_theme: 'midnight-passion',
         saved_characters: [],
         writing_style_notes: '',
         total_stories_generated: 0,

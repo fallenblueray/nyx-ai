@@ -39,10 +39,10 @@ export class ErrorBoundary extends Component<Props, State> {
       }
 
       return (
-        <div className="flex flex-col items-center justify-center min-h-[200px] p-6 bg-slate-900 rounded-lg border border-red-900/50">
+        <div className="flex flex-col items-center justify-center min-h-[200px] p-6 bg-[var(--surface)] rounded-lg border border-red-900/50">
           <AlertTriangle className="w-10 h-10 text-red-500 mb-4" />
-          <h2 className="text-lg font-semibold text-white mb-2">發生錯誤</h2>
-          <p className="text-slate-400 text-sm mb-4 text-center">
+          <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-2">發生錯誤</h2>
+          <p className="text-[var(--text-secondary)] text-sm mb-4 text-center">
             {this.state.error?.message || '請刷新頁面重試'}
           </p>
           <div className="flex gap-2">
@@ -50,7 +50,7 @@ export class ErrorBoundary extends Component<Props, State> {
               onClick={this.handleReset}
               variant="outline"
               size="sm"
-              className="border-slate-700 text-slate-300 hover:bg-slate-800"
+              className="border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--surface-2)]"
             >
               <RefreshCw className="w-4 h-4 mr-2" />
               重試

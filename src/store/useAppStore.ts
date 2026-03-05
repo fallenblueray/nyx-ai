@@ -42,6 +42,7 @@ interface AppState {
 
   // Characters
   characters: Character[]
+  setCharacters: (characters: Character[]) => void
   addCharacter: (character: Character) => void
   updateCharacter: (id: string, character: Partial<Character>) => void
   deleteCharacter: (id: string) => void
@@ -84,7 +85,15 @@ interface AppState {
   // V2.8: 目標分段數（1/2/3段）
   targetSegments: number
   setTargetSegments: (n: number) => void
-  
+
+  // V2.9: Humanize 開關
+  humanizeEnabled: boolean
+  setHumanizeEnabled: (v: boolean) => void
+
+  // V2.9: 故事風格主題
+  storyTheme: string
+  setStoryTheme: (theme: string) => void
+
   // V3: 隱形大綱（用戶不可見）
   storyOutline: any | null
   setStoryOutline: (outline: any) => void
@@ -140,8 +149,9 @@ export const useAppStore = create<AppState>()(
 
       // Characters
       characters: [],
-      addCharacter: (character) => set((state) => ({ 
-        characters: [...state.characters, character] 
+      setCharacters: (characters) => set({ characters }),
+      addCharacter: (character) => set((state) => ({
+        characters: [...state.characters, character]
       })),
       updateCharacter: (id, updates) => set((state) => ({
         characters: state.characters.map((c) =>
@@ -234,9 +244,17 @@ export const useAppStore = create<AppState>()(
         streamingError: null,
       }),
       
-      // V2.8: 目標分段數
-      targetSegments: 2,
+      // V2.8: 目標分段數（預設3段 = 消耗7500字，第4段中斷產生焦慮）
+      targetSegments: 3,
       setTargetSegments: (n) => set({ targetSegments: Math.min(Math.max(n, 1), 3) }),
+
+      // V2.9: Humanize 開關（預設啟用）
+      humanizeEnabled: true,
+      setHumanizeEnabled: (v) => set({ humanizeEnabled: v }),
+
+      // V2.9: 故事風格主題
+      storyTheme: 'midnight-passion',
+      setStoryTheme: (theme) => set({ storyTheme: theme }),
 
       // V3: 隱形大綱
       storyOutline: null,

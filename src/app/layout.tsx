@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "NyxAI - 五秒開展故事",
-  description: "AI 故事生成平台，無審查自由創作",
+  description: "AI 故事生成平台",
 };
 
 // 網頁版本號 - 每次新增功能或修改內容 +0.001

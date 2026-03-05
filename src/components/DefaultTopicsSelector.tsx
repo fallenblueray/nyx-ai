@@ -46,14 +46,14 @@ export function DefaultTopicsSelector() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
-        <Loader2 className="w-5 h-5 animate-spin text-slate-400" />
+        <Loader2 className="w-5 h-5 animate-spin text-[var(--text-muted)]" />
       </div>
     )
   }
 
   return (
     <div className="space-y-4">
-      <h3 className="text-sm font-medium text-slate-400">
+      <h3 className="text-sm font-medium text-[var(--text-secondary)]">
         選擇預設題材（最多 6 個）
       </h3>
       <div className="flex flex-wrap gap-2">
@@ -71,7 +71,7 @@ export function DefaultTopicsSelector() {
                 "text-xs",
                 isSelected
                   ? "bg-purple-600 hover:bg-purple-700"
-                  : "border-slate-700 text-slate-300 hover:bg-slate-800 disabled:opacity-40"
+                  : "border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--surface-2)] disabled:opacity-40"
               )}
             >
               {topic}
@@ -79,7 +79,7 @@ export function DefaultTopicsSelector() {
           )
         })}
       </div>
-      <p className="text-xs text-slate-500">
+      <p className="text-xs text-[var(--text-muted)]">
         已選 {selected.length}/6 個題材，會在生成時自動加入提示詞。
       </p>
       <Button

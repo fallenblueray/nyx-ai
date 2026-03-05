@@ -58,12 +58,12 @@ export function HistoryDrawer({ isOpen, onClose, onLoadStory }: HistoryDrawerPro
       />
       
       {/* Drawer */}
-      <div className="fixed right-0 top-0 bottom-0 w-full max-w-md bg-slate-900 border-l nyx-border z-50 flex flex-col">
+      <div className="fixed right-0 top-0 bottom-0 w-full max-w-md bg-[var(--surface)] border-l border-[var(--border)] z-50 flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b nyx-border">
+        <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
           <div className="flex items-center gap-2">
-            <History className="w-5 h-5 nyx-text-muted" />
-            <h2 className="text-lg font-bold text-white">歷史故事</h2>
+            <History className="w-5 h-5 text-[var(--text-muted)]" />
+            <h2 className="text-lg font-bold text-[var(--text-primary)]">歷史故事</h2>
           </div>
           <Button
             variant="ghost"

@@ -97,6 +97,11 @@ export async function POST(request: NextRequest) {
     // Build prompt based on scene position
     const isFirstScene = scene_index === 1;
     const isLastScene = scene_index === total_scenes;
+    
+    // 🎯 CRITICAL: 3rd segment cliffhanger logic for conversion
+    // When user selects 3 segments, scene 3 is NOT the true ending
+    // It should end with rising tension to trigger 4th generation
+    const isSegment3Of3 = (scene_index === 3 && total_scenes === 3);
 
     let segmentPrompt = '';
 
@@ -156,7 +161,7 @@ ${previousEnding}`;
 5. ${isFirstScene ? '從故事開頭自然延續，不要重複開頭內容' : '承接前文結尾，自然過渡，不要重複前文'}
 6. 專注描寫「${outline.key_event}」這個核心事件
 7. 保持「${outline.mood}」的情緒基調
-8. ${isLastScene ? '本段需要為故事畫上句點，給出滿意的結局或開放式餘韻' : '本段結尾要為下一段留下自然的銜接點'}
+8. ${isSegment3Of3 ? '本段結尾必須製造懸念：情節升溫、關鍵情節即將發生、角色關係將迎來轉折，讓讀者產生「必須繼續」的心理焦慮' : (isLastScene ? '本段需要為故事畫上句點，給出滿意的結局或開放式餘韻' : '本段結尾要為下一段留下自然的銜接點')}
 9. 可適當深入描寫角色心理與感官細節
 10. 禁止輸出「第X段」或「Scene X」等標記，純故事內文即可
 

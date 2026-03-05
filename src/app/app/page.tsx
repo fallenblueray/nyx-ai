@@ -121,6 +121,11 @@ export default function AppPage() {
     setStoryOutput("")
     setTitle("")
     setSaved(false)
+    
+    // 清空所有輸入內容
+    setStoryInput("")
+    useAppStore.getState().setSelectedTopics([])
+    useAppStore.getState().setCharacters([])
   }
   
   return (
@@ -137,9 +142,6 @@ export default function AppPage() {
             <Menu className="w-5 h-5" />
           </Button>
           <h1 className="text-lg font-bold nyx-text-primary">NyxAI</h1>
-          <span className="px-2 py-0.5 nyx-accent-bg nyx-accent-border text-purple-500 dark:text-purple-400 text-xs rounded-full border">
-            {translations.app?.tagline || "無審查 · 自由創作"}
-          </span>
         </div>
         
         {/* 固定右側按鈕群 */}

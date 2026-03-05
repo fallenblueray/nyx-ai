@@ -41,22 +41,22 @@ export function RechargeModal({ open, onClose, isFirstPurchase, wordCount }: Rec
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent 
-        className="max-w-2xl bg-slate-900 border-slate-700"
+      <DialogContent
+        className="max-w-2xl bg-[var(--surface)] border-[var(--border)]"
       >
         <DialogHeader>
-          <DialogTitle className="text-white flex items-center gap-2">
+          <DialogTitle className="text-[var(--text-primary)] flex items-center gap-2">
             <Zap className="w-5 h-5 text-yellow-400" />
             充值字數
           </DialogTitle>
-          <DialogDescription className="text-slate-400">
+          <DialogDescription className="text-[var(--text-secondary)]">
             選擇充值方案以獲取更多字數額度。剩餘：{wordCount.toLocaleString()} 字
           </DialogDescription>
         </DialogHeader>
 
         {isFirstPurchase && (
           <div className="bg-gradient-to-r from-orange-900/40 to-red-900/40 border border-orange-700 rounded-lg p-3 text-center">
-            <span className="text-orange-300 font-bold">🎉 首充優惠！所有方案 5折 + 雙倍字數</span>
+            <span className="text-orange-300 font-bold">🎉 首充半價優惠！10萬字只需19.9元</span>
           </div>
         )}
 
@@ -71,35 +71,62 @@ export function RechargeModal({ open, onClose, isFirstPurchase, wordCount }: Rec
             const priceId = isFirstPurchase ? pkg.firstPriceId : pkg.normalPriceId
             const price = isFirstPurchase ? pkg.firstPrice : pkg.normalPrice
             const isLoading = loading === priceId
+            const isFeatured = pkg.isFeatured
 
             return (
               <Card
                 key={pkg.words}
-                className="bg-slate-800 border-slate-700 hover:border-blue-500 transition-colors"
+                className={`
+                  transition-all duration-200
+                  ${isFeatured 
+                    ? 'bg-gradient-to-br from-purple-900/30 to-pink-900/30 border-2 border-purple-500/50 shadow-lg shadow-purple-500/10 scale-[1.02]' 
+                    : 'bg-[var(--surface-2)] border-[var(--border)] hover:border-[var(--accent)]'
+                  }
+                `}
               >
                 <CardContent className="p-4">
+                  {isFeatured && (
+                    <div className="mb-2 -mt-1">
+                      <Badge className="bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold text-xs px-2 py-0.5">
+                        {pkg.badge}
+                      </Badge>
+                    </div>
+                  )}
+                  
                   <div className="flex justify-between items-start mb-3">
                     <div>
-                      <div className="text-white font-bold text-lg">{formatWords(pkg.words)} 字</div>
-                      {isFirstPurchase && (
-                        <div className="text-slate-400 text-xs line-through">原價 ¥{pkg.normalPrice}</div>
+                      <div className="text-[var(--text-primary)] font-bold text-lg">{formatWords(pkg.words)} 字</div>
+                      {isFirstPurchase && isFeatured && (
+                        <div className="text-[var(--text-muted)] text-xs line-through">原價 ¥{pkg.normalPrice}</div>
+                      )}
+                      {isFirstPurchase && !isFeatured && (
+                        <div className="text-[var(--text-muted)] text-xs line-through">原價 ¥{pkg.normalPrice}</div>
                       )}
                     </div>
-                    {isFirstPurchase ? (
-                      <Badge className="bg-orange-600 text-white">首充{pkg.discount}</Badge>
-                    ) : (
-                      <Badge variant="outline" className="border-slate-600 text-slate-400">
-                        {pkg.discount}
+                    {!isFeatured && !isFirstPurchase && (
+                      <Badge variant="outline" className="border-[var(--border)] text-[var(--text-muted)]">
+                        {pkg.badge || pkg.discount}
                       </Badge>
                     )}
                   </div>
+
                   <div className="flex justify-between items-center">
-                    <span className="text-yellow-400 font-bold text-xl">¥{price}</span>
+                    <div className="flex flex-col">
+                      <span className={`font-bold text-xl ${isFeatured ? 'text-pink-400' : 'text-yellow-400'}`}>
+                        ¥{price}
+                      </span>
+                      {isFeatured && isFirstPurchase && (
+                        <span className="text-xs text-orange-400">首充半價</span>
+                      )}
+                    </div>
                     <Button
                       size="sm"
                       onClick={() => handleCheckout(pkg)}
                       disabled={!!loading}
-                      className="bg-blue-600 hover:bg-blue-700"
+                      className={isFeatured 
+                        ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white' 
+                        : 'bg-blue-600 hover:bg-blue-700'
+                      }
                     >
                       {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : '立即充值'}
                     </Button>

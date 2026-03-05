@@ -23,13 +23,13 @@ export function RechargePromptModal({ open, onClose, isFirstPurchase, onRecharge
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="bg-slate-900 border-slate-700 text-slate-200 max-w-md">
+      <DialogContent className="bg-[var(--surface)] border-[var(--border)] text-[var(--text-primary)] max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-xl text-white">
+          <DialogTitle className="flex items-center gap-2 text-xl text-[var(--text-primary)]">
             <Zap className="w-5 h-5 text-yellow-400" />
             字數已用完
           </DialogTitle>
-          <DialogDescription className="text-slate-400">
+          <DialogDescription className="text-[var(--text-secondary)]">
             充值後繼續無限創作
           </DialogDescription>
         </DialogHeader>
@@ -45,9 +45,9 @@ export function RechargePromptModal({ open, onClose, isFirstPurchase, onRecharge
           )}
 
           {/* 推薦套餐 */}
-          <div className="rounded-lg bg-slate-800 border border-slate-700 p-4">
+          <div className="rounded-lg bg-[var(--surface-2)] border border-[var(--border)] p-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-slate-300 font-medium">
+              <span className="text-[var(--text-secondary)] font-medium">
                 {formatWords(featuredPackage.words)} 字
               </span>
               <span className="text-xs bg-purple-600/20 text-purple-400 px-2 py-0.5 rounded-full border border-purple-600/30">
@@ -55,11 +55,11 @@ export function RechargePromptModal({ open, onClose, isFirstPurchase, onRecharge
               </span>
             </div>
             <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-bold text-white">
+              <span className="text-2xl font-bold text-[var(--text-primary)]">
                 HK${price}
               </span>
               {isFirstPurchase && (
-                <span className="text-slate-500 line-through text-sm">
+                <span className="text-[var(--text-muted)] line-through text-sm">
                   HK${featuredPackage.normalPrice}
                 </span>
               )}
@@ -76,7 +76,7 @@ export function RechargePromptModal({ open, onClose, isFirstPurchase, onRecharge
             </Button>
             <Button
               variant="ghost"
-              className="w-full text-slate-400 hover:text-slate-200"
+              className="w-full text-[var(--text-muted)] hover:text-[var(--text-primary)]"
               onClick={onClose}
             >
               稍後再說

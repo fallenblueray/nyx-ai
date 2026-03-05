@@ -15,6 +15,7 @@ import { Loader2, Sparkles, RotateCcw, Edit2, Eye, RefreshCw, Download, FileText
 import { cn } from "@/lib/utils"
 import { extractDynamicContext } from "@/lib/story-utils"
 import { SYSTEM_PROMPT as OFFICIAL_SYSTEM_PROMPT } from "@/app/api/story/segment/system_prompt"
+import { getThemeById } from "@/lib/themes"
 
 const MAX_CHARS = 5000
 
@@ -74,35 +75,46 @@ function ErrorDisplay({
 }
 
 // 生成進度條組件
-function GenerationProgress({ 
-  isGenerating, 
-  currentSegment, 
-  totalSegments, 
-  segmentProgress = 0 
-}: { 
+function GenerationProgress({
+  isGenerating,
+  currentSegment,
+  totalSegments,
+  contentLength,
+  targetTotalLength = 5000
+}: {
   isGenerating: boolean
   currentSegment: number
   totalSegments: number
-  segmentProgress?: number
+  contentLength: number
+  targetTotalLength?: number
 }) {
   if (!isGenerating) return null
 
-  // 計算總進度：大綱(5%) + 各段(每段佔剩餘比例的均分) + 清理(5%)
-  const outlineWeight = 5
-  const cleanupWeight = 5
-  const segmentWeight = (100 - outlineWeight - cleanupWeight) / totalSegments
-  
-  let totalProgress = 0
-  
+  // V2.9: 基於實際內容長度計算進度
+  // 每段目標約 2500 字，總目標 = 段數 × 2500
+  const TARGET_PER_SEGMENT = 2500
+  const totalTarget = totalSegments * TARGET_PER_SEGMENT
+
+  // 計算進度：實際字數 / 總目標字數，最高 95%（保留 5% 給最後處理）
+  let contentProgress = Math.min(95, (contentLength / totalTarget) * 100)
+
+  // 如果當前段已完成但字數未達標，根據段數進度補償
+  const segmentProgress = ((currentSegment || 1) / totalSegments) * 100
+
+  // 取兩者較大值，但確保進度是遞增的
+  let totalProgress = Math.max(contentProgress, segmentProgress * 0.8)
+
+  // 確保進度不會倒退
+  totalProgress = Math.min(95, Math.max(5, totalProgress))
+
+  // 狀態文字
+  let statusText = ""
   if (currentSegment === 0) {
-    // 大綱生成階段
-    totalProgress = Math.min(outlineWeight, segmentProgress * outlineWeight / 100)
-  } else if (currentSegment > totalSegments) {
-    // 清理階段
-    totalProgress = 100 - cleanupWeight + (segmentProgress * cleanupWeight / 100)
+    statusText = "準備生成..."
+  } else if (contentLength >= totalTarget * 0.95) {
+    statusText = "整理輸出..."
   } else {
-    // 段落生成階段
-    totalProgress = outlineWeight + (currentSegment - 1) * segmentWeight + (segmentProgress * segmentWeight / 100)
+    statusText = `第 ${Math.min(currentSegment, totalSegments)}/${totalSegments} 段 · ${contentLength.toLocaleString()} 字`
   }
 
   return (
@@ -110,14 +122,12 @@ function GenerationProgress({
       <div className="flex justify-between text-xs text-purple-400">
         <span className="flex items-center gap-1">
           <Loader2 className="w-3 h-3 animate-spin" />
-          {currentSegment === 0 ? "生成大綱..." : 
-           currentSegment > totalSegments ? "整理輸出..." : 
-           `生成第 ${currentSegment}/${totalSegments} 段...`}
+          {statusText}
         </span>
         <span>{Math.round(totalProgress)}%</span>
       </div>
-      <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
-        <div 
+      <div className="w-full h-1.5 bg-[var(--surface-2)] rounded-full overflow-hidden">
+        <div
           className="h-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all duration-300 ease-out"
           style={{ width: `${Math.min(100, totalProgress)}%` }}
         />
@@ -129,40 +139,31 @@ function GenerationProgress({
 // 導出功能組件
 function ExportButtons({ content, title }: { content: string; title?: string }) {
   const [copied, setCopied] = useState(false)
+  const [exporting, setExporting] = useState(false)
   
   const handleCopy = async () => {
     await navigator.clipboard.writeText(content)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
-  
-  const handleDownloadTxt = () => {
-    // 添加 UTF-8 BOM 幫助 Windows 識別編碼
-    const BOM = '\uFEFF'
-    const blob = new Blob([BOM + content], { type: 'text/plain;charset=utf-8' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${title || 'story'}_${new Date().toISOString().slice(0,10)}.txt`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
-  }
-  
-  const handleDownloadMd = () => {
-    const mdContent = `# ${title || '無標題故事'}\n\n${content}`
-    // 添加 UTF-8 BOM 幫助 Windows 識別編碼
-    const BOM = '\uFEFF'
-    const blob = new Blob([BOM + mdContent], { type: 'text/markdown;charset=utf-8' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${title || 'story'}_${new Date().toISOString().slice(0,10)}.md`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
+
+  // V2.9: Word 導出
+  const handleDownloadWord = async () => {
+    setExporting(true)
+    try {
+      const { exportStoryToWord, downloadBlob } = await import('@/lib/export-word')
+      const blob = await exportStoryToWord(content, {
+        title: title || 'NyxAI 故事',
+        createdAt: new Date(),
+        wordCount: content.length
+      })
+      downloadBlob(blob, `${title || 'story'}_${new Date().toISOString().slice(0,10)}.docx`)
+    } catch (error) {
+      console.error('Word export failed:', error)
+      alert('導出失敗，請重試')
+    } finally {
+      setExporting(false)
+    }
   }
   
   return (
@@ -179,20 +180,12 @@ function ExportButtons({ content, title }: { content: string; title?: string }) 
       <Button
         variant="ghost"
         size="sm"
-        onClick={handleDownloadTxt}
+        onClick={handleDownloadWord}
+        disabled={exporting}
         className="h-7 px-2 nyx-text-muted hover:nyx-text-primary"
-        title="下載 TXT"
+        title="下載 Word 文檔"
       >
-        <FileText className="w-3 h-3" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={handleDownloadMd}
-        className="h-7 px-2 nyx-text-muted hover:nyx-text-primary"
-        title="下載 Markdown"
-      >
-        <Download className="w-3 h-3" />
+        {exporting ? <Loader2 className="w-3 h-3 animate-spin" /> : <FileText className="w-3 h-3" />}
       </Button>
     </div>
   )
@@ -332,10 +325,12 @@ export function StoryOutput() {
         </div>
         
         {/* 生成進度條 */}
-        <GenerationProgress 
-          isGenerating={isStreaming} 
+        <GenerationProgress
+          isGenerating={isStreaming}
           currentSegment={currentSceneIndex}
           totalSegments={displaySegments}
+          contentLength={storyOutput.length}
+          targetTotalLength={displaySegments * 2500}
         />
       </CardHeader>
       <CardContent className="flex-1 p-4 overflow-auto">
@@ -400,6 +395,7 @@ export function GenerateButtons() {
     setShouldRegenerate,
     targetSegments,
     setTargetSegments,
+    humanizeEnabled,
   } = useAppStore()
 
   const [rechargeOpen, setRechargeOpen] = useState(false)
@@ -438,69 +434,80 @@ export function GenerateButtons() {
   }, [isLoggedIn, setAnonymousWordsLeft])
 
   const buildPrompt = (isContinue: boolean = false, segmentCount: number = targetSegments) => {
-    // V2.7: 統一使用官方 System Prompt
-    const systemPrompt = OFFICIAL_SYSTEM_PROMPT
+    // V3.1: 統一使用官方 System Prompt
+    // V3.1: 添加主題風格
+    const { storyTheme } = useAppStore.getState()
+    const theme = getThemeById(storyTheme)
+    const themeAddon = theme ? theme.systemPromptAddon : ''
+    const systemPrompt = OFFICIAL_SYSTEM_PROMPT + (themeAddon ? `\n\n【風格要求】${themeAddon}` : '')
 
-    // V2.8: 動態計算字數要求
-    const wordsPerSegment = 2500
+    // V3.1: 調整字數目標 - 避免每段過長
+    const wordsPerSegment = 2200  // 從 2500 降到 2200
     const totalWords = segmentCount * wordsPerSegment
     
     let userPrompt = ""
     if (isContinue && storyOutput) {
-      // V2.7：優化續寫prompt，明確要求2500字並強化風格錨定
-      const ending = storyOutput.slice(-1800)  // 增加到1800字上下文
-      const styleSample = storyOutput.slice(
-        Math.max(0, storyOutput.length - 2500), 
-        Math.max(800, storyOutput.length - 1500)
-      )  // 取風格樣本
+      // V3.1：優化續寫prompt - 從開頭提取風格樣本避免繼承混亂
+      const ending = storyOutput.slice(-1200)  // 減少到 1200 字
+      // 🎯 CRITICAL: 從第1段開頭提取風格（避免繼承後期凌亂內容）
+      const styleSample = storyOutput.slice(0, 800)  // 取前 800 字而非中間
       
-      // 提取出現過的角色
+      // 提取出現過的角色（從全文統計）
       const characterList = characters.length > 0 
         ? characters.map(c => `${c.name}：${c.description}`).join('\n')
         : '（沿用前文角色）'
       
-      userPrompt = `【續寫任務 - 必須生成${wordsPerSegment}~${wordsPerSegment + 500}字】
+      userPrompt = `【續寫任務】
+
+【字數要求】嚴格控制 ${wordsPerSegment}~${wordsPerSegment + 300} 字（約 ${Math.floor(wordsPerSegment/3)}-${Math.floor((wordsPerSegment+300)/3)} 段落）。達到字數後**必須立即停止**，不可強行延長。
 
 【角色設定】（必須沿用，不可新增或遺漏）
 ${characterList}
 
-【風格樣本】（必須保持相同文筆）
-${styleSample.slice(0, 500)}
+【原創風格基準】（模仿此風格，而非後文）
+${styleSample.slice(0, 400)}
 
-【前文結尾】（直接承接，嚴禁重複）
-${ending}
+【直接承接】（從此處繼續）
+...${ending.slice(-300)}
 
 【強制要求】
-1. 字數：嚴格控制${wordsPerSegment}~${wordsPerSegment + 500}字之間，只許多不許少
-2. 承接：從上文結尾下一秒開始，自然過渡，絕對禁止重複前文任何句子
-3. 人物：只能使用【角色設定】中的角色，不得新增角色，不得遺漏既有角色
-4. 劇情：延續前文情節發展，推動故事向更深層次推進
-5. 風格：完全模仿【風格樣本】的文筆、節奏和詞彙使用習慣
-6. 結構：必須包含對話、心理描寫、動作細節，段落之間空一行
-7. 內容：延續前文的親密場景，增加變化和張力
+1. **字數優先**：達到 ${wordsPerSegment} 字後立即停止，無論劇情是否完整
+2. **自然延續**：從承接點下一秒無縫過渡，絕對禁止重複前文任何句子
+3. **風格一致**：完全模仿【原創風格基準】的文筆和節奏
+4. **人物鎖定**：只能使用既有角色，不得新增
+5. **適可而止**：不要強行加入多餘高潮或延長結尾
 
-只輸出故事正文，一個字都不要多。`
+只輸出故事正文，禁止任何說明或標記。`
     } else {
       const topicStr = selectedTopics.map(t => `${t.category}: ${t.item}`).join("、")
       const charStr = characters.map(c => `${c.name}：${c.description}（${c.traits.join("、")}）`).join("\n")
       
-      // V2.8: 根據段數動態生成字數要求
-      let segmentDescription = ""
-      if (segmentCount === 1) {
-        segmentDescription = `單段完整故事，約 ${wordsPerSegment} 字`
-      } else if (segmentCount === 2) {
-        segmentDescription = `分 2 段，每段約 ${wordsPerSegment} 字，合計約 ${totalWords} 字`
-      } else {
-        segmentDescription = `分 ${segmentCount} 段，每段約 ${wordsPerSegment} 字，合計約 ${totalWords} 字`
-      }
-      
-      userPrompt = `用戶設定：
-- 故事起點：${storyInput || "（自由創作）"}
-- 題材：${topicStr || "（自由發揮）"}
-- 角色：
-${charStr || "（自由創作）"}
+      // V3.1: 更清晰的字數要求 - 強調每段獨立控制
+      userPrompt = `【故事創作要求】
 
-【強制要求】字數：${segmentDescription}。每段必須生成 ${wordsPerSegment - 200}-${wordsPerSegment} 字，嚴格遵守，不可縮短。`
+【總體結構】生成 ${segmentCount} 段故事，每段獨立控制字數。
+【每段目標】${wordsPerSegment}~${wordsPerSegment + 300} 字（約 ${Math.floor(wordsPerSegment/3)}-${Math.floor((wordsPerSegment+300)/3)} 段落）
+【總字數上限】不超過 ${totalWords + 600} 字
+
+【用戶輸入】
+- 故事起點：${storyInput || "（由 AI 自由發揮精彩開場）"}
+- 題材偏好：${topicStr || "（根據起點自動選擇最適題材）"}
+- 角色設定：${charStr || "（由 AI 創作魅力角色）"}
+
+【分段要求】
+${segmentCount === 2 ? `第 1 段：開場鋪陳 + 首次高潮（${wordsPerSegment}~${wordsPerSegment+300} 字）
+第 2 段：續寫發展 + 最終高潮與收尾（${wordsPerSegment}~${wordsPerSegment+300} 字）` : 
+  segmentCount === 3 ? `第 1 段：開場鋪陳 + 初步互動（${wordsPerSegment}~${wordsPerSegment+300} 字）
+第 2 段：情節升溫 + 關鍵高潮（${wordsPerSegment}~${wordsPerSegment+300} 字）
+第 3 段：延續發展 + 多次高潮與精緻收尾（${wordsPerSegment}~${wordsPerSegment+300} 字）` : 
+  `完整單段故事，約 ${wordsPerSegment}~${wordsPerSegment+300} 字`}
+
+【絕對禁止】
+- 嚴禁超過每段字數上限
+- 嚴禁機械重複相同動作或對話
+- 嚴文言堆砌、生硬轉折
+
+【輸出格式】直接輸出故事正文，用兩個換行分隔各段。禁止前言、標題、字數統計或任何說明。`
     }
 
     return { systemPrompt, userPrompt }
@@ -605,13 +612,16 @@ ${charStr || "（自由創作）"}
     console.log('[V2.5] generateStoryDirect started, canGenerate:', canGenerate, 'targetSegments:', targetSegments)
     if (!canGenerate) return
 
-    const { resetStreaming, setStreamingState } = useAppStore.getState()
+    const { resetStreaming, setStreamingState, humanizeEnabled } = useAppStore.getState()
     resetStreaming()
-    // 設置流式狀態，啟動進度條
-    setStreamingState({ isStreaming: true, currentSceneIndex: 0, totalScenes: targetSegments })
+    // V2.9: 設置流式狀態，啟動進度條。currentSceneIndex 從 1 開始（第一段）
+    setStreamingState({ isStreaming: true, currentSceneIndex: 1, totalScenes: targetSegments })
     setIsGenerating(true)
     setError(null)
     setStoryOutput("")
+
+    // V2.9: humanize 緩衝區
+    let humanizeBuffer = ""
 
     try {
       const { systemPrompt, userPrompt } = buildPrompt(false)
@@ -623,6 +633,11 @@ ${charStr || "（自由創作）"}
         headers['x-multi-segment'] = 'true'
         headers['x-target-segments'] = String(targetSegments)
         console.log('[V2.5] Using multi-segment with', targetSegments, 'segments')
+      }
+
+      // V2.9: 添加 humanize 標記
+      if (humanizeEnabled) {
+        headers['x-humanize'] = 'true'
       }
 
       const response = await fetch("/api/generate-story", {
@@ -704,10 +719,29 @@ ${charStr || "（自由創作）"}
               }
 
               if (parsed.content) {
-                appendStoryOutput(parsed.content)
+                // V2.9: 如果啟用 humanize，處理內容
+                if (humanizeEnabled) {
+                  const { humanizeChunk } = await import('@/lib/humanizer')
+                  const { output, newBuffer } = humanizeChunk(parsed.content, humanizeBuffer)
+                  humanizeBuffer = newBuffer
+                  if (output) {
+                    appendStoryOutput(output)
+                  }
+                } else {
+                  appendStoryOutput(parsed.content)
+                }
               }
 
               if (parsed.done) {
+                // V2.9: 處理剩餘的 humanize 緩衝
+                if (humanizeEnabled && humanizeBuffer) {
+                  const { humanizeText } = await import('@/lib/humanizer')
+                  const finalChunk = humanizeText(humanizeBuffer)
+                  if (finalChunk) {
+                    appendStoryOutput(finalChunk)
+                  }
+                  humanizeBuffer = ""
+                }
                 if (parsed.isAnonymous && parsed.remaining !== undefined) {
                   setAnonymousWordsLeft(parsed.remaining)
                 }
@@ -742,11 +776,14 @@ ${charStr || "（自由創作）"}
 
   // V1/V2: 續寫流程（保持原有邏輯）
   const continueStory = async () => {
-    const { setStreamingState } = useAppStore.getState()
+    const { setStreamingState, humanizeEnabled } = useAppStore.getState()
     // 設置流式狀態，啟動進度條（續寫顯示為第 1/1 段）
     setStreamingState({ isStreaming: true, currentSceneIndex: 1, totalScenes: 1 })
     setIsGenerating(true)
     setError(null)
+
+    // V2.9: humanize 緩衝區
+    let humanizeBuffer = ""
 
     try {
       const { systemPrompt, userPrompt } = buildPrompt(true)
@@ -754,6 +791,11 @@ ${charStr || "（自由創作）"}
 
       // V2.5: 續寫不使用多段模式（只用單段生成）
       const headers: Record<string, string> = { "Content-Type": "application/json" }
+
+      // V2.9: 添加 humanize 標記
+      if (humanizeEnabled) {
+        headers['x-humanize'] = 'true'
+      }
 
       const response = await fetch("/api/generate-story", {
         method: "POST",
@@ -830,15 +872,34 @@ ${charStr || "（自由創作）"}
               }
 
               if (parsed.content) {
-                appendStoryOutput(parsed.content)
+                // V2.9: 如果啟用 humanize，處理內容
+                if (humanizeEnabled) {
+                  const { humanizeChunk } = await import('@/lib/humanizer')
+                  const { output, newBuffer } = humanizeChunk(parsed.content, humanizeBuffer)
+                  humanizeBuffer = newBuffer
+                  if (output) {
+                    appendStoryOutput(output)
+                  }
+                } else {
+                  appendStoryOutput(parsed.content)
+                }
               }
 
               if (parsed.done) {
+                // V2.9: 處理剩餘的 humanize 緩衝
+                if (humanizeEnabled && humanizeBuffer) {
+                  const { humanizeText } = await import('@/lib/humanizer')
+                  const finalChunk = humanizeText(humanizeBuffer)
+                  if (finalChunk) {
+                    appendStoryOutput(finalChunk)
+                  }
+                  humanizeBuffer = ""
+                }
                 // 更新匿名用戶剩餘字數
                 if (parsed.isAnonymous && parsed.remaining !== undefined) {
                   setAnonymousWordsLeft(parsed.remaining)
                 }
-                
+
                 // 後台異步提取角色
                 const currentStory = useAppStore.getState().storyOutput
                 if (currentStory.length > 100) {
@@ -867,17 +928,17 @@ ${charStr || "（自由創作）"}
       <div className="space-y-2">
         {/* V2.5: 分段選擇器 */}
         {!hasOutput && (
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-xs nyx-text-secondary">分段：</span>
-            <div className="flex gap-1">
+          <div className="flex items-center gap-1 sm:gap-2 mb-2 flex-wrap">
+            <span className="text-xs nyx-text-secondary whitespace-nowrap">分段：</span>
+            <div className="flex gap-0.5 sm:gap-1">
               {[1, 2, 3].map(seg => (
                 <button
                   key={seg}
                   onClick={() => setTargetSegments(seg)}
                   disabled={isGenerating}
-                  className={`px-2 py-1 text-xs rounded ${
-                    targetSegments === seg 
-                      ? 'bg-purple-600 text-white' 
+                  className={`px-1.5 sm:px-2 py-1 text-xs rounded whitespace-nowrap ${
+                    targetSegments === seg
+                      ? 'bg-purple-600 text-white'
                       : 'nyx-surface-2 nyx-text-secondary hover:nyx-text-primary'
                   }`}
                 >
@@ -886,7 +947,7 @@ ${charStr || "（自由創作）"}
               ))}
             </div>
             {isGenerating && currentSegment > 0 && (
-              <span className="text-xs text-purple-400">
+              <span className="text-xs text-purple-400 whitespace-nowrap">
                 第{currentSegment}段生成中...
               </span>
             )}
@@ -901,23 +962,23 @@ ${charStr || "（自由創作）"}
             className="w-full bg-blue-600 hover:bg-blue-700"
           >
             {isGenerating ? (
-              <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{currentSegment > 0 ? `第${currentSegment}段...` : '生成中...'}</>
+              <><Loader2 className="w-4 h-4 mr-1 sm:mr-2 animate-spin" />{currentSegment > 0 ? `第${currentSegment}段...` : '生成中...'}</>
             ) : (
-              <><Sparkles className="w-4 h-4 mr-2" />{targetSegments > 1 ? `開始創作（${targetSegments}段）` : '開始創作'}</>
+              <><Sparkles className="w-4 h-4 mr-1 sm:mr-2" />{targetSegments > 1 ? `開始創作（${targetSegments}段）` : '開始創作'}</>
             )}
           </Button>
         ) : (
           // 已有故事：「繼續創作」+ 「再寫一次」並排
-          <div className="flex gap-2">
+          <div className="flex gap-1 sm:gap-2">
             <Button
               onClick={() => continueStory()}
               disabled={isGenerating}
-              className="flex-1 bg-purple-600 hover:bg-purple-700"
+              className="flex-1 bg-purple-600 hover:bg-purple-700 px-2 sm:px-4"
             >
               {isGenerating ? (
-                <><Loader2 className="w-4 h-4 mr-2 animate-spin" />續寫中...</>
+                <><Loader2 className="w-4 h-4 mr-1 sm:mr-2 animate-spin" />續寫中...</>
               ) : (
-                <><RotateCcw className="w-4 h-4 mr-2" />繼續創作</>
+                <><RotateCcw className="w-4 h-4 mr-1 sm:mr-2" />繼續創作</>
               )}
             </Button>
             <Button
@@ -927,9 +988,9 @@ ${charStr || "（自由創作）"}
               }}
               disabled={isGenerating}
               variant="outline"
-              className="flex-1 nyx-border nyx-text-secondary hover:text-orange-400"
+              className="flex-1 nyx-border nyx-text-secondary hover:text-orange-400 px-2 sm:px-4"
             >
-              <RefreshCw className="w-4 h-4 mr-2" />再寫一次
+              <RefreshCw className="w-4 h-4 mr-1 sm:mr-2" />再寫一次
             </Button>
           </div>
         )}

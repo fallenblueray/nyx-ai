@@ -225,14 +225,22 @@ export async function POST(req: NextRequest) {
     // ============================================================
     const enableMultiSegment = req.headers.get('x-multi-segment') === 'true'
     const targetSegments = parseInt(req.headers.get('x-target-segments') || '2', 10)
-    
+
+    // V3.1: 調整 max_tokens - 更嚴格的字數控制
+    // 每段約 2200 字，max_tokens 約為字數的 1.3 倍（更保守）
+    const getMaxTokens = (segments: number) => {
+      if (segments === 1) return 2800  // 單段約 2200 字
+      if (segments === 2) return 3800  // 兩段約 4400 字（降低 from 4500）
+      return 5000  // 三段約 6600 字（降低 from 6000）
+    }
+
     // 多段模式只用於首次生成，不適用於續寫
-    if (enableMultiSegment) {
+    if (enableMultiSegment && targetSegments > 1) {
       return handleMultiSegmentGeneration(req, {
         systemPrompt: enrichedSystemPrompt,
         userPrompt,
         model,
-        targetSegments: Math.min(Math.max(targetSegments, 2), 4),
+        targetSegments: Math.min(Math.max(targetSegments, 2), 3),
         isLoggedIn,
         session,
         anonymousId,
@@ -263,7 +271,7 @@ export async function POST(req: NextRequest) {
                 { role: "system", content: enrichedSystemPrompt },
                 { role: "user", content: userPrompt }
               ],
-              max_tokens: 4000,
+              max_tokens: getMaxTokens(targetSegments),
               stream: true
             })
           })
@@ -297,6 +305,22 @@ export async function POST(req: NextRequest) {
                 const data = line.slice(6)
 
                 if (data === '[DONE]') {
+                  // V2.9: 單段模式硬截斷（防止生成過長）
+                  // 目標 2500 字，硬截斷 3000 字
+                  const MAX_SINGLE_LENGTH = 3000
+                  if (fullContent.length > MAX_SINGLE_LENGTH) {
+                    // 找最近的句子結束點
+                    const searchStart = Math.floor(MAX_SINGLE_LENGTH * 0.9)
+                    const searchRange = fullContent.slice(searchStart, MAX_SINGLE_LENGTH + 100)
+                    const sentenceEnd = searchRange.search(/[。！？][^」』）)]/)
+                    if (sentenceEnd !== -1) {
+                      fullContent = fullContent.slice(0, searchStart + sentenceEnd + 1)
+                    } else {
+                      fullContent = fullContent.slice(0, MAX_SINGLE_LENGTH)
+                    }
+                    console.log(`[generate-story] Single segment truncated to ${fullContent.length} chars`)
+                  }
+
                   // 字數估算：使用字元數 * 0.8 轉換為字數（中文約等於）
                   const wordsUsed = Math.ceil(fullContent.length * 0.8)
 
@@ -679,15 +703,18 @@ function extractContextForSegment(previousContent: string): string {
     .slice(0, 3)
     .map(([name]) => name)
 
+  // 🎯 V3.1: 從文章開頭提取風格樣本（避免繼承後期凌亂內容）
+  const styleSample = previousContent.slice(0, 600)  // 取前 600 字而非中間
+
   let context = '【前文輪廓】\n'
   if (topNames.length > 0) {
     context += `主要角色：${topNames.join('、')}\n`
   }
   context += `累計進度：約 ${Math.floor(previousContent.length / 100) / 10} 千字\n\n`
-  
-  context += '【風格樣本】（維持此風格）\n'
-  context += midSample.slice(0, 200) + '\n\n'
-  
+
+  context += '【原創風格基準】（模仿此風格，文章开头部分）\n'
+  context += styleSample.slice(0, 300) + '\n\n'
+
   context += '【銜接點】（直接接續）\n'
   context += tail.slice(-150)
 

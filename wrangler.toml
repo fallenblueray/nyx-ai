@@ -1,0 +1,24 @@
+name = "nyx-ai"
+main = "functions/[[path]].ts"
+compatibility_date = "2024-03-05"
+
+[site]
+bucket = "./dist"
+
+[vars]
+NODE_ENV = "production"
+
+[[kv_namespaces]]
+binding = "NYX_AI_KV"
+id = "nyx-ai-kv"
+
+# 环境变量需要在 Cloudflare Dashboard 中设置
+# - OPENROUTER_API_KEY
+# - SUPABASE_URL
+# - SUPABASE_ANON_KEY
+# - SUPABASE_SERVICE_ROLE_KEY
+# - NEXTAUTH_SECRET
+# - NEXTAUTH_URL
+# - STRIPE_SECRET_KEY
+# - STRIPE_PUBLISHABLE_KEY
+# - STRIPE_WEBHOOK_SECRET

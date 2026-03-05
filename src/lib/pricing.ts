@@ -1,4 +1,15 @@
-export const PACKAGES = [
+export interface PricingPackage {
+  words: number
+  normalPrice: number
+  firstPrice: number
+  normalPriceId: string
+  firstPriceId: string
+  discount: string
+  badge?: string // 🔥 最熱門 標註
+  isFeatured?: boolean // 是否突出顯示
+}
+
+export const PACKAGES: PricingPackage[] = [
   {
     words: 50000,
     normalPrice: 29.9,
@@ -10,10 +21,12 @@ export const PACKAGES = [
   {
     words: 100000,
     normalPrice: 39.9,
-    firstPrice: 19.95,
+    firstPrice: 19.9, // 調整為心理價格 19.9（而非 19.95）
     normalPriceId: 'price_1T3vGgEu4Bc1R5b51SxFeirJ',
     firstPriceId: 'price_1T3ybDEu4Bc1R5b5wkXFSId',
     discount: '5折',
+    badge: '🔥 最熱門', // 突出標註預設首充套餐
+    isFeatured: true,
   },
   {
     words: 350000,
@@ -22,6 +35,7 @@ export const PACKAGES = [
     normalPriceId: 'price_1T3vHbEu4Bc1R5b5omOOSOiN',
     firstPriceId: 'price_1T3ycoEu4Bc1R5b5KkG2Hzyv',
     discount: '5折',
+    badge: '沉浸之選',
   },
   {
     words: 1000000,
@@ -30,6 +44,7 @@ export const PACKAGES = [
     normalPriceId: 'price_1T3vIzEu4Bc1R5b5g756peyq',
     firstPriceId: 'price_1T3ygzEu4Bc1R5b5J5IBU9nN',
     discount: '5折',
+    badge: '專業創作',
   },
   {
     words: 3000000,
@@ -38,6 +53,7 @@ export const PACKAGES = [
     normalPriceId: 'price_1T3vJlEu4Bc1R5b5cOTjvM6w',
     firstPriceId: 'price_1T3yhwEu4Bc1R5b5cWJr6mJC',
     discount: '5折',
+    badge: '創作者專屬',
   },
 ]
 

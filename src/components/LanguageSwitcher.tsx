@@ -27,7 +27,7 @@ export function LanguageSwitcher() {
 
   return (
     <div className="space-y-4">
-      <h3 className="text-sm font-medium text-slate-400">介面語言</h3>
+      <h3 className="text-sm font-medium text-[var(--text-secondary)]">介面語言</h3>
       <div className="flex gap-3">
         {(Object.keys(LANG_LABELS) as Lang[]).map((l) => (
           <Button
@@ -36,7 +36,7 @@ export function LanguageSwitcher() {
             className={
               lang === l
                 ? "bg-purple-600 hover:bg-purple-700 flex-1"
-                : "border-slate-700 text-slate-300 hover:bg-slate-800 flex-1"
+                : "border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--surface-2)] flex-1"
             }
             onClick={() => selectLang(l)}
           >
@@ -44,7 +44,7 @@ export function LanguageSwitcher() {
           </Button>
         ))}
       </div>
-      <p className="text-xs text-slate-500">
+      <p className="text-xs text-[var(--text-muted)]">
         預設：繁體中文（zh-TW）。此設定影響故事生成語言。
       </p>
     </div>
