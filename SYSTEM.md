@@ -43,7 +43,7 @@ src/
 
 ---
 
-## ⚙️ 當前生成參數（V4，2026-03-05）
+## ⚙️ 當前生成參數（V4.1，2026-03-05）
 
 | 參數 | 值 | 說明 |
 |------|----|------|
@@ -53,6 +53,7 @@ src/
 | 目標字數 | ~2000 字 | prompt 中說明約 2000 字 |
 | 緩存策略 | 強制跳過 | 所有請求 `skipCache: true` |
 | 段數 | 單段 | 不再分段，自然完結 |
+| **最小生成門檻** | **1000 字** | V4.1 新增：少於此門檻直接拒絕 |
 
 ---
 
@@ -75,11 +76,37 @@ Body: {
 **處理流程**：
 1. 安全檢查（輸入驗證、Prompt Injection、非法內容、速率限制）
 2. 字數額度檢查（匿名/登入用戶）
-3. 記憶層注入（登入用戶的偏好）
-4. ❌ 緩存層（被 `skipCache: true` 跳過）
-5. 調用 DeepSeek R1 生成
-6. 硬截斷處理（>2500字則找句子結束點）
-7. SSE 流式返回
+3. **V4.1: 預檢查門檻** - 少於 1000 字直接返回 403 錯誤
+4. 記憶層注入（登入用戶的偏好）
+5. ❌ 緩存層（被 `skipCache: true` 跳過）
+6. 調用 DeepSeek R1 生成
+7. **V4.1: 實時字數檢查** - 流式輸出過程中累計字數，超過剩餘字數立即停止
+8. 硬截斷處理（>2500字則找句子結束點）
+9. SSE 流式返回
+
+### V4.1 字數控制機制
+
+```typescript
+// 1. 預檢查（調用 API 前）
+if (currentWordCount < MIN_WORDS_REQUIRED(1000)) {
+  return 403 { errorType: "insufficient_words" | "free_quota_exceeded" }
+}
+
+// 2. 實時檢查（流式輸出過程中）
+const currentWordsUsed = Math.ceil(fullContent.length * 0.8)
+if (currentWordsUsed > currentWordCount) {
+  // 立即停止，返回錯誤
+  return SSE { error, errorType, truncated: true }
+}
+
+// 3. 完成後檢查（[DONE] 時）
+const wordsUsed = Math.ceil(fullContent.length * 0.8)
+if (currentWordCount < wordsUsed) {
+  // 理論上不應觸發，因為有實時檢查
+  return SSE { error, errorType }
+}
+// 扣除字數並返回成功
+```
 
 ---
 

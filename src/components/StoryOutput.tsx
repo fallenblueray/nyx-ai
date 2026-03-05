@@ -687,11 +687,14 @@ ${styleSample.slice(0, 300)}
               }
 
               if (parsed.error) {
+                // V4.1: 字數不足錯誤處理 - 清空已輸出的不完整內容
                 if (parsed.errorType === "free_quota_exceeded") {
+                  setStoryOutput("")  // 清空不完整內容
                   setShowSignupPrompt(true)
                   return
                 }
                 if (parsed.errorType === "insufficient_words") {
+                  setStoryOutput("")  // 清空不完整內容
                   const info = await getUserWordCount()
                   setWordInfo(info)
                   setShowRechargePrompt(true)
@@ -846,6 +849,7 @@ ${styleSample.slice(0, 300)}
               }
 
               if (parsed.error) {
+                // V4.1: 字數不足錯誤處理 - 續寫不清空內容（保留前文），但顯示提示
                 if (parsed.errorType === "free_quota_exceeded") {
                   setShowSignupPrompt(true)
                   return

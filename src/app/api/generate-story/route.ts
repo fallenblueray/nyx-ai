@@ -226,6 +226,21 @@ export async function POST(req: NextRequest) {
     // 固定 max_tokens: 3500 tokens ≈ 2000-2500 中文字
     const MAX_TOKENS = 2800  // 降低以减少超長生成
     const MAX_STORY_LENGTH = 2500  // 硬截斷上限：2500 字
+    const MIN_WORDS_REQUIRED = 1000  // 最小生成門檻：需要至少1000字才能生成
+
+    // ============================================================
+    // V4.1: 預檢查 - 確保有足夠字數才開始生成
+    // ============================================================
+    if (currentWordCount < MIN_WORDS_REQUIRED) {
+      console.warn(`[generate-story] Pre-check failed: have ${currentWordCount}, need at least ${MIN_WORDS_REQUIRED}`)
+      const errorType = isAnonymous ? "free_quota_exceeded" : "insufficient_words"
+      return NextResponse.json({
+        error: isAnonymous ? "免費字數已用完，請註冊或登入" : "字數已用完，請充值",
+        errorType,
+        remaining: currentWordCount,
+        required: MIN_WORDS_REQUIRED
+      }, { status: 403 })
+    }
 
     // ============================================================
     // 建立 Streaming Response
@@ -397,6 +412,23 @@ export async function POST(req: NextRequest) {
                   const content = parsed.choices?.[0]?.delta?.content || ''
                   if (content) {
                     fullContent += content
+                    
+                    // V4.1: 實時字數檢查 - 如果內容已超過用戶剩餘字數，立即停止
+                    const currentWordsUsed = Math.ceil(fullContent.length * 0.8)
+                    if (currentWordsUsed > currentWordCount) {
+                      console.warn(`[generate-story] Real-time limit reached: ${currentWordsUsed} > ${currentWordCount}`)
+                      const errorType = isAnonymous ? "free_quota_exceeded" : "insufficient_words"
+                      controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+                        error: isAnonymous ? "免費字數已用完，請註冊或登入" : "字數已用完，請充值",
+                        errorType,
+                        remaining: 0,
+                        wordsUsed: currentWordsUsed,
+                        truncated: true
+                      })}\n\n`))
+                      controller.close()
+                      return
+                    }
+                    
                     controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content })}\n\n`))
                   }
                 } catch {
