@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { BookOpen, Save, Plus, Trash2, Crown, Flame, Star, Search, X, User, Sparkles, Check, TrendingUp } from "lucide-react"
+import { BookOpen, Save, Plus, Trash2, Crown, Flame, Star, Search, X, User, Sparkles, Check, TrendingUp, Loader2 } from "lucide-react"
 import { TrendingSection } from "./template/TrendingSection"
 import { FavoritesSection } from "./template/FavoritesSection"
 import { FavoriteButton } from "./template/FavoriteButton"
@@ -201,6 +201,7 @@ export function TemplateSelector() {
 
   // V5.1: 調用 API 生成角色和大綱
   const generateCharactersAndOutline = async (template: Template) => {
+    console.log('[TemplateSelector] Generating characters for template:', template.id)
     setIsGeneratingCharacters(true)
     setError(null)
     
@@ -219,19 +220,27 @@ export function TemplateSelector() {
         })
       })
       
+      console.log('[TemplateSelector] API response status:', response.status)
+      
       if (!response.ok) {
-        console.warn("[TemplateSelector] Outline generation failed:", await response.text())
+        const errorText = await response.text()
+        console.warn("[TemplateSelector] Outline generation failed:", errorText)
         return null
       }
       
       const data = await response.json()
+      console.log('[TemplateSelector] API response data:', data.success ? 'success' : 'failed')
+      
       if (!data.success || !data.data) {
+        console.warn('[TemplateSelector] Invalid response data')
         return null
       }
       
       // 存儲生成的角色和大綱到 store
       const char1 = data.data.characters.character1
       const char2 = data.data.characters.character2
+      
+      console.log('[TemplateSelector] Setting characters:', char1.name, char2.name)
       
       setGeneratedCharacters([char1, char2])
       setGeneratedOutline(data.data.outline)
@@ -685,10 +694,14 @@ export function TemplateSelector() {
                   </Button>
                   <Button
                     onClick={() => applyTemplateInternal(previewTemplate, editedCharacter)}
+                    disabled={isGeneratingCharacters}
                     className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90"
                   >
-                    <Check className="w-4 h-4 mr-2" />
-                    確認使用
+                    {isGeneratingCharacters ? (
+                      <><Loader2 className="w-4 h-4 mr-2 animate-spin" />生成中...</>
+                    ) : (
+                      <><Check className="w-4 h-4 mr-2" />確認使用</>
+                    )}
                   </Button>
                 </div>
               </div>
