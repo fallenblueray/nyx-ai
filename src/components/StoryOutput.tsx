@@ -698,6 +698,14 @@ ${perspectiveInstruction}
     // V5.1: 使用預生成的角色和大綱（如果有），否則實時生成
     const { selectedTemplate, generatedCharacters: preGeneratedChars, generatedOutline: preGeneratedOutline } = useAppStore.getState()
     
+    console.log('[V5.1] Store state:', { 
+      selectedTemplate, 
+      hasPreGeneratedChars: !!preGeneratedChars, 
+      preGeneratedCharsLength: preGeneratedChars?.length,
+      hasPreGeneratedOutline: !!preGeneratedOutline,
+      preGeneratedCharsNames: preGeneratedChars?.map((c: {name: string}) => c.name)
+    })
+    
     let finalCharacters: CharacterConfig[] = []
     let finalOutline = null
     let finalTemplateId = null
@@ -707,19 +715,24 @@ ${perspectiveInstruction}
       finalCharacters = preGeneratedChars
       finalOutline = preGeneratedOutline
       finalTemplateId = selectedTemplate
-      console.log('[V5.1] Using pre-generated characters and outline')
+      console.log('[V5.1] Using pre-generated characters:', finalCharacters.map(c => c.name))
     } else if (selectedTemplate) {
       // 實時生成角色和大綱（向後兼容）
+      console.log('[V5.1] No pre-generated data, generating in real-time for template:', selectedTemplate)
       const characterAndOutline = await generateCharacterAndOutline()
+      console.log('[V5.1] Real-time generation result:', characterAndOutline ? 'success' : 'failed')
       if (characterAndOutline) {
         finalCharacters = characterAndOutline.characters
         finalOutline = characterAndOutline.outline
         finalTemplateId = characterAndOutline.templateId
-        console.log('[V5] Generated characters and outline in real-time')
+        console.log('[V5.1] Generated characters:', finalCharacters.map(c => c.name))
+      } else {
+        console.warn('[V5.1] Real-time generation failed')
       }
     }
     
     // 如果都沒有，使用現有角色
+    console.log('[V5.1] Final characters before fallback:', finalCharacters.length, finalCharacters.map(c => c.name))
     if (finalCharacters.length === 0) {
       finalCharacters = characters.map(c => ({
         name: c.name,
@@ -771,30 +784,32 @@ ${perspectiveInstruction}
           skipCache: true,
         }
         console.log('[V5.1] Using new Prompt Engine API with pre-generated data:', finalTemplateId)
-      } else if (selectedTemplate) {
-        // Fallback: 如果沒有預生成數據，使用舊流程
+      } else if (selectedTemplate && finalCharacters.length >= 2) {
+        // Fallback: 有模板但沒有大綱，使用舊流程但帶上角色信息
         const { systemPrompt, userPrompt } = buildPrompt(false)
         requestBody = {
           systemPrompt,
           userPrompt,
           model: "deepseek/deepseek-r1-0528",
-          characters: finalCharacters,
+          characters: {
+            character1: finalCharacters[0],
+            character2: finalCharacters[1]
+          },
           anonymousId,
           skipCache: true,
         }
-        console.log('[V5.1] Using legacy API (no pre-generated data)')
+        console.log('[V5.1] Using legacy API with characters:', finalCharacters.map(c => c.name))
       } else {
-        // 沒有選擇模板，使用傳統流程
+        // 沒有選擇模板或沒有角色，使用傳統流程（不帶 characters）
         const { systemPrompt, userPrompt } = buildPrompt(false)
         requestBody = {
           systemPrompt,
           userPrompt,
           model: "deepseek/deepseek-r1-0528",
-          characters: finalCharacters,
           anonymousId,
           skipCache: true,
         }
-        console.log('[V5.1] Using traditional API (no template)')
+        console.log('[V5.1] Using traditional API (no template/characters)')
       }
 
       const response = await fetch("/api/generate-story", {
