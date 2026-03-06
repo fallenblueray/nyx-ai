@@ -1,30 +1,45 @@
-# NyxAI 系統說明書 (V4 單段生成)
+# NyxAI 系統說明書 (V5 模板系統)
 
 > **千螢維護協議**：每次開始任何 NyxAI 工作前，必須先完整讀取此文件。
 
 ---
 
-## 🗺️ 系統架構速覽 (V4 單段生成)
+## 🗺️ 系統架構速覽 (V5 模板系統)
 
 ```
-用戶輸入（一句話/模板）
+用戶選擇模板 / 輸入一句話
     ↓
-[generate-story/route.ts]   ← DeepSeek R1 單段生成 (~2000字)
+[TemplateSelector.tsx]   ← 50個官方模板 + 分類 + 收藏 + Trending
+    ↓
+[prompt-builder.ts]      ← 模板 → System Prompt + User Prompt
+    ↓
+[generate-story/route.ts] ← DeepSeek R1 單段生成 (~2000字)
     ↓
 SSE 流式輸出 → StoryOutput.tsx
 ```
 
-**V4 重大變更**：
-- ❌ 移除了多段生成模式（原本 2-3 段大綱 + 分段生成）
-- ✅ 簡化為單段生成，直接調用 DeepSeek R1
-- ✅ 強制 `skipCache: true`，避免緩存命中導致重複內容
+**V5 重大變更**：
+- ✅ 產品轉型：「AI寫作工具」→「AI幻想生成器」
+- ✅ 50個官方模板（7大分類：經典/校園/人妻/職場/禁忌/NTR/高級）
+- ✅ 模板分類導航 + 搜索 + 收藏 + Trending
+- ✅ Prompt Builder 自動從模板構建高質量 Prompt
+- ✅ 保留原有單段生成引擎（V4）
+- **繼續計劃**：Phase 4（角色卡整合）、Phase 5（快速生成增強）、Phase 6（Premium）、Phase 7（Trending後端）、Phase 8（SEO頁面）
 
 ---
 
-## 📁 文件地圖（V4 現狀）
+## 📁 文件地圖（V5 現狀）
 
 ```
 src/
+├── types/
+│   └── template.ts                      # ✅ V5新增：模板系統類型定義
+├── data/
+│   └── templates.ts                     # ✅ V5新增：50個官方模板數據
+├── lib/
+│   ├── prompt-builder.ts                # ✅ V5新增：模板→Prompt 轉換
+│   ├── content-cleaner.ts               # 清理 AI 思考標籤
+│   └── story-utils.ts                   # 工具函數
 ├── app/api/
 │   ├── story/outline/route.ts           # 大綱生成（Kimi K2.5）- 僅備用
 │   ├── story/segment/route.ts           # 單段生成（DeepSeek R1）- 僅備用
@@ -33,12 +48,11 @@ src/
 ├── app/app/page.tsx                     # 主界面（含「新建」按鈕）
 ├── components/
 │   ├── StoryOutput.tsx                  # 故事顯示 + 生成按鈕邏輯
-│   └── TemplateSelector.tsx             # 模板選擇
-├── lib/
-│   ├── content-cleaner.ts               # 清理 AI 思考標籤
-│   └── story-utils.ts                   # 工具函數
-└── store/
-    └── useAppStore.ts                   # 全局狀態（含 shouldRegenerate）
+│   └── TemplateSelector.tsx             # ✅ V5重寫：模板中心（分類/搜索/收藏/Trending）
+├── store/
+│   └── useAppStore.ts                   # 全局狀態（含 shouldRegenerate）
+└── docs/
+    └── TEMPLATE_SYSTEM_PLAN.md          # ✅ V5新增：完整8階段技術規劃
 ```
 
 ---

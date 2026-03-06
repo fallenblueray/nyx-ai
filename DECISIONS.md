@@ -294,4 +294,39 @@ if (!skipCache) {  // 永遠為 false
 
 ---
 
+### [2026-03-06] 為什麼模板直接轉換為 Prompt 而不是獨立 API？
+
+**決策**：Prompt Builder 在前端直接把模板配置轉換為 systemPrompt + userPrompt，不另外開 API 端點。
+
+**原因**：
+1. 模板的本質是 Prompt 配置，不需要後端邏輯
+2. 避免額外 API 呼叫，減少延遲
+3. 直接傳入現有的 `/api/generate-story` 端點，架構不變
+4. 未來若需要服務端模板（如 SEO 頁面），再加 API
+
+---
+
+### [2026-03-06] 為什麼 TemplateSelector 保留舊版 PRESET_TEMPLATES 導出？
+
+**決策**：新版 TemplateSelector 仍然導出 `PRESET_TEMPLATES`，由新模板數據自動生成。
+
+**原因**：
+1. 其他組件可能引用了 `PRESET_TEMPLATES`，向後相容
+2. 避免修改太多文件導致 Build 失敗
+3. 新版模板數據已完全替代，`PRESET_TEMPLATES` 只是一個兼容層
+
+---
+
+### [2026-03-06] 為什麼 50 個模板全部放在靜態 ts 文件而不是數據庫？
+
+**決策**：Phase 1-3 先用靜態 `src/data/templates.ts`，Phase 2 的 Supabase 方案推後執行。
+
+**原因**：
+1. **速度優先**：靜態文件不需要 API 呼叫，頁面秒開
+2. **簡單優先**：先跑通 UI 邏輯，驗證用戶體驗
+3. **成本優先**：50個模板不需要數據庫，直接 bundle 進前端
+4. **未來擴展**：100+ 模板時再遷移到 Supabase（Phase 2 計劃中）
+
+---
+
 *格式：每次做出重要決定後，在這裡加一條。*

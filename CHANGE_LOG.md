@@ -201,6 +201,48 @@
 
 ---
 
+### [2026-03-06] Template System Phase 1-3：模板系統核心實現
+
+**變更類型**: 功能重構（產品轉型）
+**相關文件**: 
+- `src/types/template.ts`（新增）
+- `src/data/templates.ts`（新增）
+- `src/lib/prompt-builder.ts`（新增）
+- `src/components/TemplateSelector.tsx`（完全重寫）
+
+**產品轉型**：從「AI寫作工具」→「AI幻想生成器」
+
+**Phase 1 - 類型定義**:
+- `Template`, `PromptConfig`, `CharacterConfig` 等完整類型
+- 7大分類：經典/校園/人妻/職場/禁忌/NTR/高級
+
+**Phase 2 - 模板數據**:
+- 50個官方模板（靜態 ts 文件，無需 API）
+- 每個模板含：Prompt配置、角色卡、標籤、Premium設定
+
+**Phase 3 - 模板 UI 重構**:
+- 分類導航（7個分類 Tab）
+- 搜索功能
+- 收藏功能（localStorage）
+- Trending 熱門題材（6個）
+- 我的模板（儲存/套用/刪除）
+- Premium 模板標識（金色皇冠）
+
+**Prompt Builder**:
+- `buildSystemPromptFromTemplate()` - 從模板生成 System Prompt
+- `buildUserPromptFromTemplate()` - 從模板生成 User Prompt
+- `enhanceUserInput()` - 自由輸入增強
+- `matchTemplateByInput()` - 關鍵詞匹配模板
+
+**同步更新**:
+- ✅ SYSTEM.md: 更新為 V5，新增文件地圖
+- ✅ DECISIONS.md: 新增3條設計決策
+- ✅ TEMPLATE_SYSTEM_PLAN.md: 規劃文件（完整8階段）
+
+**Commit**: `b1dff53`
+
+---
+
 ### [2026-03-06] Landing Page V2: 高轉化落地頁重構
 
 **變更類型**: 功能改進（營銷優化）
