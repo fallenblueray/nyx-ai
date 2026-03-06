@@ -228,5 +228,62 @@ npx vercel --prod --yes --token "$VERCEL_TOKEN"
 
 ---
 
-*最後更新：2026-03-05 by 千螢*
+## 🌐 Landing Page 架構（V2，2026-03-06）
+
+### 文件位置
+- **主文件**: `src/app/page.tsx`
+- **組件依賴**: `FloatingLines.tsx`, `ParticleField.tsx`
+
+### 頁面結構（從上到下）
+
+| 區塊 | 說明 | 關鍵元素 |
+|------|------|----------|
+| **Hero** | 主視覺 + 核心價值主張 | 主標題、副標題、CTA按鈕、社會證明徽章 |
+| **即時示例** | 展示 AI 生成效果，建立信任 | 輸入框直達功能（V2.1+）、Demo展示 |
+| **熱門題材** | 降低決策成本 | 8個卡片，點擊帶入 `/app?topic=X&prompt=Y` |
+| **能力展示** | 功能說明 | 5項核心能力圖標列表 |
+| **使用流程** | 降低使用門檻 | 3步流程圖示 |
+| **免費體驗** | 消除顧慮 | 強調8000字免費、無需登入 |
+| **價格方案** | 明確定價 | 5檔價格，標示「首次充值半價」|
+| **最終CTA** | 最後轉化點 | 大按鈕強化行動呼籲 |
+| **Footer** | 版權資訊 | 品牌、隱私政策、服務條款 |
+
+### 輸入框直達機制（V2.1）
+
+```typescript
+// Landing Page (page.tsx)
+const [userPrompt, setUserPrompt] = useState("");
+
+const handleGenerate = () => {
+  if (userPrompt.trim()) {
+    window.location.href = `/app?prompt=${encodeURIComponent(userPrompt.trim())}`;
+  }
+};
+
+// App Page (app/page.tsx)
+useEffect(() => {
+  const promptFromUrl = searchParams.get('prompt');
+  if (promptFromUrl && !storyInput) {
+    setStoryInput(promptFromUrl);
+  }
+}, [searchParams, setStoryInput, storyInput]);
+```
+
+**關鍵參數**: `prompt` - 自動填充到 App 的故事輸入框
+
+---
+
+### [2026-03-06] Landing Page V2.2 輸入框強化
+
+| 項目 | 變更前 | 變更後 |
+|------|--------|--------|
+| 組件類型 | Input | Textarea |
+| 高度 | 單行 (h-12) | 兩行 (min-h-[80px]) |
+| 邊框 | border-white/10 | border-2 border-white/30 |
+| 標籤字級 | text-sm | text-base md:text-lg |
+| 提示文字 | 通用範例 | 具體故事開頭 |
+
+---
+
+*最後更新：2026-03-06 by 千螢*
 *變更記錄：見 CHANGE_LOG.md*
