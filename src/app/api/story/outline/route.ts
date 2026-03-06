@@ -1,5 +1,3 @@
-"use server"
-
 import { NextRequest, NextResponse } from "next/server"
 import { officialTemplates, type Template } from "@/data/templates"
 import { generateCharacterPair, generateOutline, type CharacterConfig } from "@/lib/prompt-engine"
