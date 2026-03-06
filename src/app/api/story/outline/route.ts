@@ -35,7 +35,7 @@ interface OutlineResponse {
  */
 async function callAI(prompt: string, seed?: number): Promise<string> {
   const apiKey = process.env.OPENROUTER_API_KEY
-  const model = process.env.STORY_GENERATION_MODEL || "openrouter/deepseek/deepseek-chat-v3-0324"
+  const model = process.env.STORY_GENERATION_MODEL || "deepseek/deepseek-chat"
   
   // 加入隨機種子確保每次生成不同
   const randomSeed = seed || Date.now() + Math.floor(Math.random() * 1000000)
