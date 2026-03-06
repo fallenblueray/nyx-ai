@@ -8,6 +8,7 @@ import Link from "next/link";
 import { ChevronRight, Sparkles, Zap, BookOpen, Users, Clock, PenTool, Layers, Download, Play, Wand2 } from "lucide-react";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
 const NYX_GRADIENT = ["#1e1b4b", "#3730a3", "#6d28d9", "#8b5cf6", "#a78bfa"];
 
@@ -211,22 +212,21 @@ export default function Home() {
             {/* 即時輸入區 - 最強轉化點 */}
             <div className="mt-10 max-w-2xl mx-auto">
               <div className="rounded-2xl border border-purple-500/30 bg-gradient-to-br from-purple-900/20 via-black/60 to-black/40 p-6 backdrop-blur-sm">
-                <label className="block text-sm font-medium text-white/70 mb-3">
+                <label className="block text-base md:text-lg font-semibold text-white mb-4">
                   輸入一句故事開頭
                 </label>
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <Input
-                    type="text"
-                    placeholder="例如：深夜加班時，女上司忽然鎖上辦公室的門..."
+                <div className="flex flex-col gap-4">
+                  <Textarea
+                    placeholder="我獲得絕對命令和刪除記憶的超能力，第一個目標是公司的老闆秘書..."
                     value={userPrompt}
                     onChange={(e) => setUserPrompt(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    className="flex-1 h-12 bg-black/40 border-white/10 text-white placeholder:text-white/30 focus:border-purple-500/50 focus:ring-purple-500/20 rounded-xl"
+                    className="min-h-[80px] bg-black/40 border-2 border-white/30 text-white placeholder:text-white/30 focus:border-white/60 focus:ring-white/20 rounded-xl resize-none"
                   />
                   <Button
                     onClick={handleGenerate}
                     disabled={!userPrompt.trim()}
-                    className="h-12 px-8 rounded-xl font-semibold transition-all duration-300 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                    className="h-12 px-8 rounded-xl font-semibold transition-all duration-300 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 w-full sm:w-auto sm:self-start"
                     style={{
                       background: "linear-gradient(135deg, #6d28d9, #8b5cf6)",
                       color: "#FFFFFF",
