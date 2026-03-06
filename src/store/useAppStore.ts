@@ -98,6 +98,10 @@ interface AppState {
   
   // V4.5: 故事主題
   storyTheme: string
+  
+  // V5: Prompt Engine - 選中的模板
+  selectedTemplate: string | null
+  setSelectedTemplate: (templateId: string | null) => void
   setStoryTheme: (theme: string) => void
 }
 
@@ -255,6 +259,10 @@ export const useAppStore = create<AppState>()(
       // V4.5: 故事主題（預設 Midnight Passion）
       storyTheme: 'midnight-passion',
       setStoryTheme: (theme) => set({ storyTheme: theme }),
+      
+      // V5: Prompt Engine - 選中的模板
+      selectedTemplate: null,
+      setSelectedTemplate: (templateId) => set({ selectedTemplate: templateId }),
     }),
     {
       name: 'nyx-ai-storage',

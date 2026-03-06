@@ -609,10 +609,71 @@ ${perspectiveInstruction}
     updateDynamicContext(result)
   }
 
+  // V5: Prompt Engine 新流程 - 先獲取角色和大綱，再生成故事
+  const generateCharacterAndOutline = async (): Promise<{ 
+    characters: Array<{ name: string; description: string; traits: string[] }>
+    outline: { beginning: string; development: string; climax: string }
+    templateId: string | null
+  } | null> => {
+    const { selectedTemplate } = useAppStore.getState()
+    
+    // 如果沒有選擇模板，使用默認流程
+    if (!selectedTemplate) {
+      return null
+    }
+    
+    try {
+      const response = await fetch("/api/story/outline", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          templateId: selectedTemplate
+        })
+      })
+      
+      if (!response.ok) {
+        console.warn("[V5] Outline generation failed:", await response.text())
+        return null
+      }
+      
+      const data = await response.json()
+      if (!data.success || !data.data) {
+        return null
+      }
+      
+      // 轉換角色格式
+      const char1 = {
+        name: data.data.characters.character1.name,
+        description: data.data.characters.character1.personality,
+        traits: data.data.characters.character1.traits
+      }
+      const char2 = {
+        name: data.data.characters.character2.name,
+        description: data.data.characters.character2.personality,
+        traits: data.data.characters.character2.traits
+      }
+      
+      return {
+        characters: [char1, char2],
+        outline: data.data.outline,
+        templateId: selectedTemplate
+      }
+    } catch (err) {
+      console.error("[V5] Character/Outline generation failed:", err)
+      return null
+    }
+  }
+
   // V2.5: 直接多段生成（跳過大綱）
   const generateStoryDirect = async () => {
     console.log('[V2.5] generateStoryDirect started, canGenerate:', canGenerate, 'targetSegments:', targetSegments)
     if (!canGenerate) return
+    
+    // V5: Prompt Engine - 先獲取角色和大綱
+    const characterAndOutline = await generateCharacterAndOutline()
+    if (characterAndOutline) {
+      console.log('[V5] Using new Prompt Engine with:', characterAndOutline.templateId)
+    }
 
     const { resetStreaming, setStreamingState, humanizeEnabled } = useAppStore.getState()
     resetStreaming()

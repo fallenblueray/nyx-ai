@@ -31,9 +31,13 @@ interface OutlineResponse {
 /**
  * 調用 AI 生成角色或大綱
  */
-async function callAI(prompt: string): Promise<string> {
+async function callAI(prompt: string, seed?: number): Promise<string> {
   const apiKey = process.env.OPENROUTER_API_KEY
   const model = process.env.STORY_GENERATION_MODEL || "openrouter/deepseek/deepseek-chat-v3-0324"
+  
+  // 加入隨機種子確保每次生成不同
+  const randomSeed = seed || Date.now() + Math.floor(Math.random() * 1000000)
+  const promptWithSeed = `${prompt}\n\n[隨機種子: ${randomSeed}]`
   
   const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
@@ -43,8 +47,8 @@ async function callAI(prompt: string): Promise<string> {
     },
     body: JSON.stringify({
       model,
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0.8,
+      messages: [{ role: "user", content: promptWithSeed }],
+      temperature: 0.9,
       max_tokens: 2000,
     }),
   })

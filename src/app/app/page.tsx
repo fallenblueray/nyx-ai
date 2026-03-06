@@ -40,7 +40,8 @@ export default function AppPage() {
     characters,
     setCharacters,
     setError,
-    isGenerating
+    isGenerating,
+    setSelectedTemplate
   } = useAppStore()
   
   const [historyOpen, setHistoryOpen] = useState(false)
@@ -63,6 +64,9 @@ export default function AppPage() {
         const inputText = promptFromUrl || template.promptBuilder.baseScenario
         setStoryInput(inputText)
         
+        // 記錄選中的模板（V5: Prompt Engine 使用）
+        setSelectedTemplate(templateId)
+        
         // 如果有角色，自動創建
         if (template.characterConfig) {
           const char = {
@@ -80,7 +84,7 @@ export default function AppPage() {
     } else if (promptFromUrl && !storyInput) {
       setStoryInput(promptFromUrl)
     }
-  }, [searchParams, setStoryInput, storyInput, setCharacters])
+  }, [searchParams, setStoryInput, storyInput, setCharacters, setSelectedTemplate])
   
   const hasOutput = storyOutput.trim().length > 0
   
