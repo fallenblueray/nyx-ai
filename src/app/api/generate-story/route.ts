@@ -313,9 +313,10 @@ export async function POST(req: NextRequest) {
               model,
               messages: [
                 { role: "system", content: enrichedSystemPrompt },
-                { role: "user", content: finalUserPrompt }
+                { role: "user", content: finalUserPrompt + `\n\n[隨機種子: ${Date.now()}-${Math.floor(Math.random() * 1000000)}]` }
               ],
               max_tokens: MAX_TOKENS,
+              temperature: 0.95,
               stream: true
             })
           })

@@ -633,11 +633,18 @@ ${perspectiveInstruction}
     }
     
     try {
+      // V5.1: 添加時間戳防止緩存，確保每次生成不同角色
       const response = await fetch("/api/story/outline", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+          "Pragma": "no-cache"
+        },
         body: JSON.stringify({
-          templateId: selectedTemplate
+          templateId: selectedTemplate,
+          timestamp: Date.now(), // 確保請求唯一
+          randomSeed: Math.floor(Math.random() * 1000000) // 額外隨機種子
         })
       })
       

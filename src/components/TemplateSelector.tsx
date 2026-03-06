@@ -154,7 +154,8 @@ export function TemplateSelector() {
     addCharacter,
     setCharacters,
     storyInput,
-    characters
+    characters,
+    setSelectedTemplate
   } = useAppStore()
 
   // 載入收藏和儲存模板
@@ -206,6 +207,9 @@ export function TemplateSelector() {
         traits: [customChar.role, template.characterConfig.desireStyle.split('，')[0]]
       }]
     }
+    
+    // V5: 設置選中的模板 ID（Prompt Engine 使用）
+    setSelectedTemplate(template.id)
     
     setStoryInput(legacy.storyInput)
     setCharacters([])

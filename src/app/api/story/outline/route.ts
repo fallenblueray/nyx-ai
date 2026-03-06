@@ -7,6 +7,8 @@ import { generateCharacterPair, generateOutline, type CharacterConfig } from "@/
 interface OutlineRequest {
   templateId: string
   userInput?: string
+  timestamp?: number
+  randomSeed?: number
 }
 
 interface OutlineResponse {
@@ -66,12 +68,16 @@ async function callAI(prompt: string, seed?: number): Promise<string> {
  * 合併角色和大綱生成为一次 API 调用
  */
 async function generateCharacterAndOutline(
-  template: Template
+  template: Template,
+  seed?: number
 ): Promise<OutlineResponse['data'] | null> {
   const templateWorld = template.promptBuilder.systemPrompt || `你是一位頂級成人小說作家，專注於${template.category}題材的創作。`
   
+  // 創建帶種子的 callAI 包裝函數
+  const callAIWithSeed = (prompt: string) => callAI(prompt, seed)
+  
   // Step 1: 生成角色
-  const characterPair = await generateCharacterPair(templateWorld, callAI)
+  const characterPair = await generateCharacterPair(templateWorld, callAIWithSeed)
   if (!characterPair) return null
   
   // Step 2: 生成大綱
@@ -79,7 +85,7 @@ async function generateCharacterAndOutline(
     templateWorld,
     characterPair.character1,
     characterPair.character2,
-    callAI
+    callAIWithSeed
   )
   if (!outline) return null
   
@@ -97,7 +103,7 @@ async function generateCharacterAndOutline(
 export async function POST(request: NextRequest): Promise<NextResponse<OutlineResponse>> {
   try {
     const body: OutlineRequest = await request.json()
-    const { templateId } = body
+    const { templateId, randomSeed } = body
     
     // 查找模板
     const template = officialTemplates.find(t => t.id === templateId)
@@ -109,7 +115,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<OutlineRe
     }
     
     // 生成角色和大綱（2次 API 调用合并为 1 个逻辑）
-    const data = await generateCharacterAndOutline(template)
+    const data = await generateCharacterAndOutline(template, randomSeed)
     
     if (!data) {
       return NextResponse.json(
