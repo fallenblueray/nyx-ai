@@ -399,7 +399,8 @@ export function GenerateButtons() {
   const [wordInfo, setWordInfo] = useState<{ wordCount: number; isFirstPurchase: boolean } | null>(null)
   const [currentSegment, setCurrentSegment] = useState<number>(0)   // V2.5: 當前分段
 
-  const canGenerate = storyInput.trim().length > 0 || characters.length > 0
+  const { selectedTemplate } = useAppStore()
+  const canGenerate = storyInput.trim().length > 0 || characters.length > 0 || !!selectedTemplate
   const hasOutput = storyOutput.trim().length > 0
   const isLoggedIn = !!session?.user
 
@@ -694,30 +695,33 @@ ${perspectiveInstruction}
     console.log('[V2.5] generateStoryDirect started, canGenerate:', canGenerate, 'targetSegments:', targetSegments)
     if (!canGenerate) return
     
-    // V5: Prompt Engine - 先獲取角色和大綱
-    const characterAndOutline = await generateCharacterAndOutline()
+    // V5.1: 使用預生成的角色和大綱（如果有），否則實時生成
+    const { selectedTemplate, generatedCharacters: preGeneratedChars, generatedOutline: preGeneratedOutline } = useAppStore.getState()
     
-    let generatedCharacters: CharacterConfig[] = []
-    let generatedOutline = null
-    let generatedTemplateId = null
+    let finalCharacters: CharacterConfig[] = []
+    let finalOutline = null
+    let finalTemplateId = null
     
-    if (characterAndOutline) {
-      // 更新 store 中的角色（轉換為 store 格式）
-      const { setCharacters } = useAppStore.getState()
-      const storeCharacters = characterAndOutline.characters.map(char => ({
-        id: `char-${char.name}-${Date.now()}`,
-        name: char.name,
-        description: `${char.age}，${char.role}。${char.personality}`,
-        traits: char.traits
-      }))
-      setCharacters(storeCharacters)
-      generatedCharacters = characterAndOutline.characters
-      generatedOutline = characterAndOutline.outline
-      generatedTemplateId = characterAndOutline.templateId
-      console.log('[V5] Updated characters and outline for generation')
-    } else {
-      // 沒有選擇模板，使用現有角色
-      generatedCharacters = characters.map(c => ({
+    if (selectedTemplate && preGeneratedChars && preGeneratedChars.length >= 2 && preGeneratedOutline) {
+      // 使用預生成的角色和大綱
+      finalCharacters = preGeneratedChars
+      finalOutline = preGeneratedOutline
+      finalTemplateId = selectedTemplate
+      console.log('[V5.1] Using pre-generated characters and outline')
+    } else if (selectedTemplate) {
+      // 實時生成角色和大綱（向後兼容）
+      const characterAndOutline = await generateCharacterAndOutline()
+      if (characterAndOutline) {
+        finalCharacters = characterAndOutline.characters
+        finalOutline = characterAndOutline.outline
+        finalTemplateId = characterAndOutline.templateId
+        console.log('[V5] Generated characters and outline in real-time')
+      }
+    }
+    
+    // 如果都沒有，使用現有角色
+    if (finalCharacters.length === 0) {
+      finalCharacters = characters.map(c => ({
         name: c.name,
         age: '',
         role: c.description?.split('，')[0] || '',
@@ -750,35 +754,47 @@ ${perspectiveInstruction}
         headers['x-humanize'] = 'true'
       }
       
-      // V5: 決定使用哪種 API 參數
+      // V5.1: 決定使用哪種 API 參數
       let requestBody: Record<string, unknown>
       
-      if (generatedTemplateId && generatedOutline && generatedCharacters.length >= 2) {
+      if (finalTemplateId && finalOutline && finalCharacters.length >= 2) {
         // V5: 使用新的 Prompt Engine 格式
         requestBody = {
-          templateId: generatedTemplateId,
+          templateId: finalTemplateId,
           characters: {
-            character1: generatedCharacters[0],
-            character2: generatedCharacters[1]
+            character1: finalCharacters[0],
+            character2: finalCharacters[1]
           },
-          outline: generatedOutline,
+          outline: finalOutline,
           model: "deepseek/deepseek-r1-0528",
           anonymousId,
           skipCache: true,
         }
-        console.log('[V5] Using new Prompt Engine API with template:', generatedTemplateId)
-      } else {
-        // 舊流程：使用傳統 systemPrompt/userPrompt
+        console.log('[V5.1] Using new Prompt Engine API with pre-generated data:', finalTemplateId)
+      } else if (selectedTemplate) {
+        // Fallback: 如果沒有預生成數據，使用舊流程
         const { systemPrompt, userPrompt } = buildPrompt(false)
         requestBody = {
           systemPrompt,
           userPrompt,
           model: "deepseek/deepseek-r1-0528",
-          characters: generatedCharacters,
+          characters: finalCharacters,
           anonymousId,
           skipCache: true,
         }
-        console.log('[V5] Using legacy API (no template selected)')
+        console.log('[V5.1] Using legacy API (no pre-generated data)')
+      } else {
+        // 沒有選擇模板，使用傳統流程
+        const { systemPrompt, userPrompt } = buildPrompt(false)
+        requestBody = {
+          systemPrompt,
+          userPrompt,
+          model: "deepseek/deepseek-r1-0528",
+          characters: finalCharacters,
+          anonymousId,
+          skipCache: true,
+        }
+        console.log('[V5.1] Using traditional API (no template)')
       }
 
       const response = await fetch("/api/generate-story", {

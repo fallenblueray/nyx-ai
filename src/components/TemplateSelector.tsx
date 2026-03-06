@@ -148,6 +148,7 @@ export function TemplateSelector() {
   const [savedTemplates, setSavedTemplates] = useState<LegacyTemplate[]>([])
   const [showSaveDialog, setShowSaveDialog] = useState(false)
   const [saveForm, setSaveForm] = useState({ name: "", description: "" })
+  const [isGeneratingCharacters, setIsGeneratingCharacters] = useState(false)
 
   const {
     setStoryInput,
@@ -155,7 +156,11 @@ export function TemplateSelector() {
     setCharacters,
     storyInput,
     characters,
-    setSelectedTemplate
+    setSelectedTemplate,
+    setGeneratedCharacters,
+    setGeneratedOutline,
+    setIsGenerating,
+    setError
   } = useAppStore()
 
   // 載入收藏和儲存模板
@@ -194,26 +199,96 @@ export function TemplateSelector() {
     role: string
   } | null>(null)
 
-  // 套用模板（內部方法）
-  const applyTemplateInternal = (template: Template, customChar?: typeof editedCharacter) => {
-    const legacy = convertToLegacy(template)
+  // V5.1: 調用 API 生成角色和大綱
+  const generateCharactersAndOutline = async (template: Template) => {
+    setIsGeneratingCharacters(true)
+    setError(null)
     
-    // 如果使用自定義角色
-    if (customChar && template.characterConfig) {
-      legacy.characters = [{
-        id: `${template.id}-char-${Date.now()}`,
-        name: customChar.name,
-        description: `${customChar.age}歲，${customChar.role}。${customChar.personality}。${customChar.appearance}`,
-        traits: [customChar.role, template.characterConfig.desireStyle.split('，')[0]]
-      }]
+    try {
+      const response = await fetch("/api/story/outline", {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+          "Pragma": "no-cache"
+        },
+        body: JSON.stringify({
+          templateId: template.id,
+          timestamp: Date.now(),
+          randomSeed: Math.floor(Math.random() * 1000000)
+        })
+      })
+      
+      if (!response.ok) {
+        console.warn("[TemplateSelector] Outline generation failed:", await response.text())
+        return null
+      }
+      
+      const data = await response.json()
+      if (!data.success || !data.data) {
+        return null
+      }
+      
+      // 存儲生成的角色和大綱到 store
+      const char1 = data.data.characters.character1
+      const char2 = data.data.characters.character2
+      
+      setGeneratedCharacters([char1, char2])
+      setGeneratedOutline(data.data.outline)
+      
+      // 同時更新舊版角色格式（兼容性）
+      const storeCharacters = [
+        {
+          id: `char-${char1.name}-${Date.now()}`,
+          name: char1.name,
+          description: `${char1.age}，${char1.role}。${char1.personality}`,
+          traits: char1.traits
+        },
+        {
+          id: `char-${char2.name}-${Date.now()}`,
+          name: char2.name,
+          description: `${char2.age}，${char2.role}。${char2.personality}`,
+          traits: char2.traits
+        }
+      ]
+      setCharacters(storeCharacters)
+      
+      return data.data
+    } catch (err) {
+      console.error("[TemplateSelector] Failed to generate characters:", err)
+      return null
+    } finally {
+      setIsGeneratingCharacters(false)
     }
+  }
+
+  // 套用模板（內部方法）
+  const applyTemplateInternal = async (template: Template, customChar?: typeof editedCharacter) => {
+    const legacy = convertToLegacy(template)
     
     // V5: 設置選中的模板 ID（Prompt Engine 使用）
     setSelectedTemplate(template.id)
     
     setStoryInput(legacy.storyInput)
-    setCharacters([])
-    legacy.characters.forEach(char => addCharacter(char))
+    
+    // V5.1: 如果有角色配置，調用 API 生成新角色和大綱
+    if (template.characterConfig) {
+      await generateCharactersAndOutline(template)
+    }
+    
+    if (customChar) {
+      // 使用自定義角色
+      const desireStyle = template.characterConfig?.desireStyle || '主動'
+      legacy.characters = [{
+        id: `${template.id}-char-${Date.now()}`,
+        name: customChar.name,
+        description: `${customChar.age}歲，${customChar.role}。${customChar.personality}。${customChar.appearance}`,
+        traits: [customChar.role, desireStyle.split('，')[0] || '主動']
+      }]
+      setCharacters([])
+      legacy.characters.forEach(char => addCharacter(char))
+    }
+    
     setIsPreviewOpen(false)
     setPreviewTemplate(null)
     setIsOpen(false)

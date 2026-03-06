@@ -103,6 +103,12 @@ interface AppState {
   selectedTemplate: string | null
   setSelectedTemplate: (templateId: string | null) => void
   setStoryTheme: (theme: string) => void
+  
+  // V5.1: 生成的角色和大綱（用戶可編輯）
+  generatedCharacters: { name: string; age: string; role: string; personality: string; appearance: string; desireStyle: string; traits: string[] }[] | null
+  generatedOutline: { beginning: string; development: string; climax: string; preview: string } | null
+  setGeneratedCharacters: (characters: { name: string; age: string; role: string; personality: string; appearance: string; desireStyle: string; traits: string[] }[] | null) => void
+  setGeneratedOutline: (outline: { beginning: string; development: string; climax: string; preview: string } | null) => void
 }
 
 export const useAppStore = create<AppState>()(
@@ -263,6 +269,12 @@ export const useAppStore = create<AppState>()(
       // V5: Prompt Engine - 選中的模板
       selectedTemplate: null,
       setSelectedTemplate: (templateId) => set({ selectedTemplate: templateId }),
+      
+      // V5.1: 生成的角色和大綱
+      generatedCharacters: null,
+      generatedOutline: null,
+      setGeneratedCharacters: (characters) => set({ generatedCharacters: characters }),
+      setGeneratedOutline: (outline) => set({ generatedOutline: outline }),
     }),
     {
       name: 'nyx-ai-storage',
