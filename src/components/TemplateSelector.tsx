@@ -3,71 +3,17 @@
 import { useState, useEffect } from "react"
 import { useAppStore } from "@/store/useAppStore"
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Wand2, Plus, Trash2, BookOpen, Sparkles, Save, X } from "lucide-react"
+import { BookOpen, Save, Plus, Trash2, Crown, Flame, Star, Search, X } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { officialTemplates, CATEGORY_CONFIG } from "@/data/templates"
+import type { Template, TemplateCategory } from "@/types/template"
+import { buildSystemPromptFromTemplate, buildUserPromptFromTemplate } from "@/lib/prompt-builder"
 
-// 預設模板
-export const PRESET_TEMPLATES = [
-  {
-    id: "preset-1",
-    name: "霸道總裁",
-    description: "冷酷總裁遇上倔強小秘書，辦公室的權力遊戲",
-    storyInput: "她只是一個普通的助理，卻在一次加班時被總裁叫進辦公室...",
-    topics: [{ category: "都市", subcategory: "", item: "辦公室" }, { category: "職業", subcategory: "", item: "上司" }],
-    characters: [
-      { id: "char-1", name: "冷傲天", description: "28歲，跨國集團總裁，冷酷霸道，對她卻有莫名的占有欲", traits: ["霸道", "冷酷", "占有欲強"] },
-      { id: "char-2", name: "林小雅", description: "23歲，總裁助理，清純倔強，不願屈服於權勢", traits: ["清純", "倔強", "小白兔"] }
-    ]
-  },
-  {
-    id: "preset-2",
-    name: "異世界後宮",
-    description: "穿越異世界，成為龍傲天，收集各種族美女",
-    storyInput: "我只是在玩遊戲時睡著了，醒來卻發現自己在一個陌生的房間，床上還躺著一個精靈族美少女...",
-    topics: [{ category: "穿越", subcategory: "", item: "異世界轉生" }, { category: "幻想", subcategory: "", item: "龍族後宮" }],
-    characters: [
-      { id: "char-1", name: "艾莉婭", description: "精靈族公主，高傲但對主人絕對忠誠", traits: ["精靈", "高傲", "忠誠"] },
-      { id: "char-2", name: "莉莉絲", description: "魅魔女僕，善於挑逗，總是想方設法誘惑主人", traits: ["魅魔", "淫蕩", "挑逗"] }
-    ]
-  },
-  {
-    id: "preset-3",
-    name: "禁忌師生",
-    description: "嚴厲教官與叛逆學生的秘密關係",
-    storyInput: "軍訓結束那天，她故意留在教室等所有人都離開，因為她知道教官會來找她...",
-    topics: [{ category: "禁忌", subcategory: "", item: "老師學生" }, { category: "職業", subcategory: "", item: "教官" }],
-    characters: [
-      { id: "char-1", name: "嚴鐵軍", description: "35歲，軍事教官，鐵血嚴厲，卻對她無法自拔", traits: ["嚴厲", "鐵血", "反差"] },
-      { id: "char-2", name: "蘇可可", description: "19歲，大一新生，外表甜美內心叛逆，專門挑戰權威", traits: ["叛逆", "甜美", "誘惑"] }
-    ]
-  },
-  {
-    id: "preset-4",
-    name: "鄰居誘惑",
-    description: "隔壁搬來的美人妻，總是在陽台上對你微笑",
-    storyInput: "新搬來的鄰居是個人妻，丈夫經常出差。每次我在陽台抽煙，她總會穿著睡衣出來晾衣服...",
-    topics: [{ category: "禁忌", subcategory: "", item: "人妻" }, { category: "都市", subcategory: "", item: "鄰居誘惑" }],
-    characters: [
-      { id: "char-1", name: "王太太", description: "30歲，寂寞人妻，丈夫冷落，渴望被關注", traits: ["寂寞", "人妻", "主動"] }
-    ]
-  },
-  {
-    id: "preset-5",
-    name: "醫院艷遇",
-    description: "住院期間，美麗的護士小姐特別關照你",
-    storyInput: "住院第三天，那位漂亮的護士又來查房了。這次她說要檢查一個特殊的地方...",
-    topics: [{ category: "職業", subcategory: "", item: "護士" }, { category: "都市", subcategory: "", item: "醫生病人" }],
-    characters: [
-      { id: "char-1", name: "白小護", description: "26歲，護士，溫柔體貼，對病人有特殊的關懷方式", traits: ["護士", "溫柔", "體貼"] }
-    ]
-  }
-]
-
-interface StoryTemplate {
+// ========== 舊版相容類型（給 useAppStore 用）==========
+interface LegacyTemplate {
   id: string
   name: string
   description: string
@@ -76,52 +22,192 @@ interface StoryTemplate {
   characters: Array<{ id: string; name: string; description: string; traits: string[] }>
 }
 
+// ========== 模板轉換：新格式 → 舊格式（回填 store）==========
+function convertToLegacy(template: Template, userInput?: string): LegacyTemplate {
+  const char = template.characterConfig
+  return {
+    id: template.id,
+    name: template.name,
+    description: template.description,
+    storyInput: userInput || template.promptBuilder.baseScenario,
+    topics: [{ category: template.category, subcategory: "", item: template.name }],
+    characters: char ? [{
+      id: `${template.id}-char`,
+      name: char.name,
+      description: `${char.age}，${char.role}。${char.personality}`,
+      traits: [char.role, char.desireStyle.split('，')[0]]
+    }] : []
+  }
+}
+
+// ========== 分類標籤 ==========
+function CategoryTab({
+  label, emoji, active, onClick
+}: { label: string; emoji: string; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-medium transition-all whitespace-nowrap",
+        active
+          ? "bg-purple-600 text-white"
+          : "bg-white/5 text-white/60 hover:bg-white/10 hover:text-white"
+      )}
+    >
+      <span>{emoji}</span>
+      <span>{label}</span>
+    </button>
+  )
+}
+
+// ========== 模板卡片 ==========
+function TemplateCard({
+  template, onSelect, isFavorite, onToggleFavorite
+}: {
+  template: Template
+  onSelect: (t: Template) => void
+  isFavorite: boolean
+  onToggleFavorite: (id: string) => void
+}) {
+  return (
+    <div
+      className={cn(
+        "group relative rounded-xl border p-4 cursor-pointer transition-all duration-200",
+        "bg-white/5 hover:bg-white/10 border-white/10 hover:border-purple-500/50"
+      )}
+      onClick={() => onSelect(template)}
+    >
+      {/* Premium 標識 */}
+      {template.isPremium && (
+        <div className="absolute top-3 right-3 flex items-center gap-1 px-2 py-0.5 rounded-full bg-yellow-500/20 border border-yellow-500/30">
+          <Crown className="w-3 h-3 text-yellow-400" />
+          <span className="text-xs text-yellow-400">高級</span>
+        </div>
+      )}
+
+      {/* 收藏按鈕 */}
+      <button
+        className={cn(
+          "absolute top-3 right-3 p-1 rounded-full transition-all opacity-0 group-hover:opacity-100",
+          template.isPremium && "right-16",
+          isFavorite && "opacity-100 text-yellow-400"
+        )}
+        onClick={(e) => { e.stopPropagation(); onToggleFavorite(template.id) }}
+      >
+        <Star className={cn("w-4 h-4", isFavorite ? "fill-yellow-400 text-yellow-400" : "text-white/40")} />
+      </button>
+
+      {/* 內容 */}
+      <h3 className="text-sm font-semibold text-white pr-8">{template.name}</h3>
+      <p className="text-xs text-white/50 mt-1 line-clamp-2">{template.description}</p>
+
+      {/* 角色名稱 */}
+      {template.characterConfig && (
+        <div className="mt-2 flex flex-wrap gap-1">
+          <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300">
+            {template.characterConfig.name} · {template.characterConfig.role}
+          </span>
+        </div>
+      )}
+
+      {/* 字數倍率 */}
+      {template.wordCostMultiplier > 1 && (
+        <p className="text-xs text-yellow-400/70 mt-1.5">
+          消耗 {template.wordCostMultiplier}x 字數
+        </p>
+      )}
+
+      {/* 套用按鈕（hover 顯示）*/}
+      <div className="mt-3 opacity-0 group-hover:opacity-100 transition-opacity">
+        <button className="w-full text-xs py-1.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-medium transition-colors">
+          套用此模板
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ========== Trending 區塊 ==========
+const TRENDING_ITEMS = [
+  { text: "女上司深夜叫我留下加班", category: "career" },
+  { text: "鄰居人妻穿著睡衣敲門求助", category: "mature" },
+  { text: "女老師的秘密補習課", category: "campus" },
+  { text: "青梅竹馬突然告白了", category: "classic" },
+  { text: "校花學姐主動找我聊天", category: "campus" },
+  { text: "離婚少婦入住我家", category: "mature" },
+]
+
+// ========== 主組件 ==========
 export function TemplateSelector() {
   const [isOpen, setIsOpen] = useState(false)
-  const [activeTab, setActiveTab] = useState<"presets" | "saved">("presets")
-  const [savedTemplates, setSavedTemplates] = useState<StoryTemplate[]>([])
+  const [activeCategory, setActiveCategory] = useState<TemplateCategory | 'all' | 'favorite'>('all')
+  const [searchQuery, setSearchQuery] = useState("")
+  const [favorites, setFavorites] = useState<string[]>([])
+  const [savedTemplates, setSavedTemplates] = useState<LegacyTemplate[]>([])
   const [showSaveDialog, setShowSaveDialog] = useState(false)
   const [saveForm, setSaveForm] = useState({ name: "", description: "" })
-  
-  const { 
-    setStoryInput, 
-    setSelectedTopics, 
-    characters, 
+
+  const {
+    setStoryInput,
+    setSelectedTopics,
     addCharacter,
     setCharacters,
     storyInput,
-    selectedTopics
+    selectedTopics,
+    characters
   } = useAppStore()
-  
-  // 從 localStorage 載入儲存模板（只在客戶端執行）
+
+  // 載入收藏和儲存模板
   useEffect(() => {
-    const saved = localStorage.getItem("nyx-ai-templates")
-    if (saved) {
-      try {
-        setSavedTemplates(JSON.parse(saved))
-      } catch (e) {
-        console.error("Failed to load templates:", e)
-      }
-    }
+    try {
+      const favs = localStorage.getItem("nyx-template-favorites")
+      if (favs) setFavorites(JSON.parse(favs))
+      const saved = localStorage.getItem("nyx-ai-templates")
+      if (saved) setSavedTemplates(JSON.parse(saved))
+    } catch (e) { /* ignore */ }
   }, [])
-  
-  const handleApplyTemplate = (template: StoryTemplate) => {
-    setStoryInput(template.storyInput)
-    setSelectedTopics(template.topics)
-    
-    // V4.2: 先清除現有角色，再添加模板角色
+
+  // 過濾模板
+  const filteredTemplates = officialTemplates.filter(t => {
+    if (!t.isActive) return false
+    if (activeCategory === 'favorite') return favorites.includes(t.id)
+    if (activeCategory !== 'all' && t.category !== activeCategory) return false
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase()
+      return t.name.includes(q) || t.description.includes(q) || t.tags.some(tag => tag.includes(q))
+    }
+    return true
+  })
+
+  // 套用模板
+  const handleSelectTemplate = (template: Template) => {
+    const legacy = convertToLegacy(template)
+    setStoryInput(legacy.storyInput)
+    setSelectedTopics(legacy.topics)
     setCharacters([])
-    template.characters.forEach(char => {
-      addCharacter(char)
-    })
-    
+    legacy.characters.forEach(char => addCharacter(char))
     setIsOpen(false)
   }
-  
+
+  // 套用 Trending
+  const handleTrendingClick = (text: string) => {
+    setStoryInput(text)
+    setIsOpen(false)
+  }
+
+  // 切換收藏
+  const handleToggleFavorite = (id: string) => {
+    const updated = favorites.includes(id)
+      ? favorites.filter(f => f !== id)
+      : [...favorites, id]
+    setFavorites(updated)
+    localStorage.setItem("nyx-template-favorites", JSON.stringify(updated))
+  }
+
+  // 儲存當前設定
   const handleSaveCurrent = () => {
     if (!storyInput.trim()) return
-    
-    const newTemplate: StoryTemplate = {
+    const newTemplate: LegacyTemplate = {
       id: `custom-${Date.now()}`,
       name: saveForm.name || "自定義模板",
       description: saveForm.description || "",
@@ -129,25 +215,30 @@ export function TemplateSelector() {
       topics: selectedTopics,
       characters
     }
-    
     const updated = [...savedTemplates, newTemplate]
     setSavedTemplates(updated)
     localStorage.setItem("nyx-ai-templates", JSON.stringify(updated))
-    
     setShowSaveDialog(false)
     setSaveForm({ name: "", description: "" })
   }
-  
-  const handleDeleteTemplate = (id: string) => {
+
+  const handleDeleteSaved = (id: string) => {
     const updated = savedTemplates.filter(t => t.id !== id)
     setSavedTemplates(updated)
     localStorage.setItem("nyx-ai-templates", JSON.stringify(updated))
   }
-  
-  const templates = activeTab === "presets" ? PRESET_TEMPLATES : savedTemplates
-  
+
+  const handleApplySaved = (template: LegacyTemplate) => {
+    setStoryInput(template.storyInput)
+    setSelectedTopics(template.topics)
+    setCharacters([])
+    template.characters.forEach(char => addCharacter(char))
+    setIsOpen(false)
+  }
+
   return (
     <>
+      {/* 觸發按鈕 */}
       <Button
         variant="outline"
         size="sm"
@@ -155,135 +246,181 @@ export function TemplateSelector() {
         className="w-full nyx-border nyx-text-secondary hover:nyx-surface-2"
       >
         <BookOpen className="w-4 h-4 mr-2" />
-        套用模板
+        故事模板
       </Button>
-      
+
+      {/* 主對話框 */}
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="nyx-surface nyx-border nyx-text-primary max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Wand2 className="w-5 h-5 text-purple-400" />
-              故事模板
+        <DialogContent className="nyx-surface nyx-border nyx-text-primary max-w-3xl max-h-[85vh] overflow-hidden flex flex-col p-0">
+          <DialogHeader className="px-6 pt-6 pb-0">
+            <DialogTitle className="text-xl font-bold text-white">
+              選擇故事模板
             </DialogTitle>
-            <DialogDescription className="nyx-text-muted">
-              選擇一個預設模板快速開始，或儲存當前設定為模板
-            </DialogDescription>
           </DialogHeader>
-          
-          {/* 切換標籤 */}
-          <div className="flex gap-2 border-b nyx-border pb-2">
-            <Button
-              variant={activeTab === "presets" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setActiveTab("presets")}
-              className={activeTab === "presets" ? "bg-purple-600" : "nyx-text-muted"}
-            >
-              <Sparkles className="w-4 h-4 mr-1" />
-              預設模板
-            </Button>
-            <Button
-              variant={activeTab === "saved" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setActiveTab("saved")}
-              className={activeTab === "saved" ? "bg-purple-600" : "nyx-text-muted"}
-            >
-              <Save className="w-4 h-4 mr-1" />
-              我的模板 ({savedTemplates.length})
-            </Button>
+
+          {/* 搜索框 */}
+          <div className="px-6 py-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+              <input
+                type="text"
+                placeholder="搜索模板..."
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm placeholder:text-white/30 focus:outline-none focus:border-purple-500/50"
+              />
+              {searchQuery && (
+                <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2">
+                  <X className="w-4 h-4 text-white/40 hover:text-white" />
+                </button>
+              )}
+            </div>
           </div>
-          
-          {/* 儲存當前按鈕（只在「我的模板」頁顯示） */}
-          {activeTab === "saved" && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowSaveDialog(true)}
-              className="w-full nyx-border nyx-text-secondary"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              儲存當前設定為模板
-            </Button>
-          )}
-          
-          {/* 模板列表 */}
-          <div className="grid gap-3">
-            {templates.map((template) => (
-              <Card key={template.id} className="nyx-surface-2 nyx-border hover:border-purple-500/50 transition-colors">
-                <CardHeader className="pb-2">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <CardTitle className="text-sm nyx-text-primary">{template.name}</CardTitle>
-                      <p className="text-xs nyx-text-muted mt-1">{template.description}</p>
+
+          {/* 分類導航 */}
+          <div className="px-6 pb-3">
+            <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
+              <CategoryTab label="全部" emoji="🔥" active={activeCategory === 'all'} onClick={() => setActiveCategory('all')} />
+              {CATEGORY_CONFIG.map(cat => (
+                <CategoryTab
+                  key={cat.id}
+                  label={cat.name}
+                  emoji={cat.emoji}
+                  active={activeCategory === cat.id}
+                  onClick={() => setActiveCategory(cat.id)}
+                />
+              ))}
+              <CategoryTab
+                label={`收藏 (${favorites.length})`}
+                emoji="⭐"
+                active={activeCategory === 'favorite'}
+                onClick={() => setActiveCategory('favorite')}
+              />
+            </div>
+          </div>
+
+          {/* 主內容區 */}
+          <div className="flex-1 overflow-y-auto px-6 pb-6 space-y-6">
+
+            {/* Trending（只在全部頁顯示）*/}
+            {activeCategory === 'all' && !searchQuery && (
+              <div>
+                <h3 className="text-sm font-semibold text-white/70 mb-2 flex items-center gap-1">
+                  <Flame className="w-4 h-4 text-orange-400" />
+                  今日熱門
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {TRENDING_ITEMS.map((item, i) => (
+                    <button
+                      key={i}
+                      onClick={() => handleTrendingClick(item.text)}
+                      className="text-xs px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-white/70 hover:bg-purple-500/20 hover:border-purple-500/40 hover:text-white transition-all"
+                    >
+                      🔥 {item.text}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 官方模板網格 */}
+            {filteredTemplates.length > 0 ? (
+              <div>
+                {activeCategory === 'all' && !searchQuery && (
+                  <h3 className="text-sm font-semibold text-white/70 mb-3">官方模板 ({filteredTemplates.length})</h3>
+                )}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {filteredTemplates.map(template => (
+                    <TemplateCard
+                      key={template.id}
+                      template={template}
+                      onSelect={handleSelectTemplate}
+                      isFavorite={favorites.includes(template.id)}
+                      onToggleFavorite={handleToggleFavorite}
+                    />
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <p className="text-center text-white/40 py-8">
+                {activeCategory === 'favorite' ? '還沒有收藏的模板' : '沒有找到相關模板'}
+              </p>
+            )}
+
+            {/* 我的收藏模板 */}
+            {savedTemplates.length > 0 && activeCategory === 'all' && !searchQuery && (
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-semibold text-white/70 flex items-center gap-1">
+                    <Save className="w-4 h-4" />
+                    我的模板 ({savedTemplates.length})
+                  </h3>
+                  <button
+                    onClick={() => setShowSaveDialog(true)}
+                    className="text-xs px-3 py-1 rounded-full bg-white/5 border border-white/10 text-white/50 hover:text-white transition-all"
+                  >
+                    <Plus className="w-3 h-3 inline mr-1" />
+                    儲存當前
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {savedTemplates.map(t => (
+                    <div key={t.id} className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/10 hover:border-purple-500/30 transition-all">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-white truncate">{t.name}</p>
+                        <p className="text-xs text-white/40 truncate">{t.description || t.storyInput.slice(0, 30) + '...'}</p>
+                      </div>
+                      <div className="flex gap-1 ml-2">
+                        <button onClick={() => handleApplySaved(t)} className="text-xs px-2 py-1 rounded-lg bg-purple-600 hover:bg-purple-700 text-white transition-colors">套用</button>
+                        <button onClick={() => handleDeleteSaved(t.id)} className="p-1 rounded-lg hover:bg-red-500/20 text-white/30 hover:text-red-400 transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
+                      </div>
                     </div>
-                    <div className="flex gap-1">
-                      {activeTab === "saved" && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteTemplate(template.id)}
-                          className="h-7 w-7 p-0 text-red-400"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      )}
-                      <Button
-                        size="sm"
-                        onClick={() => handleApplyTemplate(template)}
-                        className="bg-purple-600 hover:bg-purple-700"
-                      >
-                        套用
-                      </Button>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <p className="text-xs nyx-text-secondary line-clamp-2">{template.storyInput}</p>
-                  {template.characters.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {template.characters.map(char => (
-                        <span key={char.id} className="text-xs px-1.5 py-0.5 nyx-surface-3 rounded nyx-text-muted">
-                          {char.name}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 儲存按鈕（當沒有我的模板時） */}
+            {savedTemplates.length === 0 && activeCategory === 'all' && !searchQuery && (
+              <button
+                onClick={() => setShowSaveDialog(true)}
+                className="w-full py-3 rounded-xl border border-dashed border-white/20 text-white/40 hover:text-white/60 hover:border-white/30 text-sm transition-all"
+              >
+                <Plus className="w-4 h-4 inline mr-2" />
+                儲存當前設定為我的模板
+              </button>
+            )}
           </div>
         </DialogContent>
       </Dialog>
-      
+
       {/* 儲存模板對話框 */}
       <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
-        <DialogContent className="nyx-surface nyx-border nyx-text-primary">
+        <DialogContent className="nyx-surface nyx-border nyx-text-primary max-w-sm">
           <DialogHeader>
-            <DialogTitle>儲存模板</DialogTitle>
-            <DialogDescription className="nyx-text-muted">
-              為當前設定取個名字，方便下次使用
-            </DialogDescription>
+            <DialogTitle>儲存為我的模板</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-4 mt-2">
             <div>
-              <label className="text-sm nyx-text-muted">模板名稱</label>
+              <label className="text-sm text-white/60">模板名稱</label>
               <Input
                 value={saveForm.name}
-                onChange={(e) => setSaveForm({ ...saveForm, name: e.target.value })}
-                placeholder="例如：我的霸道總裁設定"
-                className="nyx-input"
+                onChange={e => setSaveForm({ ...saveForm, name: e.target.value })}
+                placeholder="例如：我的女上司設定"
+                className="nyx-input mt-1"
               />
             </div>
             <div>
-              <label className="text-sm nyx-text-muted">描述（可選）</label>
+              <label className="text-sm text-white/60">描述（可選）</label>
               <Input
                 value={saveForm.description}
-                onChange={(e) => setSaveForm({ ...saveForm, description: e.target.value })}
-                placeholder="簡單描述這個模板的內容..."
-                className="nyx-input"
+                onChange={e => setSaveForm({ ...saveForm, description: e.target.value })}
+                placeholder="簡單描述..."
+                className="nyx-input mt-1"
               />
             </div>
-            <Button 
-              onClick={handleSaveCurrent} 
+            <Button
+              onClick={handleSaveCurrent}
               className="w-full bg-purple-600 hover:bg-purple-700"
               disabled={!saveForm.name.trim()}
             >
@@ -296,3 +433,18 @@ export function TemplateSelector() {
     </>
   )
 }
+
+// ========== 向後相容：舊版 PRESET_TEMPLATES 導出 ==========
+export const PRESET_TEMPLATES = officialTemplates.slice(0, 5).map(t => ({
+  id: t.id,
+  name: t.name,
+  description: t.description,
+  storyInput: t.promptBuilder.baseScenario,
+  topics: [{ category: t.category, subcategory: "", item: t.name }],
+  characters: t.characterConfig ? [{
+    id: `${t.id}-char`,
+    name: t.characterConfig.name,
+    description: `${t.characterConfig.age}，${t.characterConfig.personality}`,
+    traits: [t.characterConfig.role]
+  }] : []
+}))
