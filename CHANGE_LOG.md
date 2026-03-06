@@ -17,6 +17,41 @@
 
 ## 變更記錄
 
+### [2026-03-06] V5.0: Phase 4 & 5 完成 - 角色卡預覽與 Landing Page 增強
+
+**變更類型**: 功能實現
+**相關文件**: 
+- `TemplateSelector.tsx` - Phase 4 角色卡預覽
+- `app/page.tsx` (Landing) - Phase 5 熱門模板快捷入口
+- `app/app/page.tsx` - URL 模板參數支持
+
+**Phase 4: 角色卡預覽整合**:
+1. 添加 `previewTemplate` 和 `editedCharacter` 狀態管理
+2. 創建角色卡預覽模態框，支持：
+   - 顯示模板生成的自動角色卡
+   - 編輯角色名稱、年齡、身份、性格、外貌
+   - 「確認使用」按鈕套用自定義角色
+3. 修改 `handleSelectTemplate` 邏輯：
+   - 有角色配置的模板 → 顯示預覽
+   - 無角色模板 → 直接套用
+
+**Phase 5: Landing Page 快速生成增強**:
+1. 從 `officialTemplates` 動態生成熱門模板列表（8個免費模板）
+2. 根據模板分類自動分配顏色主題
+3. 點擊熱門模板跳轉至 `/app?template={id}&prompt={desc}`
+4. `app/page.tsx` 支持從 URL 讀取 `template` 參數：
+   - 自動填充模板基礎場景
+   - 自動創建模板角色
+   - 自動設置主題標籤
+
+**測試驗證**:
+- [x] TemplateSelector 角色預覽模態框正常顯示
+- [x] 角色編輯後正確保存到 store
+- [x] Landing Page 熱門模板正確渲染
+- [x] 點擊模板跳轉並自動應用參數
+
+---
+
 ### [2026-03-05] V4.2: 修復模板切換時角色卡未清除
 
 **變更類型**: Bug 修復

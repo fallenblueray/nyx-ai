@@ -13,8 +13,13 @@ export function getTranslation(lang: Language): Translations {
   return translations[lang] || zhTW;
 }
 
-export function getNestedTranslation(obj: any, path: string): string {
-  return path.split('.').reduce((acc, key) => acc?.[key], obj) || path;
+export function getNestedTranslation(obj: unknown, path: string): string {
+  return path.split('.').reduce((acc: unknown, key) => {
+    if (acc && typeof acc === 'object' && key in acc) {
+      return (acc as Record<string, unknown>)[key];
+    }
+    return undefined;
+  }, obj) as string || path;
 }
 
 export const DEFAULT_LANGUAGE: Language = 'zh-TW';

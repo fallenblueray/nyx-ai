@@ -12,7 +12,8 @@ import { useAppStore } from "@/store/useAppStore"
 function useMounted() {
   const [mounted, setMounted] = useState(false)
   useEffect(() => {
-    queueMicrotask(() => setMounted(true))
+    const timer = setTimeout(() => setMounted(true), 0)
+    return () => clearTimeout(timer)
   }, [])
   return mounted
 }
@@ -48,8 +49,10 @@ export function UserMenu() {
   useEffect(() => {
     if (session?.user) {
       getUserWordCount().then(({ wordCount, isFirstPurchase }) => {
-        setWordCount(wordCount)
-        setIsFirstPurchase(isFirstPurchase)
+        queueMicrotask(() => {
+          setWordCount(wordCount)
+          setIsFirstPurchase(isFirstPurchase)
+        })
       })
       
       // TODO: Phase 4 完整實現時，從 Supabase 獲取真實統計
@@ -57,10 +60,12 @@ export function UserMenu() {
       const savedStories = localStorage.getItem('nyx-ai-stories-count')
       const savedCharacters = localStorage.getItem('nyx-ai-characters-count')
       
-      setStats({
-        totalStories: savedStories ? parseInt(savedStories) : 0,
-        totalCharacters: savedCharacters ? parseInt(savedCharacters) : 0,
-        totalWordsWritten: 0 // 待 API 實現
+      queueMicrotask(() => {
+        setStats({
+          totalStories: savedStories ? parseInt(savedStories) : 0,
+          totalCharacters: savedCharacters ? parseInt(savedCharacters) : 0,
+          totalWordsWritten: 0 // 待 API 實現
+        })
       })
     }
   }, [session])
@@ -73,8 +78,10 @@ export function UserMenu() {
       const params = new URLSearchParams(window.location.search)
       if (params.get('payment') === 'success') {
         getUserWordCount().then(({ wordCount, isFirstPurchase }) => {
-          setWordCount(wordCount)
-          setIsFirstPurchase(isFirstPurchase)
+          queueMicrotask(() => {
+            setWordCount(wordCount)
+            setIsFirstPurchase(isFirstPurchase)
+          })
         })
         window.history.replaceState({}, '', '/app')
       }

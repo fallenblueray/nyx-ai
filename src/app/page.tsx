@@ -9,20 +9,30 @@ import { ChevronRight, Sparkles, Zap, BookOpen, Users, Clock, PenTool, Layers, D
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { officialTemplates } from "@/data/templates";
+import type { Template } from "@/types/template";
 
 const NYX_GRADIENT = ["#1e1b4b", "#3730a3", "#6d28d9", "#8b5cf6", "#a78bfa"];
 
 // 熱門題材數據
-const HOT_TOPICS = [
-  { title: "女上司", desc: "今晚加班的人只有你。", color: "from-purple-500/20 to-pink-500/20" },
-  { title: "人妻誘惑", desc: "她望向我的眼神，帶著說不清的意味。", color: "from-rose-500/20 to-orange-500/20" },
-  { title: "青梅竹馬", desc: "從小到大，我們之間總有些说不清。", color: "from-blue-500/20 to-cyan-500/20" },
-  { title: "同學會重逢", desc: "多年不見，她變得不太一樣了。", color: "from-indigo-500/20 to-purple-500/20" },
-  { title: "偶像邂逅", desc: "沒想到會在這裡遇見她。", color: "from-pink-500/20 to-rose-500/20" },
-  { title: "鄰居姐姐", desc: "她總是在深夜才有空。", color: "from-amber-500/20 to-orange-500/20" },
-  { title: "秘密戀情", desc: "這段關係，不能被任何人知道。", color: "from-red-500/20 to-pink-500/20" },
-  { title: "酒店邂逅", desc: "電梯裡的偶遇改變了一切。", color: "from-violet-500/20 to-purple-500/20" },
-];
+// ========== Phase 5: 熱門模板快捷入口 ==========
+// 從官方模板中選取高質量模板作為熱門推薦
+const HOT_TOPIC_TEMPLATES = officialTemplates
+  .filter(t => t.isActive && !t.isPremium) // 只選免費且活躍的
+  .slice(0, 8) // 取前 8 個
+  .map(t => ({
+    id: t.id,
+    title: t.name,
+    desc: t.description.slice(0, 30) + (t.description.length > 30 ? '...' : ''),
+    color: t.category === 'classic' ? 'from-purple-500/20 to-pink-500/20' :
+           t.category === 'career' ? 'from-amber-500/20 to-orange-500/20' :
+           t.category === 'campus' ? 'from-green-500/20 to-emerald-500/20' :
+           t.category === 'mature' ? 'from-rose-500/20 to-red-500/20' :
+           t.category === 'taboo' ? 'from-red-500/20 to-pink-500/20' :
+           t.category === 'ntr' ? 'from-orange-500/20 to-amber-500/20' :
+           t.category === 'extreme' ? 'from-violet-500/20 to-fuchsia-500/20' :
+           'from-blue-500/20 to-cyan-500/20'
+  }));
 
 // NyxAI 能力
 const CAPABILITIES = [
@@ -255,10 +265,10 @@ export default function Home() {
             </p>
             
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {HOT_TOPICS.map((topic, idx) => (
+              {HOT_TOPIC_TEMPLATES.map((topic) => (
                 <Link
-                  key={idx}
-                  href={`/app?topic=${encodeURIComponent(topic.title)}&prompt=${encodeURIComponent(topic.desc)}`}
+                  key={topic.id}
+                  href={`/app?template=${encodeURIComponent(topic.id)}&prompt=${encodeURIComponent(topic.desc)}`}
                   className="group"
                 >
                   <div className={`rounded-xl border border-white/10 bg-gradient-to-br ${topic.color} p-5 backdrop-blur-sm transition-all duration-300 hover:border-white/30 hover:scale-[1.02] h-full`}>

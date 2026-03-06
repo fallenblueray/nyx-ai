@@ -10,9 +10,12 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
-  Brain, RotateCcw, Check, Loader2, BookOpen, Palette
+  Brain, RotateCcw, Check, Loader2, BookOpen, Palette, AlignLeft
 } from "lucide-react"
-import { updatePreferredStyles, updateStyleNotes, resetPreferences } from "@/app/actions/preferences"
+import { updatePreferredStyles, updatePreferredWordLength, updateStyleNotes, resetPreferences } from "@/app/actions/preferences"
+import { updatePreferredTheme } from "@/app/actions/preferences-theme"
+import type { UserPreferences } from "@/app/actions/preferences"
+import { ThemeSelector } from "./ThemeSelector"
 import { cn } from "@/lib/utils"
 
 const STYLE_OPTIONS = [
@@ -26,12 +29,12 @@ const STYLE_OPTIONS = [
   { id: "dominant", label: "支配" },
 ]
 
-interface UserPreferences {
-  preferred_styles?: string[]
-  writing_style_notes?: string
-  total_stories_generated: number
-  total_words_generated: number
-}
+const WORD_LENGTH_OPTIONS = [
+  { value: 500, label: "短篇 (~500字)" },
+  { value: 1000, label: "中篇 (~1000字)" },
+  { value: 2000, label: "長篇 (~2000字)" },
+  { value: 3000, label: "超長 (~3000字)" },
+]
 
 interface MemorySettingsProps {
   initialPreferences: UserPreferences
@@ -44,9 +47,23 @@ export function MemorySettings({ initialPreferences }: MemorySettingsProps) {
   const [selectedStyles, setSelectedStyles] = useState<string[]>(
     initialPreferences.preferred_styles || []
   )
+  const [wordLength, setWordLength] = useState<number>(
+    initialPreferences.preferred_word_length || 1000
+  )
+  const [selectedTheme, setSelectedTheme] = useState<string>(
+    initialPreferences.preferred_theme || 'midnight-passion'
+  )
   const [styleNotes, setStyleNotes] = useState(
     initialPreferences.writing_style_notes || ""
   )
+
+  const handleThemeChange = (themeId: string) => {
+    setSelectedTheme(themeId)
+    startTransition(async () => {
+      await updatePreferredTheme(themeId)
+      showSaved("主題偏好已更新")
+    })
+  }
 
   const showSaved = (msg: string) => {
     setSavedMsg(msg)
@@ -65,6 +82,14 @@ export function MemorySettings({ initialPreferences }: MemorySettingsProps) {
     })
   }
 
+  const handleWordLength = (length: number) => {
+    setWordLength(length)
+    startTransition(async () => {
+      await updatePreferredWordLength(length)
+      showSaved("字數偏好已更新")
+    })
+  }
+
   const handleStyleNotes = () => {
     startTransition(async () => {
       await updateStyleNotes(styleNotes)
@@ -77,6 +102,7 @@ export function MemorySettings({ initialPreferences }: MemorySettingsProps) {
     startTransition(async () => {
       await resetPreferences()
       setSelectedStyles([])
+      setWordLength(1000)
       setStyleNotes("")
       showSaved("記憶已清除")
     })
@@ -144,7 +170,45 @@ export function MemorySettings({ initialPreferences }: MemorySettingsProps) {
           </div>
         </CardContent>
       </Card>
-      
+
+      {/* 字數偏好 */}
+      <Card className="bg-[var(--surface)] border-[var(--border)]">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-[var(--text-primary)] flex items-center gap-2 text-base">
+            <AlignLeft className="w-4 h-4 text-green-400" />
+            預設字數長度
+          </CardTitle>
+          <CardDescription className="text-[var(--text-secondary)] text-sm">
+            AI 生成時的目標字數
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 gap-2">
+            {WORD_LENGTH_OPTIONS.map(opt => (
+              <Button
+                key={opt.value}
+                variant={wordLength === opt.value ? "default" : "outline"}
+                size="sm"
+                className={cn(
+                  "justify-start",
+                  wordLength === opt.value
+                    ? "bg-green-700 hover:bg-green-800 text-white border-green-600"
+                    : "border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]"
+                )}
+                onClick={() => handleWordLength(opt.value)}
+                disabled={isPending}
+              >
+                {wordLength === opt.value && <Check className="w-3 h-3 mr-1" />}
+                {opt.label}
+              </Button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* V2.9: 主題偏好 */}
+      <ThemeSelector value={selectedTheme} onChange={handleThemeChange} />
+
       {/* 個性化指令 */}
       <Card className="bg-[var(--surface)] border-[var(--border)]">
         <CardHeader className="pb-3">

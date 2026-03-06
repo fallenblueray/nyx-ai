@@ -6,69 +6,67 @@ import { Label } from '@/components/ui/label';
 import { Moon, Sun } from 'lucide-react';
 
 interface ThemeSwitcherProps {
-  translations: any;
+  translations: Record<string, unknown>;
 }
 
 type Theme = 'light' | 'dark';
+
+function applyTheme(newTheme: Theme) {
+  const html = document.documentElement;
+  if (newTheme === 'dark') {
+    html.classList.add('dark');
+    html.style.colorScheme = 'dark';
+  } else {
+    html.classList.remove('dark');
+    html.style.colorScheme = 'light';
+  }
+  localStorage.setItem('theme', newTheme);
+}
 
 export function ThemeSwitcher({ translations }: ThemeSwitcherProps) {
   const [theme, setTheme] = useState<Theme>('light');
   const [mounted, setMounted] = useState(false);
 
-  // 初始化主題
   useEffect(() => {
-    setMounted(true);
     const saved = localStorage.getItem('theme') as Theme | null;
     const systemPreference = window.matchMedia('(prefers-color-scheme: dark)')
       .matches
       ? 'dark'
       : 'light';
     const initial = saved || systemPreference;
-    setTheme(initial);
-    applyTheme(initial);
+    queueMicrotask(() => {
+      setTheme(initial);
+      applyTheme(initial);
+      setMounted(true);
+    });
   }, []);
-
-  const applyTheme = (newTheme: Theme) => {
-    const html = document.documentElement;
-    // 立即應用到 DOM（同步操作）
-    if (newTheme === 'dark') {
-      html.classList.add('dark');
-      html.style.colorScheme = 'dark';
-    } else {
-      html.classList.remove('dark');
-      html.style.colorScheme = 'light';
-    }
-    // 確保 localStorage 更新
-    localStorage.setItem('theme', newTheme);
-    console.log('[Theme] Applied:', newTheme, 'classList:', Array.from(html.classList).join(' '));
-  };
 
   const handleThemeChange = (value: string) => {
     const newTheme = value as Theme;
-    console.log('[Theme] User changed to:', newTheme);
-    // 立即應用，然後更新狀態
     applyTheme(newTheme);
     setTheme(newTheme);
   };
 
   if (!mounted) return null;
 
+  const t = translations as { settings?: { appearance?: { label?: string; light?: string; dark?: string } } };
+
   return (
     <div className="space-y-4">
-      <Label>{translations.settings.appearance.label}</Label>
+      <Label>{t.settings?.appearance?.label ?? '外觀'}</Label>
       <RadioGroup value={theme} onValueChange={handleThemeChange}>
         <div className="flex items-center space-x-2">
           <RadioGroupItem value="light" id="light" />
           <Label htmlFor="light" className="flex items-center space-x-2 cursor-pointer">
             <Sun className="h-4 w-4" />
-            <span>{translations.settings.appearance.light}</span>
+            <span>{t.settings?.appearance?.light ?? '淺色'}</span>
           </Label>
         </div>
         <div className="flex items-center space-x-2">
           <RadioGroupItem value="dark" id="dark" />
           <Label htmlFor="dark" className="flex items-center space-x-2 cursor-pointer">
             <Moon className="h-4 w-4" />
-            <span>{translations.settings.appearance.dark}</span>
+            <span>{t.settings?.appearance?.dark ?? '深色'}</span>
           </Label>
         </div>
       </RadioGroup>

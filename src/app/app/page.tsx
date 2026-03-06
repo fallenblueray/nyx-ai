@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from "react"
 import { useSearchParams } from "next/navigation"
+import { officialTemplates } from "@/data/templates"
+import type { Template } from "@/types/template"
 import { useAppStore } from "@/store/useAppStore"
-import { TopicSelector } from "@/components/TopicSelector"
 import { CharacterManager } from "@/components/CharacterManager"
 import { PerspectiveSelector } from "@/components/PerspectiveSelector"
 import { StoryOutput, GenerateButtons } from "@/components/StoryOutput"
@@ -24,11 +25,10 @@ interface StoryData {
   title: string
   content: string
   created_at?: string
-  topics?: Array<{ category: string; item: string }>
 }
 
 export default function AppPage() {
-  const translations = useTranslation()
+  const translations = useTranslation() as { app?: Record<string, string> }
   const searchParams = useSearchParams()
   const { 
     isPanelCollapsed, 
@@ -37,8 +37,8 @@ export default function AppPage() {
     setStoryInput,
     setStoryOutput,
     storyOutput,
-    selectedTopics,
     characters,
+    setCharacters,
     setError,
     isGenerating
   } = useAppStore()
@@ -50,27 +50,49 @@ export default function AppPage() {
   const [title, setTitle] = useState("")
   const [saved, setSaved] = useState(false)
   
-  // 讀取 URL 參數並填充輸入框
+  // ========== Phase 5: 從 URL 讀取模板參數 ==========
   useEffect(() => {
     const promptFromUrl = searchParams.get('prompt')
-    if (promptFromUrl && !storyInput) {
+    const templateId = searchParams.get('template')
+    
+    if (templateId && !storyInput) {
+      // 查找模板
+      const template = officialTemplates.find(t => t.id === templateId)
+      if (template) {
+        // 自動應用模板輸入
+        const inputText = promptFromUrl || template.promptBuilder.baseScenario
+        setStoryInput(inputText)
+        
+        // 如果有角色，自動創建
+        if (template.characterConfig) {
+          const char = {
+            id: `${template.id}-char-${Date.now()}`,
+            name: template.characterConfig.name,
+            description: `${template.characterConfig.age}，${template.characterConfig.role}。${template.characterConfig.personality}。${template.characterConfig.appearance}`,
+            traits: [template.characterConfig.role, template.characterConfig.desireStyle.split('、')[0]]
+          }
+          // 清空現有角色並添加新角色
+          setCharacters([char])
+        } else {
+          setCharacters([])
+        }
+      }
+    } else if (promptFromUrl && !storyInput) {
       setStoryInput(promptFromUrl)
     }
-  }, [searchParams, setStoryInput, storyInput])
+  }, [searchParams, setStoryInput, storyInput, setCharacters])
   
   const hasOutput = storyOutput.trim().length > 0
   
   const handleSaveDraft = () => {
     localStorage.setItem("nyx-ai-draft", storyInput)
-    alert(translations.app?.draftSaved || "草稿已儲存！")
+    const t = translations as { app?: { draftSaved?: string } }
+    alert(t.app?.draftSaved || "草稿已儲存！")
   }
   
   const handleLoadStory = (story: StoryData) => {
     setStoryOutput(story.content)
     setTitle(story.title || "")
-    if (story.topics) {
-      // Load topics if needed
-    }
   }
   
   const handleSave = async () => {
@@ -80,7 +102,6 @@ export default function AppPage() {
     const result = await saveStory({
       title: title || "無標題",
       content: storyOutput,
-      topics: selectedTopics,
       roles: characters
     })
     
@@ -101,7 +122,6 @@ export default function AppPage() {
     const saveResult = await saveStory({
       title: title || "無標題",
       content: storyOutput,
-      topics: selectedTopics,
       roles: characters,
       is_public: true
     })
@@ -135,7 +155,6 @@ export default function AppPage() {
     
     // 清空所有輸入內容
     setStoryInput("")
-    useAppStore.getState().setSelectedTopics([])
     useAppStore.getState().setCharacters([])
   }
   
@@ -289,13 +308,6 @@ export default function AppPage() {
                 <Save className="w-4 h-4 mr-2" />
                 {translations.app?.saveDraft || "儲存草稿"}
               </Button>
-            </div>
-            
-            <div className="space-y-2">
-              <label className="text-sm font-medium nyx-text-secondary">
-                {translations.app?.topicSelection || "題材選擇"}
-              </label>
-              <TopicSelector />
             </div>
             
             <div className="space-y-2">

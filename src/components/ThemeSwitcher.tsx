@@ -1,10 +1,10 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useLayoutEffect } from "react"
 import { Moon, Sun } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
-export function applyTheme(t: "dark" | "light") {
+function applyTheme(t: "dark" | "light") {
   if (t === "dark") {
     document.documentElement.classList.add("dark")
     document.documentElement.classList.remove("light")
@@ -19,7 +19,7 @@ export function applyTheme(t: "dark" | "light") {
 export function ThemeSwitcher() {
   const [theme, setTheme] = useState<"dark" | "light">("dark")
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     // 讀取 localStorage（key 統一為 "theme"）
     const stored = localStorage.getItem("theme") as "dark" | "light" | null
     const systemDark = window.matchMedia("(prefers-color-scheme: dark)").matches

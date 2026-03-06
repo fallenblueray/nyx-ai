@@ -96,7 +96,7 @@ function GenerationProgress({
   const totalTarget = TARGET_PER_SEGMENT  // V4: 單段生成，固定 2500 字目標
 
   // 計算進度：實際字數 / 總目標字數，最高 95%（保留 5% 給最後處理）
-  let contentProgress = Math.min(95, (contentLength / totalTarget) * 100)
+  const contentProgress = Math.min(95, (contentLength / totalTarget) * 100)
 
   // 如果當前段已完成但字數未達標，根據段數進度補償
   const segmentProgress = ((currentSegment || 1) / totalSegments) * 100
@@ -242,7 +242,7 @@ function EmptyState({
 }
 
 export function StoryOutput() {
-  const { storyOutput, error, isGenerating, currentSceneIndex, totalScenes, isStreaming, storyInput, selectedTopics, characters } = useAppStore()
+  const { storyOutput, error, isGenerating, currentSceneIndex, totalScenes, isStreaming, storyInput, characters } = useAppStore()
   const [isEditing, setIsEditing] = useState(false)
   const [editContent, setEditContent] = useState("")
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -355,7 +355,7 @@ export function StoryOutput() {
           )
         ) : (
           <EmptyState 
-            hasInput={storyInput.trim().length > 0 || selectedTopics.length > 0 || characters.length > 0}
+            hasInput={storyInput.trim().length > 0 || characters.length > 0}
             isGenerating={isGenerating}
           />
         )}
@@ -375,7 +375,6 @@ export function GenerateButtons() {
   const { data: session } = useSession()
   const {
     storyInput,
-    selectedTopics,
     characters,
     storyOutput,
     isGenerating,
@@ -400,7 +399,7 @@ export function GenerateButtons() {
   const [wordInfo, setWordInfo] = useState<{ wordCount: number; isFirstPurchase: boolean } | null>(null)
   const [currentSegment, setCurrentSegment] = useState<number>(0)   // V2.5: 當前分段
 
-  const canGenerate = storyInput.trim().length > 0 || selectedTopics.length > 0 || characters.length > 0
+  const canGenerate = storyInput.trim().length > 0 || characters.length > 0
   const hasOutput = storyOutput.trim().length > 0
   const isLoggedIn = !!session?.user
 
@@ -480,7 +479,7 @@ ${styleSample.slice(0, 300)}
 
 只輸出故事正文。`
     } else {
-      const topicStr = selectedTopics.map(t => `${t.category}: ${t.item}`).join("、")
+      const topicStr = ""
       const charStr = characters.map(c => `${c.name}：${c.description}（${c.traits.join("、")}）`).join("\n")
       
       // V4: 單段生成，自然完結
@@ -507,7 +506,11 @@ ${perspectiveInstruction}
   }
 
   // V3: 生成隱形大綱
-  const generateOutline = async (): Promise<any | null> => {
+  interface StoryOutline {
+    scenes: { title: string; summary: string; targetLength: number }[]
+  }
+  
+  const generateOutline = async (): Promise<StoryOutline | null> => {
     try {
       const response = await fetch("/api/story/outline", {
         method: "POST",
@@ -515,7 +518,7 @@ ${perspectiveInstruction}
         body: JSON.stringify({
           story_start: storyInput,
           characters,
-          genre: selectedTopics.map(t => t.category).join('、'),
+          genre: ["模板"].join('、'),
           style: "流暢細膩、長篇敘事"
         })
       })
@@ -542,10 +545,16 @@ ${perspectiveInstruction}
   }
 
   // V3: 生成單段
+  interface OutlineScene {
+    title: string
+    summary: string
+    targetLength: number
+  }
+  
   const generateSegment = async (
     sceneIndex: number,
     totalScenes: number,
-    outlineScene: any,
+    outlineScene: OutlineScene,
     previousSegment?: string
   ): Promise<string | null> => {
     try {
@@ -567,7 +576,7 @@ ${perspectiveInstruction}
             dynamic_context: useAppStore.getState().dynamicContext
           },
           characters,
-          genre: selectedTopics.map(t => t.category).join('、'),
+          genre: ["模板"].join('、'),
           style: "流暢細膩、長篇敘事"
         })
       })
@@ -635,7 +644,7 @@ ${perspectiveInstruction}
           systemPrompt,
           userPrompt,
           model: "deepseek/deepseek-r1-0528",
-          topics: selectedTopics,
+          
           characters,
           ...(anonymousId && { anonymousId }),
           skipCache: true,  // V4: 永遠跳過緩存，確保每次生成新內容
@@ -801,7 +810,7 @@ ${perspectiveInstruction}
           systemPrompt,
           userPrompt,
           model: "deepseek/deepseek-r1-0528",
-          topics: selectedTopics,
+          
           characters,
           ...(anonymousId && { anonymousId }),
           skipCache: true,  // 續寫永遠生成新內容，不讀緩存

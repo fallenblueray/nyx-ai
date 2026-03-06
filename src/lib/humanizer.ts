@@ -80,11 +80,11 @@ const REPLACEMENTS: Record<string, string> = {
  * 檢測文本的 AI 痕跡分數 (0-100)
  */
 export function detectAIHints(text: string): number {
-  let score = 0
+  const score = 0
   let matches = 0
 
   // 檢測各類模式
-  Object.entries(AI_PATTERNS).forEach(([category, patterns]) => {
+  Object.entries(AI_PATTERNS).forEach(([, patterns]) => {
     if (Array.isArray(patterns)) {
       patterns.forEach(pattern => {
         const match = text.match(pattern)

@@ -19,7 +19,6 @@ export function useStoryGeneration(options: UseStoryGenerationOptions = {}) {
   
   const {
     storyInput,
-    selectedTopics,
     characters,
     targetSegments,
     setIsGenerating,
@@ -33,10 +32,14 @@ export function useStoryGeneration(options: UseStoryGenerationOptions = {}) {
   } = useAppStore()
 
   const isLoggedIn = !!session?.user
-  const canGenerate = storyInput.trim().length > 0 || selectedTopics.length > 0 || characters.length > 0
+  const canGenerate = storyInput.trim().length > 0 || characters.length > 0
+
+  interface ApiErrorResult {
+    errorType?: "free_quota_exceeded" | "insufficient_words";
+  }
 
   // 處理 API 錯誤響應
-  const handleApiError = useCallback(async (result: any) => {
+  const handleApiError = useCallback(async (result: ApiErrorResult) => {
     if (result.errorType === "free_quota_exceeded") {
       setShowSignupPrompt(true)
       return true
@@ -75,10 +78,20 @@ export function useStoryGeneration(options: UseStoryGenerationOptions = {}) {
   }, [setIsGenerating, options])
 
   // 處理 SSE 數據
-  const handleSSEData = useCallback((data: any) => {
+  const handleSSEData = useCallback((data: {
+    segmentStart?: boolean;
+    segmentIndex?: number;
+    segmentDone?: boolean;
+    error?: string;
+    errorType?: "free_quota_exceeded" | "insufficient_words";
+    content?: string;
+    done?: boolean;
+    isAnonymous?: boolean;
+    remaining?: number;
+  }) => {
     // 分段事件
     if (data.segmentStart) {
-      setCurrentSegment(data.segmentIndex)
+      setCurrentSegment(data.segmentIndex!)
       const { setStreamingState } = useAppStore.getState()
       setStreamingState({ currentSceneIndex: data.segmentIndex })
       return
@@ -90,7 +103,7 @@ export function useStoryGeneration(options: UseStoryGenerationOptions = {}) {
 
     // 錯誤處理
     if (data.error) {
-      handleApiError(data)
+      handleApiError({ errorType: data.errorType })
       setError(data.error)
       return
     }

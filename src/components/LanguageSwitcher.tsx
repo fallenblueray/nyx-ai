@@ -16,7 +16,7 @@ export function LanguageSwitcher() {
   useEffect(() => {
     const stored = localStorage.getItem("nyx-lang") as Lang | null
     if (stored && stored in LANG_LABELS) {
-      setLang(stored)
+      queueMicrotask(() => setLang(stored))
     }
   }, [])
 

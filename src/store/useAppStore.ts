@@ -10,12 +10,6 @@ export interface Character {
   traits: string[]
 }
 
-export interface Topic {
-  category: string
-  subcategory: string
-  item: string
-}
-
 interface AppState {
   // Panel state
   isPanelCollapsed: boolean
@@ -35,12 +29,6 @@ interface AppState {
   setIsGenerating: (generating: boolean) => void
   error: string | null
   setError: (error: string | null) => void
-
-  // Selected topics
-  selectedTopics: Topic[]
-  setSelectedTopics: (topics: Topic[]) => void
-  addTopic: (topic: Topic) => void
-  removeTopic: (topic: Topic) => void
 
   // Characters
   characters: Character[]
@@ -92,17 +80,13 @@ interface AppState {
   humanizeEnabled: boolean
   setHumanizeEnabled: (v: boolean) => void
 
-  // V2.9: 故事風格主題
-  storyTheme: string
-  setStoryTheme: (theme: string) => void
-
   // V3: 隱形大綱（用戶不可見）
-  storyOutline: any | null
-  setStoryOutline: (outline: any) => void
+  storyOutline: unknown | null
+  setStoryOutline: (outline: unknown) => void
   
   // V3: 動態上下文
   dynamicContext: {
-    characters: any[]
+    characters: { name: string; mood: string; status: string; isNew: boolean }[]
     relationships: string[]
     keyItems: string[]
   }
@@ -111,6 +95,10 @@ interface AppState {
   // V4.4: 人稱視角（第一人稱/第三人稱）
   perspective: 'first-person' | 'third-person'
   setPerspective: (perspective: 'first-person' | 'third-person') => void
+  
+  // V4.5: 故事主題
+  storyTheme: string
+  setStoryTheme: (theme: string) => void
 }
 
 export const useAppStore = create<AppState>()(
@@ -136,20 +124,6 @@ export const useAppStore = create<AppState>()(
       setIsGenerating: (generating) => set({ isGenerating: generating }),
       error: null,
       setError: (error) => set({ error }),
-
-      // Topics
-      selectedTopics: [],
-      setSelectedTopics: (topics) => set({ selectedTopics: topics }),
-      addTopic: (topic) => set((state) => ({
-        selectedTopics: [...state.selectedTopics, topic]
-      })),
-      removeTopic: (topic) => set((state) => ({
-        selectedTopics: state.selectedTopics.filter(
-          (t) => !(t.category === topic.category &&
-            t.subcategory === topic.subcategory &&
-            t.item === topic.item)
-        )
-      })),
 
       // Characters
       characters: [],
@@ -256,17 +230,13 @@ export const useAppStore = create<AppState>()(
       humanizeEnabled: true,
       setHumanizeEnabled: (v) => set({ humanizeEnabled: v }),
 
-      // V2.9: 故事風格主題
-      storyTheme: 'midnight-passion',
-      setStoryTheme: (theme) => set({ storyTheme: theme }),
-
       // V3: 隱形大綱
       storyOutline: null,
       setStoryOutline: (outline) => set({ storyOutline: outline }),
 
       // V3: 動態上下文
       dynamicContext: {
-        characters: [],
+        characters: [] as { name: string; mood: string; status: string; isNew: boolean }[],
         relationships: [],
         keyItems: [],
       },
@@ -281,6 +251,10 @@ export const useAppStore = create<AppState>()(
       // V4.4: 人稱視角（預設第一人稱）
       perspective: 'first-person',
       setPerspective: (perspective) => set({ perspective }),
+      
+      // V4.5: 故事主題（預設 Midnight Passion）
+      storyTheme: 'midnight-passion',
+      setStoryTheme: (theme) => set({ storyTheme: theme }),
     }),
     {
       name: 'nyx-ai-storage',
@@ -289,11 +263,11 @@ export const useAppStore = create<AppState>()(
         isPanelCollapsed: state.isPanelCollapsed,
         storyInput: state.storyInput,
         storyOutput: state.storyOutput,
-        selectedTopics: state.selectedTopics,
         characters: state.characters,
         storyOutline: state.storyOutline,
         dynamicContext: state.dynamicContext,
         perspective: state.perspective,
+        storyTheme: state.storyTheme,
       }),
     }
   )

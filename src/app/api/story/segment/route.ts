@@ -8,6 +8,18 @@ const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const OPENROUTER_MODEL = 'deepseek/deepseek-r1-0528';
 const NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET;
 
+interface DynamicCharacter {
+  name: string;
+  description?: string;
+  state?: string;
+  mood?: string;
+}
+
+interface RequestCharacter {
+  name: string;
+  description: string;
+}
+
 interface SceneContext {
   scene_index: number;
   total_scenes: number;
@@ -19,7 +31,7 @@ interface SceneContext {
   };
   previous_segment?: string;
   dynamic_context?: {
-    characters: any[];
+    characters: DynamicCharacter[];
     relationships: string[];
     key_items: string[];
   };
@@ -119,7 +131,7 @@ ${story_start}
 涉及角色：${outline.characters_involved.join('、')}
 
 【角色卡】
-${characters?.map((c: any) => `- ${c.name}：${c.description}`).join('\n') || '無特定角色'}`;
+${characters?.map((c: RequestCharacter) => `- ${c.name}：${c.description}`).join('\n') || '無特定角色'}`;
     } else {
       // Subsequent scenes: improved context injection
       const previousEnding = previous_segment?.slice(-400) || '';
@@ -132,7 +144,7 @@ ${characters?.map((c: any) => `- ${c.name}：${c.description}`).join('\n') || '�
 
 【前文輪廓】
 ${dynamic_context ? `
-角色狀態：${dynamic_context.characters?.map((c: any) => `${c.name}(${c.mood || '情緒正常'})`).join('、') || '無'}
+角色狀態：${dynamic_context.characters?.map((c: DynamicCharacter) => `${c.name}(${c.mood || '情緒正常'})`).join('、') || '無'}
 關係發展：${dynamic_context.relationships?.join('；') || '無重大變化'}
 關鍵道具：${dynamic_context.key_items?.join('、') || dynamic_context.keyItems?.join('、') || '無'}
 ` : '無'}

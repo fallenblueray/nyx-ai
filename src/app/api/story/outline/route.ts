@@ -19,6 +19,11 @@ interface StoryOutline {
   overall_arc: string;
 }
 
+interface Character {
+  name: string;
+  description: string;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { story_start, characters, genre, style, target_segments = 2 } = await request.json();
@@ -44,7 +49,7 @@ export async function POST(request: NextRequest) {
 
     // Build character context
     const characterContext = characters
-      ?.map((c: any) => `${c.name}：${c.description}`)
+      ?.map((c: Character) => `${c.name}：${c.description}`)
       .join('\n') || '';
 
     // Build scene descriptions for requested segment count

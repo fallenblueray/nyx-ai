@@ -1,14 +1,16 @@
 "use client";
 
+import { useMemo } from "react";
+
 export function ParticleField() {
-  const particles = Array.from({ length: 20 }, (_, i) => ({
+  const particles = useMemo(() => Array.from({ length: 20 }, (_, i) => ({
     id: i,
     left: `${Math.random() * 100}%`,
     size: Math.random() * 2 + 1,
     duration: Math.random() * 15 + 12,
     delay: Math.random() * 10,
     opacity: Math.random() * 0.3 + 0.1,
-  }));
+  })), []);
 
   return (
     <div className="pointer-events-none fixed inset-0 z-[1] overflow-hidden">

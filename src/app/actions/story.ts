@@ -64,7 +64,7 @@ export interface StoryData {
   id?: string
   title: string
   content: string
-  topics: Array<{ category: string; item: string }>
+  topics?: Array<{ category: string; item: string }>
   roles: Array<{ name: string; description: string; traits: string[] }>
   is_public?: boolean
 }
@@ -83,7 +83,7 @@ export async function saveStory(data: StoryData) {
       user_id: session.user.id,
       title: data.title,
       content: data.content,
-      topics: JSON.stringify(data.topics),
+      topics: data.topics ? JSON.stringify(data.topics) : null,
       roles: JSON.stringify(data.roles),
       is_public: data.is_public || false,
     }

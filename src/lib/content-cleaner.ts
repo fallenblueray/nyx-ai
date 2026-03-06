@@ -147,7 +147,7 @@ export function extractPureStoryContent(rawContent: string): string {
  * 修復段落連接問題
  */
 export function fixParagraphConnections(content: string): string {
-  let fixed = content.replace(/([^。！？\n])\n([^\n])/g, '$1\n\n$2');
+  const fixed = content.replace(/([^。！？\n])\n([^\n])/g, '$1\n\n$2');
   
   const paragraphs = fixed.split('\n\n');
   const brokenParagraphs: string[] = [];

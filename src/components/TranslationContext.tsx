@@ -5,7 +5,7 @@ import zhTW from '@/locales/zh-TW.json'
 import zhCN from '@/locales/zh-CN.json'
 
 type Translations = {
-  [key: string]: any
+  [key: string]: string | Translations | string[] | undefined
 }
 
 type Language = 'zh-TW' | 'zh-CN'

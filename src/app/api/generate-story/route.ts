@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
+import { getServerSession, type Session } from "next-auth"
 import { authOptions } from "../auth/[...nextauth]/route"
 import { createAdminClient } from "@/lib/supabase-admin"
 import { detectPromptInjection, validateInput, detectIllegalContent, checkRateLimit } from "@/lib/security"
@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const session = await getServerSession(authOptions)
-    const { systemPrompt, userPrompt, model = "deepseek/deepseek-r1-0528", anonymousId, topics, characters, skipCache = false } = await req.json()
+    const { systemPrompt, userPrompt, model = "deepseek/deepseek-r1-0528", anonymousId, topics, characters, skipCache = false, templateId } = await req.json()
 
     if (!systemPrompt || !userPrompt) {
       return NextResponse.json({ error: "缺少 prompt" }, { status: 400 })
@@ -358,6 +358,18 @@ export async function POST(req: NextRequest) {
                       }, { onConflict: 'anonymous_id' })
                   }
 
+                  // ============================================================
+                  // Phase 7: 記錄模板使用統計（用於 Trending 計算）
+                  // ============================================================
+                  if (templateId) {
+                    void supabase.from("template_usage_stats").insert({
+                      template_id: templateId,
+                      user_id: isLoggedIn ? session!.user.id : null,
+                      anonymous_id: anonymousId || null,
+                      word_count: wordsUsed,
+                    })
+                  }
+
                   // 注意：不傳 content，因為流式傳輸已逐塊發送完畢
                   // 傳 content 會導致前端 double-append（顯示字數 = 實際 × 2）
                   controller.enqueue(encoder.encode(`data: ${JSON.stringify({
@@ -474,6 +486,17 @@ export async function POST(req: NextRequest) {
                             words_limit: FREE_WORD_LIMIT
                           }, { onConflict: 'anonymous_id' })
                       }
+                      
+                      // Phase 7: 記錄模板使用統計（截斷情況）
+                      if (templateId) {
+                        void supabase.from("template_usage_stats").insert({
+                          template_id: templateId,
+                          user_id: isLoggedIn ? session!.user.id : null,
+                          anonymous_id: anonymousId || null,
+                          word_count: wordsUsed,
+                        })
+                      }
+                      
                       return
                     }
                     
@@ -523,7 +546,7 @@ async function handleMultiSegmentGeneration(
     model: string
     targetSegments: number
     isLoggedIn: boolean
-    session: any
+    session: Session | null
     anonymousId?: string
     currentWordCount: number
     supabase: ReturnType<typeof createAdminClient>
@@ -551,7 +574,7 @@ async function handleMultiSegmentGeneration(
   }
 
   // 上下文狀態
-  let contextState = {
+  const contextState = {
     previousContent: '',
     segmentIndex: 0,
     totalWordsUsed: 0
@@ -682,7 +705,7 @@ async function handleMultiSegmentGeneration(
         // 全部完成：扣除字數
         const wordsUsed = Math.ceil(contextState.totalWordsUsed * 0.8)
         
-        if (isLoggedIn) {
+        if (isLoggedIn && session?.user?.id) {
           await supabase
             .from("profiles")
             .update({ word_count: Math.max(0, currentWordCount - wordsUsed) })

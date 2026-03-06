@@ -23,8 +23,10 @@ SSE 流式輸出 → StoryOutput.tsx
 - ✅ 50個官方模板（7大分類：經典/校園/人妻/職場/禁忌/NTR/高級）
 - ✅ 模板分類導航 + 搜索 + 收藏 + Trending
 - ✅ Prompt Builder 自動從模板構建高質量 Prompt
+- ✅ **Phase 4**: 角色卡預覽整合（選擇模板時預覽/編輯自動生成角色）
+- ✅ **Phase 5**: Landing Page 快速生成增強（熱門模板快捷入口 + URL 參數支持）
 - ✅ 保留原有單段生成引擎（V4）
-- **繼續計劃**：Phase 4（角色卡整合）、Phase 5（快速生成增強）、Phase 6（Premium）、Phase 7（Trending後端）、Phase 8（SEO頁面）
+- **繼續計劃**：Phase 6（Premium 付費牆）、Phase 7（Trending 後端統計）、Phase 8（SEO 優化模板頁面）
 
 ---
 

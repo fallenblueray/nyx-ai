@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { PaymentService, PRICE_MAP, FIRST_PRICE_IDS } from '@/domain/payment/services/PaymentService'
+import type Stripe from 'stripe'
 
 // Mock Stripe
 const mockStripe = {
@@ -11,7 +12,7 @@ const mockStripe = {
   webhooks: {
     constructEvent: vi.fn()
   }
-} as any
+} as unknown as Stripe
 
 describe('PaymentService', () => {
   const service = new PaymentService(mockStripe)

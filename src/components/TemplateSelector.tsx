@@ -6,7 +6,10 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { BookOpen, Save, Plus, Trash2, Crown, Flame, Star, Search, X } from "lucide-react"
+import { BookOpen, Save, Plus, Trash2, Crown, Flame, Star, Search, X, User, Sparkles, Check, TrendingUp } from "lucide-react"
+import { TrendingSection } from "./template/TrendingSection"
+import { FavoritesSection } from "./template/FavoritesSection"
+import { FavoriteButton } from "./template/FavoriteButton"
 import { cn } from "@/lib/utils"
 import { officialTemplates, CATEGORY_CONFIG } from "@/data/templates"
 import type { Template, TemplateCategory } from "@/types/template"
@@ -18,7 +21,6 @@ interface LegacyTemplate {
   name: string
   description: string
   storyInput: string
-  topics: Array<{ category: string; subcategory: string; item: string }>
   characters: Array<{ id: string; name: string; description: string; traits: string[] }>
 }
 
@@ -30,7 +32,6 @@ function convertToLegacy(template: Template, userInput?: string): LegacyTemplate
     name: template.name,
     description: template.description,
     storyInput: userInput || template.promptBuilder.baseScenario,
-    topics: [{ category: template.category, subcategory: "", item: template.name }],
     characters: char ? [{
       id: `${template.id}-char`,
       name: char.name,
@@ -86,16 +87,17 @@ function TemplateCard({
       )}
 
       {/* 收藏按鈕 */}
-      <button
-        className={cn(
-          "absolute top-3 right-3 p-1 rounded-full transition-all opacity-0 group-hover:opacity-100",
-          template.isPremium && "right-16",
-          isFavorite && "opacity-100 text-yellow-400"
-        )}
-        onClick={(e) => { e.stopPropagation(); onToggleFavorite(template.id) }}
-      >
-        <Star className={cn("w-4 h-4", isFavorite ? "fill-yellow-400 text-yellow-400" : "text-white/40")} />
-      </button>
+      <div className={cn(
+        "absolute top-3 right-3 transition-all",
+        template.isPremium && "right-16"
+      )}>
+        <FavoriteButton
+          templateId={template.id}
+          initialFavorited={isFavorite}
+          size="sm"
+          onToggle={(favorited) => onToggleFavorite(template.id)}
+        />
+      </div>
 
       {/* 內容 */}
       <h3 className="text-sm font-semibold text-white pr-8">{template.name}</h3>
@@ -140,7 +142,7 @@ const TRENDING_ITEMS = [
 // ========== 主組件 ==========
 export function TemplateSelector() {
   const [isOpen, setIsOpen] = useState(false)
-  const [activeCategory, setActiveCategory] = useState<TemplateCategory | 'all' | 'favorite'>('all')
+  const [activeCategory, setActiveCategory] = useState<TemplateCategory | 'all' | 'favorite' | 'trending'>('all')
   const [searchQuery, setSearchQuery] = useState("")
   const [favorites, setFavorites] = useState<string[]>([])
   const [savedTemplates, setSavedTemplates] = useState<LegacyTemplate[]>([])
@@ -149,11 +151,9 @@ export function TemplateSelector() {
 
   const {
     setStoryInput,
-    setSelectedTopics,
     addCharacter,
     setCharacters,
     storyInput,
-    selectedTopics,
     characters
   } = useAppStore()
 
@@ -161,9 +161,11 @@ export function TemplateSelector() {
   useEffect(() => {
     try {
       const favs = localStorage.getItem("nyx-template-favorites")
-      if (favs) setFavorites(JSON.parse(favs))
       const saved = localStorage.getItem("nyx-ai-templates")
-      if (saved) setSavedTemplates(JSON.parse(saved))
+      queueMicrotask(() => {
+        if (favs) setFavorites(JSON.parse(favs))
+        if (saved) setSavedTemplates(JSON.parse(saved))
+      })
     } catch (e) { /* ignore */ }
   }, [])
 
@@ -171,6 +173,7 @@ export function TemplateSelector() {
   const filteredTemplates = officialTemplates.filter(t => {
     if (!t.isActive) return false
     if (activeCategory === 'favorite') return favorites.includes(t.id)
+    if (activeCategory === 'trending') return false // trending 在單獨區塊顯示
     if (activeCategory !== 'all' && t.category !== activeCategory) return false
     if (searchQuery) {
       const q = searchQuery.toLowerCase()
@@ -179,14 +182,56 @@ export function TemplateSelector() {
     return true
   })
 
-  // 套用模板
-  const handleSelectTemplate = (template: Template) => {
+  // ========== Phase 4: 角色卡預覽 ==========
+  const [previewTemplate, setPreviewTemplate] = useState<Template | null>(null)
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false)
+  const [editedCharacter, setEditedCharacter] = useState<{
+    name: string
+    age: string
+    personality: string
+    appearance: string
+    role: string
+  } | null>(null)
+
+  // 套用模板（內部方法）
+  const applyTemplateInternal = (template: Template, customChar?: typeof editedCharacter) => {
     const legacy = convertToLegacy(template)
+    
+    // 如果使用自定義角色
+    if (customChar && template.characterConfig) {
+      legacy.characters = [{
+        id: `${template.id}-char-${Date.now()}`,
+        name: customChar.name,
+        description: `${customChar.age}歲，${customChar.role}。${customChar.personality}。${customChar.appearance}`,
+        traits: [customChar.role, template.characterConfig.desireStyle.split('，')[0]]
+      }]
+    }
+    
     setStoryInput(legacy.storyInput)
-    setSelectedTopics(legacy.topics)
     setCharacters([])
     legacy.characters.forEach(char => addCharacter(char))
+    setIsPreviewOpen(false)
+    setPreviewTemplate(null)
     setIsOpen(false)
+  }
+
+  // 套用模板（入口）
+  const handleSelectTemplate = (template: Template) => {
+    // 如果有角色配置，顯示預覽
+    if (template.characterConfig) {
+      setPreviewTemplate(template)
+      setEditedCharacter({
+        name: template.characterConfig.name,
+        age: template.characterConfig.age,
+        personality: template.characterConfig.personality,
+        appearance: template.characterConfig.appearance,
+        role: template.characterConfig.role
+      })
+      setIsPreviewOpen(true)
+    } else {
+      // 無角色，直接套用
+      applyTemplateInternal(template)
+    }
   }
 
   // 套用 Trending
@@ -212,7 +257,6 @@ export function TemplateSelector() {
       name: saveForm.name || "自定義模板",
       description: saveForm.description || "",
       storyInput,
-      topics: selectedTopics,
       characters
     }
     const updated = [...savedTemplates, newTemplate]
@@ -230,7 +274,6 @@ export function TemplateSelector() {
 
   const handleApplySaved = (template: LegacyTemplate) => {
     setStoryInput(template.storyInput)
-    setSelectedTopics(template.topics)
     setCharacters([])
     template.characters.forEach(char => addCharacter(char))
     setIsOpen(false)
@@ -281,6 +324,7 @@ export function TemplateSelector() {
           <div className="px-6 pb-3">
             <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
               <CategoryTab label="全部" emoji="🔥" active={activeCategory === 'all'} onClick={() => setActiveCategory('all')} />
+              <CategoryTab label="熱門" emoji="📈" active={activeCategory === 'trending'} onClick={() => setActiveCategory('trending')} />
               {CATEGORY_CONFIG.map(cat => (
                 <CategoryTab
                   key={cat.id}
@@ -302,25 +346,65 @@ export function TemplateSelector() {
           {/* 主內容區 */}
           <div className="flex-1 overflow-y-auto px-6 pb-6 space-y-6">
 
-            {/* Trending（只在全部頁顯示）*/}
+            {/* Trending & Favorites（只在全部頁顯示）*/}
             {activeCategory === 'all' && !searchQuery && (
-              <div>
-                <h3 className="text-sm font-semibold text-white/70 mb-2 flex items-center gap-1">
-                  <Flame className="w-4 h-4 text-orange-400" />
-                  今日熱門
-                </h3>
-                <div className="flex flex-wrap gap-2">
-                  {TRENDING_ITEMS.map((item, i) => (
-                    <button
-                      key={i}
-                      onClick={() => handleTrendingClick(item.text)}
-                      className="text-xs px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-white/70 hover:bg-purple-500/20 hover:border-purple-500/40 hover:text-white transition-all"
-                    >
-                      🔥 {item.text}
-                    </button>
-                  ))}
+              <>
+                {/* 熱門模板區塊 */}
+                <TrendingSection
+                  onSelectTemplate={handleSelectTemplate}
+                  limit={5}
+                />
+                
+                {/* 我的收藏區塊 */}
+                <FavoritesSection
+                  onSelectTemplate={handleSelectTemplate}
+                />
+                
+                {/* 舊版 Trending（保留作為快捷輸入）*/}
+                <div>
+                  <h3 className="text-sm font-semibold text-white/70 mb-2 flex items-center gap-1">
+                    <Flame className="w-4 h-4 text-orange-400" />
+                    熱門話題
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {TRENDING_ITEMS.map((item, i) => (
+                      <button
+                        key={i}
+                        onClick={() => handleTrendingClick(item.text)}
+                        className="text-xs px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-white/70 hover:bg-purple-500/20 hover:border-purple-500/40 hover:text-white transition-all"
+                      >
+                        🔥 {item.text}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              </>
+            )}
+            
+            {/* 熱門分類頁 */}
+            {activeCategory === 'trending' && !searchQuery && (
+              <>
+                <TrendingSection
+                  onSelectTemplate={handleSelectTemplate}
+                  limit={10}
+                  className="mb-6"
+                />
+                <h3 className="text-sm font-semibold text-white/70 mb-3">更多熱門模板</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {officialTemplates
+                    .filter(t => t.isActive)
+                    .slice(0, 10)
+                    .map(template => (
+                      <TemplateCard
+                        key={template.id}
+                        template={template}
+                        onSelect={handleSelectTemplate}
+                        isFavorite={favorites.includes(template.id)}
+                        onToggleFavorite={handleToggleFavorite}
+                      />
+                    ))}
+                </div>
+              </>
             )}
 
             {/* 官方模板網格 */}
@@ -428,6 +512,109 @@ export function TemplateSelector() {
               儲存
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Phase 4: 角色卡預覽對話框 */}
+      <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
+        <DialogContent className="nyx-surface nyx-border nyx-text-primary max-w-lg max-h-[90vh] overflow-y-auto">
+          {previewTemplate && editedCharacter && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-purple-400" />
+                  預覽角色卡
+                  {previewTemplate.isPremium && (
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
+                      高級模板
+                    </span>
+                  )}
+                </DialogTitle>
+              </DialogHeader>
+
+              <div className="space-y-4 mt-2">
+                {/* 模板信息 */}
+                <div className="p-3 rounded-lg bg-white/5 border border-white/10">
+                  <h4 className="text-sm font-medium text-white">{previewTemplate.name}</h4>
+                  <p className="text-xs text-white/50 mt-1">{previewTemplate.description}</p>
+                </div>
+
+                {/* 角色卡編輯區 */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-sm text-white/70">
+                    <User className="w-4 h-4" />
+                    <span>角色設定（可編輯）</span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs text-white/50">名字</label>
+                      <Input
+                        value={editedCharacter.name}
+                        onChange={e => setEditedCharacter({ ...editedCharacter, name: e.target.value })}
+                        className="nyx-input mt-1 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs text-white/50">年齡</label>
+                      <Input
+                        value={editedCharacter.age}
+                        onChange={e => setEditedCharacter({ ...editedCharacter, age: e.target.value })}
+                        className="nyx-input mt-1 text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-xs text-white/50">身份 / 角色</label>
+                    <Input
+                      value={editedCharacter.role}
+                      onChange={e => setEditedCharacter({ ...editedCharacter, role: e.target.value })}
+                      className="nyx-input mt-1 text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs text-white/50">性格特質</label>
+                    <Textarea
+                      value={editedCharacter.personality}
+                      onChange={e => setEditedCharacter({ ...editedCharacter, personality: e.target.value })}
+                      rows={2}
+                      className="nyx-input mt-1 text-sm resize-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs text-white/50">外貌描述</label>
+                    <Textarea
+                      value={editedCharacter.appearance}
+                      onChange={e => setEditedCharacter({ ...editedCharacter, appearance: e.target.value })}
+                      rows={2}
+                      className="nyx-input mt-1 text-sm resize-none"
+                    />
+                  </div>
+                </div>
+
+                {/* 操作按鈕 */}
+                <div className="flex gap-3 pt-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsPreviewOpen(false)}
+                    className="flex-1 border-white/20 text-white/70 hover:bg-white/5"
+                  >
+                    取消
+                  </Button>
+                  <Button
+                    onClick={() => applyTemplateInternal(previewTemplate, editedCharacter)}
+                    className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90"
+                  >
+                    <Check className="w-4 h-4 mr-2" />
+                    確認使用
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
         </DialogContent>
       </Dialog>
     </>
