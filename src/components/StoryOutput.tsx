@@ -610,8 +610,18 @@ ${perspectiveInstruction}
   }
 
   // V5: Prompt Engine 新流程 - 先獲取角色和大綱，再生成故事
+  interface CharacterConfig {
+    name: string
+    age: string
+    role: string
+    personality: string
+    appearance: string
+    desireStyle: string
+    traits: string[]
+  }
+  
   const generateCharacterAndOutline = async (): Promise<{ 
-    characters: Array<{ name: string; description: string; traits: string[] }>
+    characters: CharacterConfig[]
     outline: { beginning: string; development: string; climax: string }
     templateId: string | null
   } | null> => {
@@ -641,15 +651,23 @@ ${perspectiveInstruction}
         return null
       }
       
-      // 轉換角色格式
+      // 轉換角色格式（完整 CharacterConfig）
       const char1 = {
         name: data.data.characters.character1.name,
-        description: data.data.characters.character1.personality,
+        age: data.data.characters.character1.age,
+        role: data.data.characters.character1.role,
+        personality: data.data.characters.character1.personality,
+        appearance: data.data.characters.character1.appearance,
+        desireStyle: data.data.characters.character1.desireStyle,
         traits: data.data.characters.character1.traits
       }
       const char2 = {
         name: data.data.characters.character2.name,
-        description: data.data.characters.character2.personality,
+        age: data.data.characters.character2.age,
+        role: data.data.characters.character2.role,
+        personality: data.data.characters.character2.personality,
+        appearance: data.data.characters.character2.appearance,
+        desireStyle: data.data.characters.character2.desireStyle,
         traits: data.data.characters.character2.traits
       }
       
@@ -671,8 +689,36 @@ ${perspectiveInstruction}
     
     // V5: Prompt Engine - 先獲取角色和大綱
     const characterAndOutline = await generateCharacterAndOutline()
+    
+    let generatedCharacters: CharacterConfig[] = []
+    let generatedOutline = null
+    let generatedTemplateId = null
+    
     if (characterAndOutline) {
-      console.log('[V5] Using new Prompt Engine with:', characterAndOutline.templateId)
+      // 更新 store 中的角色（轉換為 store 格式）
+      const { setCharacters } = useAppStore.getState()
+      const storeCharacters = characterAndOutline.characters.map(char => ({
+        id: `char-${char.name}-${Date.now()}`,
+        name: char.name,
+        description: `${char.age}，${char.role}。${char.personality}`,
+        traits: char.traits
+      }))
+      setCharacters(storeCharacters)
+      generatedCharacters = characterAndOutline.characters
+      generatedOutline = characterAndOutline.outline
+      generatedTemplateId = characterAndOutline.templateId
+      console.log('[V5] Updated characters and outline for generation')
+    } else {
+      // 沒有選擇模板，使用現有角色
+      generatedCharacters = characters.map(c => ({
+        name: c.name,
+        age: '',
+        role: c.description?.split('，')[0] || '',
+        personality: c.description || '',
+        appearance: '',
+        desireStyle: '',
+        traits: c.traits || []
+      }))
     }
 
     const { resetStreaming, setStreamingState, humanizeEnabled } = useAppStore.getState()
@@ -687,7 +733,6 @@ ${perspectiveInstruction}
     let humanizeBuffer = ""
 
     try {
-      const { systemPrompt, userPrompt } = buildPrompt(false)
       const anonymousId = !isLoggedIn ? getOrCreateAnonymousId() : undefined
 
       // V4: 固定單段生成，無需多段 header
@@ -697,19 +742,42 @@ ${perspectiveInstruction}
       if (humanizeEnabled) {
         headers['x-humanize'] = 'true'
       }
+      
+      // V5: 決定使用哪種 API 參數
+      let requestBody: Record<string, unknown>
+      
+      if (generatedTemplateId && generatedOutline && generatedCharacters.length >= 2) {
+        // V5: 使用新的 Prompt Engine 格式
+        requestBody = {
+          templateId: generatedTemplateId,
+          characters: {
+            character1: generatedCharacters[0],
+            character2: generatedCharacters[1]
+          },
+          outline: generatedOutline,
+          model: "deepseek/deepseek-r1-0528",
+          anonymousId,
+          skipCache: true,
+        }
+        console.log('[V5] Using new Prompt Engine API with template:', generatedTemplateId)
+      } else {
+        // 舊流程：使用傳統 systemPrompt/userPrompt
+        const { systemPrompt, userPrompt } = buildPrompt(false)
+        requestBody = {
+          systemPrompt,
+          userPrompt,
+          model: "deepseek/deepseek-r1-0528",
+          characters: generatedCharacters,
+          anonymousId,
+          skipCache: true,
+        }
+        console.log('[V5] Using legacy API (no template selected)')
+      }
 
       const response = await fetch("/api/generate-story", {
         method: "POST",
         headers,
-        body: JSON.stringify({
-          systemPrompt,
-          userPrompt,
-          model: "deepseek/deepseek-r1-0528",
-          
-          characters,
-          ...(anonymousId && { anonymousId }),
-          skipCache: true,  // V4: 永遠跳過緩存，確保每次生成新內容
-        })
+        body: JSON.stringify(requestBody)
       })
 
       if (!response.ok) {
