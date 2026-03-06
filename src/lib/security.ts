@@ -71,10 +71,31 @@ const MAX_CHARACTERS = 10            // 最大角色數
 const MAX_CHARACTER_NAME = 100      // 角色名最大字符
 const MAX_CHARACTER_DESC = 500      // 角色描述最大字符
 
+export interface CharactersInput {
+  character1: {
+    name: string
+    age: string
+    role: string
+    personality: string
+    appearance: string
+    desireStyle: string
+    traits: string[]
+  }
+  character2: {
+    name: string
+    age: string
+    role: string
+    personality: string
+    appearance: string
+    desireStyle: string
+    traits: string[]
+  }
+}
+
 export function validateInput(params: {
   storyInput?: string
   topics?: Array<{ category: string; item: string }>
-  characters?: Array<{ name: string; description: string; traits: string[] }>
+  characters?: CharactersInput
 }): ValidationResult {
   // 驗證劇情起點
   if (params.storyInput !== undefined) {
@@ -91,21 +112,18 @@ export function validateInput(params: {
     return { valid: false, error: `題材數量過多，請選擇最多 ${MAX_TOPICS} 個` }
   }
 
-  // 驗證角色數量
-  if (params.characters && params.characters.length > MAX_CHARACTERS) {
-    return { valid: false, error: `角色數量過多，請限制在 ${MAX_CHARACTERS} 個以內` }
-  }
-
-  // 驗證每個角色
+  // 驗證角色（Prompt Engine 格式：character1 + character2）
   if (params.characters) {
-    for (const char of params.characters) {
-      if (!char.name || char.name.trim().length === 0) {
+    const chars = [params.characters.character1, params.characters.character2]
+    for (const char of chars) {
+      if (!char || !char.name || char.name.trim().length === 0) {
         return { valid: false, error: '角色名稱不能為空' }
       }
       if (char.name.length > MAX_CHARACTER_NAME) {
         return { valid: false, error: `角色名稱過長，請限制在 ${MAX_CHARACTER_NAME} 字以內` }
       }
-      if (char.description && char.description.length > MAX_CHARACTER_DESC) {
+      const charDesc = char.personality || (char as any).description
+      if (charDesc && charDesc.length > MAX_CHARACTER_DESC) {
         return { valid: false, error: `角色描述過長，請限制在 ${MAX_CHARACTER_DESC} 字以內` }
       }
     }

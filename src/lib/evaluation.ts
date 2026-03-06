@@ -120,7 +120,10 @@ interface EvaluationInput {
   content: string
   storyInput?: string
   topics?: Array<{ category: string; item: string }>
-  characters?: Array<{ name: string; description: string; traits: string[] }>
+  characters?: {
+    character1: { name: string; description: string; traits: string[] }
+    character2: { name: string; description: string; traits: string[] }
+  }
 }
 
 /**
@@ -199,8 +202,9 @@ function buildEvaluationPrompt(input: EvaluationInput): string {
     parts.push(`【要求題材】\n${input.topics.map(t => t.item).join('、')}\n`)
   }
   
-  if (input.characters && input.characters.length > 0) {
-    parts.push(`【角色設定】\n${input.characters.map(c => `${c.name}：${c.description}`).join('\n')}\n`)
+  if (input.characters) {
+    const chars = [input.characters.character1, input.characters.character2]
+    parts.push(`【角色設定】\n${chars.map(c => `${c.name}：${c.description}`).join('\n')}\n`)
   }
   
   parts.push(`【生成內容】\n${input.content}`)

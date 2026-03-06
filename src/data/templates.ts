@@ -6,6 +6,9 @@
 
 import { Template, CategoryConfig } from '@/types/template';
 
+// 重新導出類型
+export type { Template, CategoryConfig };
+
 // 分類配置
 export const CATEGORY_CONFIG: CategoryConfig[] = [
   { id: 'classic', name: '經典', emoji: '💫', description: '初戀重逢、青梅竹馬', order: 1 },

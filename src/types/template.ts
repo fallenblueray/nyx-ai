@@ -53,6 +53,7 @@ export interface Template {
 
 // Prompt 構建配置
 export interface PromptConfig {
+  systemPrompt?: string;      // 系統提示詞（Prompt Engine 使用，可選）
   baseScenario: string;      // 基礎情境描述
   writingStyle: string;      // 寫作風格提示
   atmosphere: string;        // 氛圍描述
