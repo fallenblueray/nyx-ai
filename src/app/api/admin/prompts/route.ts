@@ -91,6 +91,8 @@ export async function POST(request: Request) {
       const newVersion = (existingData.version || 0) + 1
       console.log(`[Admin Prompts API] Updating existing prompt: ${key}, version: ${newVersion}`)
 
+      console.log(`[Admin Prompts API] Executing UPDATE for id=${existingData.id.slice(0,8)}, key=${key}`)
+      
       const { data, error } = await supabase
         .from('admin_prompts')
         .update({
@@ -108,7 +110,17 @@ export async function POST(request: Request) {
           { status: 500 }
         )
       }
+      
       result = data?.[0]
+      console.log(`[Admin Prompts API] Update result: id=${result?.id?.slice(0,8)}, version=${result?.version}, content_length=${result?.content?.length}`)
+      
+      // 立即驗證更新
+      const { data: verifyData } = await supabase
+        .from('admin_prompts')
+        .select('*')
+        .eq('key', key)
+        .single()
+      console.log(`[Admin Prompts API] Verification: id=${verifyData?.id?.slice(0,8)}, version=${verifyData?.version}, content_length=${verifyData?.content?.length}`)
     } else {
       // 插入新記錄
       console.log(`[Admin Prompts API] Creating new prompt: ${key}`)
