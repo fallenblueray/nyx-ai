@@ -50,13 +50,13 @@ export const officialTemplates: Template[] = [
     id: 'classic-002',
     slug: 'childhood-sweetheart',
     name: '青梅竹馬',
-    description: '從小一起長大的鄰家女孩，友情逐漸變質',
+    description: '那個從小一起長大的女孩，什麼時候變得這麼迷人了？',
     category: 'classic',
     tags: ['青梅竹馬', '日久生情', '鄰家'],
     promptBuilder: {
-      baseScenario: '從小一起長大的鄰家女孩，隨著年齡增長，關係發生微妙變化',
-      writingStyle: '溫馨日常描寫，逐步展現情感變化',
-      atmosphere: '青澀曖昧，帶有初戀的甜美',
+      baseScenario: '你們是住在隔壁的青梅竹馬，從小一起上下學。她總是大大咧咧地穿著睡衣來你家蹭飯，從不把你當外人。但最近你發現，這個從小看到大的女孩，身材越來越成熟，笑容也越來越讓人心跳加速...',
+      writingStyle: '日常溫馨中帶有微妙張力，注重細節描寫（睡衣領口、髮香、不經意的肢體接觸）',
+      atmosphere: '青澀曖昧，帶有「太熟了反而不好下手」的糾結',
       pace: 'slow',
       intensity: 'mild',
       perspective: 'first'
