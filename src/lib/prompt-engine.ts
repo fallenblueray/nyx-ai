@@ -308,23 +308,34 @@ export function parseCharacterResponse(response: string): CharacterPair | null {
   try {
     console.log('[PromptEngine] Raw response preview:', response.slice(0, 300))
     
-    // 標準化：找到角色1、角色2、角色關係的位置
-    const char1Index = response.search(/[=\s]*角色1[=\s]*|角色[一壹]/i)
-    const char2Index = response.search(/[=\s]*角色2[=\s]*|角色[二貳]/i)
-    const relationIndex = response.search(/[=\s]*角色關[係系][=\s]*|關[係系]類型/i)
+    // 找到角色1、角色2、角色關係的標記後的第一個換行位置
+    const char1Match = response.match(/[=\s]*角色1[=\s]*|角色[一壹]/i)
+    const char2Match = response.match(/[=\s]*角色2[=\s]*|角色[二貳]/i)
+    const relationMatch = response.match(/[=\s]*角色關[係系][=\s]*|關[係系]類型/i)
     
-    console.log('[PromptEngine] Section indices:', { char1Index, char2Index, relationIndex })
-    
-    if (char1Index === -1 || char2Index === -1) {
+    if (!char1Match || !char2Match) {
       console.error('[PromptEngine] Could not find character sections')
       return null
     }
     
-    // 提取各個區塊的文本
-    const char1Text = response.slice(char1Index, char2Index)
-    const char2EndIndex = relationIndex !== -1 ? relationIndex : response.length
-    const char2Text = response.slice(char2Index, char2EndIndex)
-    const relationText = relationIndex !== -1 ? response.slice(relationIndex) : ''
+    // 從標記後的換行開始提取內容
+    const char1Start = response.indexOf('\n', char1Match.index! + char1Match[0].length) + 1
+    const char2Start = response.indexOf('\n', char2Match.index! + char2Match[0].length) + 1
+    const relationStart = relationMatch ? response.indexOf('\n', relationMatch.index! + relationMatch[0].length) + 1 : -1
+    
+    const char2EndIndex = relationMatch ? relationMatch.index! : response.length
+    
+    const char1Text = response.slice(char1Start, char2Match.index)
+    const char2Text = response.slice(char2Start, char2EndIndex)
+    const relationText = relationStart > 0 ? response.slice(relationStart) : ''
+    
+    console.log('[PromptEngine] Section positions:', { 
+      char1Start, 
+      char2Start, 
+      relationStart,
+      char1Len: char1Text.length,
+      char2Len: char2Text.length
+    })
     
     console.log('[PromptEngine] Extracted text lengths:', { 
       char1: char1Text.length, 
