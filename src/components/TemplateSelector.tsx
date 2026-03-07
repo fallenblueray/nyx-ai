@@ -239,11 +239,29 @@ export function TemplateSelector() {
       // 存儲生成的角色和大綱到 store
       const char1 = data.data.characters.character1
       const char2 = data.data.characters.character2
+      const outline = data.data.outline
       
       console.log('[TemplateSelector] Setting characters:', char1.name, char2.name)
       
       setGeneratedCharacters([char1, char2])
-      setGeneratedOutline(data.data.outline)
+      setGeneratedOutline(outline)
+      
+      // 格式化大綱並寫入 storyInput（方案一：用戶可見大綱）
+      const formattedOutline = `【模板：${template.name}】
+女主角：${char1.name}（${char1.age}，${char1.role}）
+男主角：${char2.name}（${char2.age}，${char2.role}）
+
+【開端】
+${outline.beginning}
+
+【發展】
+${outline.development}
+
+【高潮】
+${outline.climax}`
+      
+      setStoryInput(formattedOutline)
+      console.log('[TemplateSelector] Outline written to storyInput')
       
       // 同時更新舊版角色格式（兼容性）
       const storeCharacters = [

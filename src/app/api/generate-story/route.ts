@@ -32,6 +32,7 @@ interface GenerateStoryRequest {
     development: string
     climax: string
   }
+  userInput?: string  // 用戶自定義輸入（包含大綱）
   // 舊架構兼容（直接傳入 prompt）
   systemPrompt?: string
   userPrompt?: string
@@ -54,6 +55,7 @@ export async function POST(req: NextRequest) {
       templateId, 
       characters, 
       outline,
+      userInput,
       systemPrompt: legacySystemPrompt, 
       userPrompt: legacyUserPrompt,
       model = "deepseek/deepseek-r1-0528", 
@@ -83,7 +85,7 @@ export async function POST(req: NextRequest) {
         outline.beginning,
         outline.development,
         outline.climax,
-        legacyUserPrompt // 用戶自定義輸入
+        userInput || legacyUserPrompt // 優先使用 userInput（來自前端大綱），否則用 legacyUserPrompt
       )
     } else if (legacySystemPrompt && legacyUserPrompt) {
       // ========== 舊架構：直接傳入 prompt ==========

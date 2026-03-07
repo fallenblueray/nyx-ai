@@ -661,6 +661,9 @@ ${perspectiveInstruction}
       // V5.1: 決定使用哪種 API 參數
       let requestBody: Record<string, unknown>
       
+      // 獲取用戶輸入（包含格式化後的大綱）
+      const { storyInput: userStoryInput } = useAppStore.getState()
+      
       if (finalTemplateId && finalOutline && finalCharacters.length >= 2) {
         // V5: 使用新的 Prompt Engine 格式
         requestBody = {
@@ -670,6 +673,7 @@ ${perspectiveInstruction}
             character2: finalCharacters[1]
           },
           outline: finalOutline,
+          userInput: userStoryInput, // 傳遞用戶輸入（包含大綱）
           model: "deepseek/deepseek-r1-0528",
           anonymousId,
           skipCache: true,
