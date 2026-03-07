@@ -1,19 +1,21 @@
-# NyxAI 系統說明書 (V5.1 模板系統)
+# NyxAI 系統說明書 (V5.2 統一 AI 生成)
 
 > **千螢維護協議**：每次開始任何 NyxAI 工作前，必須先完整讀取此文件。
 
 ---
 
-## 🗺️ 系統架構速覽 (V5.1)
+## 🗺️ 系統架構速覽 (V5.2)
 
 ```
 用戶選擇模板 / 輸入一句話
     ↓
 [TemplateSelector.tsx]   ← 50個官方模板 + 分類 + 收藏 + Trending
     ↓
-如果選擇模板：
-    - 調用 /api/story/outline (生成角色對 + 大綱)
-    - 顯示角色預覽彈窗（可編輯）
+調用 /api/story/outline (生成角色對 + 大綱)
+    ↓
+同時：
+  ├─ 角色寫入 store.characters → 顯示在角色面板
+  └─ 大綱寫入 store.storyInput → 顯示在劇情輸入框
     ↓
 [prompt-engine.ts]       ← 模板 + 角色 + 大綱 → 結構化 Prompt
     ↓
@@ -22,12 +24,20 @@
 SSE 流式輸出 → StoryOutput.tsx
 ```
 
+**V5.2 重大變更** (相對於 V5.1):
+- ✅ **統一 AI 生成**：所有模板調用 `/api/story/outline` 生成角色+大綱
+- ✅ **移除預設角色**：模板不再包含 `characterConfig`，完全由 AI 動態生成
+- ✅ **即時填充**：選擇模板後立即關閉選擇器，背景生成角色和劇情
+- ✅ **載入提示**：生成過程顯示「正在生成角色與劇情大綱...」
+- ✅ **用戶可編輯**：生成的劇情大綱顯示在輸入框，用戶可自由修改
+- ✅ **統一顯示位置**：角色在側邊欄角色卡，劇情在左側輸入框
+
 **V5 重大變更** (相對於早期版本):
 - ✅ 產品轉型：「AI寫作工具」→「AI幻想生成器」
 - ✅ 50個官方模板（7大分類：經典/校園/人妻/職場/禁忌/NTR/高級）
 - ✅ 模板分類導航 + 搜索 + 收藏 + Trending
 - ✅ **V5 Prompt Engine**: 從模板自動生成角色對 + 三幕大綱
-- ✅ **Phase 4**: 角色卡預覽整合（選擇模板時預覽/編輯自動生成角色）
+- ✅ **V5.2**: 統一 AI 生成流程，所有模板動態生成角色和劇情
 - ✅ **Phase 5**: Landing Page 快速生成增強（熱門模板快捷入口 + URL 參數支持）
 
 **技術簡化**:
@@ -45,37 +55,28 @@ src/
 │   └── template.ts                      # ✅ 模板系統類型定義
 ├── data/
 │   └── templates.ts                     # ✅ 50個官方模板數據
+│                                         #    ⚠️ V5.2: 已移除 characterConfig
 ├── lib/
 │   ├── prompt-engine.ts                 # ✅ V5 Prompt Engine (核心)
 │   │                                     #    - generateCharacterPair()
 │   │                                     #    - generateOutline()
 │   │                                     #    - buildStoryPrompt()
 │   ├── content-cleaner.ts               # 清理 AI 思考標籤 (<thinking>)
-│   ├── story-utils.ts                   # 工具函數 (extractDynamicContext等)
+│   ├── story-utils.ts                   # 工具函數
 │   ├── themes.ts                        # 主題風格配置
 │   └── humanizer.ts                     # V2.9 文字潤色 (可選)
 ├── app/api/
-│   ├── generate-story/route.ts          # ✅ 主生成入口 (V5 單段模式)
-│   │                                     #    支持兩種模式:
-│   │                                     #    1. V5新架構: templateId + characters + outline
-│   │                                     #    2. 舊架構: systemPrompt + userPrompt
-│   ├── story/outline/route.ts           # ✅ V5 角色/大綱生成
-│   │                                     #    輸入: templateId
-│   │                                     #    輸出: characters + outline
-│   ├── story/segment/route.ts           # ⚠️ 僅備用 (多段生成舊API)
-│   └── story/segment/system_prompt.ts   # ⚠️ 核心 prompt (官方鎖定)
-├── app/app/page.tsx                     # 主界面 (app路由)
+│   ├── generate-story/route.ts          # ✅ 主生成入口
+│   ├── story/outline/route.ts           # ✅ V5 角色/大綱生成 (所有模板使用)
+│   └── story/segment/route.ts           # ⚠️ 僅備用
+├── app/app/page.tsx                     # ✅ 主界面 (含 V5.2 載入提示)
 ├── app/page.tsx                         # Landing Page
 ├── components/
-│   ├── StoryOutput.tsx                  # ✅ 故事顯示 + GenerateButtons
-│   ├── TemplateSelector.tsx             # ✅ 模板中心 (分類/搜索/收藏/Trending)
+│   ├── StoryOutput.tsx                  # ✅ 故事顯示 + 生成按鈕
+│   ├── TemplateSelector.tsx             # ✅ V5.2: 統一調用 /api/story/outline
 │   └── template/                        # ✅ 模板相關子組件
-│       ├── FavoriteButton.tsx
-│       ├── FavoritesSection.tsx
-│       └── TrendingSection.tsx
 ├── store/
-│   └── useAppStore.ts                   # ✅ 全局狀態
-│                                         #    V5新增: selectedTemplate, generatedCharacters, generatedOutline
+│   └── useAppStore.ts                   # ✅ V5.2: 新增 isGeneratingTemplate
 └── docs/
     └── PHASE7_PLAN.md                   # 完整技術規劃
 ```
@@ -172,25 +173,39 @@ Response: {
 
 ---
 
-## 🔄 前端生成流程
+## 🔄 前端生成流程 (V5.2)
 
-### 完整 V5 流程
+### 完整 V5.2 流程
 
 ```typescript
-// TemplateSelector.tsx
-1. 用戶選擇模板
-2. 調用 /api/story/outline 生成角色對 + 大綱
-3. 存入 useAppStore: selectedTemplate, generatedCharacters, generatedOutline
-4. 顯示角色預覽彈窗（可編輯角色屬性）
+// TemplateSelector.tsx - V5.2 統一流程
+1. 用戶選擇任意模板
+2. 立即關閉選擇器，設置 isGeneratingTemplate = true
+3. 調用 /api/story/outline 生成角色對 + 大綱
+4. 同時：
+   ├─ 角色寫入 store.characters → 顯示在角色面板
+   └─ 大綱寫入 store.storyInput → 顯示在劇情輸入框
+5. 設置 isGeneratingTemplate = false
+6. 用戶可編輯角色和劇情大綱
+7. 點擊「開始創作」調用 StoryOutput.tsx
 
 // StoryOutput.tsx → generateStoryDirect()
-5. 讀取 generatedCharacters, generatedOutline 和 selectedTemplate
-6. 如果有預生成數據，使用 V5 新 API 模式
-7. 否則使用舊模式 (systemPrompt + userPrompt)
-8. 發送請求到 /api/generate-story
-9. SSE 流式接收故事內容
-10. 顯示進度條和字數統計
+8. 讀取 selectedTemplate, generatedCharacters, generatedOutline
+9. 發送請求到 /api/generate-story (V5 模式)
+10. SSE 流式接收故事內容
+11. 顯示進度條和字數統計
 ```
+
+### V5.2 關鍵變更
+
+| 項目 | V5.1 | V5.2 |
+|------|------|------|
+| 模板角色 | characterConfig 預設 | AI 動態生成 |
+| 生成時機 | 選模板 → 彈窗 → 確認後生成 | 選模板立即生成 |
+| 顯示位置 | 彈窗預覽角色 | 直接寫入角色面板 |
+| 劇情大綱 | 隱藏或部分顯示 | 完整三段式寫入輸入框 |
+| 載入提示 | 無 | 「正在生成角色與劇情大綱...」|
+| 用戶編輯 | 僅角色可編輯 | 角色和劇情都可編輯 |
 
 ### 核心函數
 
@@ -255,6 +270,10 @@ generatedOutline: {
 } | null
 setGeneratedCharacters: (chars) => void
 setGeneratedOutline: (outline) => void
+
+// V5.2 載入狀態
+isGeneratingTemplate: boolean            // 模板生成中（顯示載入提示）
+setIsGeneratingTemplate: (v: boolean) => void
 ```
 
 ### 保留狀態 (向後兼容)
@@ -327,6 +346,7 @@ npx vercel --prod --yes --token "$VERCEL_TOKEN"
 
 | 日期 | 版本 | 變更 |
 |------|------|------|
+| 2026-03-07 | V5.2 | 統一 AI 生成流程，移除模板預設角色，添加載入提示 |
 | 2026-03-07 | V5.1 | 系統文檔重構，明確 V5 Prompt Engine 架構 |
 | 2026-03-06 | V5 | 模板系統全面上線，移除題材芯片 |
 | 2026-03-05 | V4.1 | 單段生成固化，強制 skipCache |
@@ -335,4 +355,4 @@ npx vercel --prod --yes --token "$VERCEL_TOKEN"
 ---
 
 *最後更新：2026-03-07 by 千螢*
-*變更記錄：見 CHANGE_LOG.md*
+*版本：V5.2 - 統一 AI 生成*
