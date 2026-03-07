@@ -13,7 +13,6 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Loader2, Sparkles, RotateCcw, Edit2, Eye, RefreshCw, Download, FileText, Copy, Check, BookOpen, Wand2, AlertCircle, X } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { extractDynamicContext } from "@/lib/story-utils"
 import { SYSTEM_PROMPT as OFFICIAL_SYSTEM_PROMPT } from "@/app/api/story/segment/system_prompt"
 import { getThemeById } from "@/lib/themes"
 
@@ -270,9 +269,8 @@ export function StoryOutput() {
   const charCount = storyOutput.length
   const remainingChars = MAX_CHARS - charCount
   
-  // 獲取當前生成狀態
-  const { targetSegments } = useAppStore()
-  const displaySegments = targetSegments || 2
+  // V5: 固定單段生成
+  const displaySegments = 1
 
   return (
     <Card className="nyx-surface nyx-border h-full flex flex-col">
@@ -390,8 +388,6 @@ export function GenerateButtons() {
     shouldRegenerate,
     extractCharacters,
     setShouldRegenerate,
-    targetSegments,
-    setTargetSegments,
     humanizeEnabled,
   } = useAppStore()
 
@@ -410,7 +406,7 @@ export function GenerateButtons() {
       setError(null)
       setShouldRegenerate(false)
       // V3: 使用分段生成流程
-      generateStoryV3(true)
+      generateStoryV3()
     }
   }, [shouldRegenerate, canGenerate, isGenerating])
 
@@ -506,111 +502,7 @@ ${perspectiveInstruction}
     return { systemPrompt, userPrompt }
   }
 
-  // V3: 生成隱形大綱
-  interface StoryOutline {
-    scenes: { title: string; summary: string; targetLength: number }[]
-  }
-  
-  const generateOutline = async (): Promise<StoryOutline | null> => {
-    try {
-      const response = await fetch("/api/story/outline", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          story_start: storyInput,
-          characters,
-          genre: ["模板"].join('、'),
-          style: "流暢細膩、長篇敘事"
-        })
-      })
-
-      if (!response.ok) {
-        const result = await response.json()
-        if (result.errorType === "free_quota_exceeded") {
-          setShowSignupPrompt(true)
-          return null
-        }
-        if (result.errorType === "insufficient_words") {
-          setShowRechargePrompt(true)
-          return null
-        }
-        throw new Error(result.error || "大綱生成失敗")
-      }
-
-      const data = await response.json()
-      return data.outline
-    } catch (err) {
-      console.error('Outline generation failed:', err)
-      return null
-    }
-  }
-
-  // V3: 生成單段
-  interface OutlineScene {
-    title: string
-    summary: string
-    targetLength: number
-  }
-  
-  const generateSegment = async (
-    sceneIndex: number,
-    totalScenes: number,
-    outlineScene: OutlineScene,
-    previousSegment?: string
-  ): Promise<string | null> => {
-    try {
-      const anonymousId = !isLoggedIn ? getOrCreateAnonymousId() : undefined
-      
-      const response = await fetch("/api/story/segment", {
-        method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          ...(anonymousId && { "x-anonymous-id": anonymousId })
-        },
-        body: JSON.stringify({
-          story_start: storyInput,
-          scene_context: {
-            scene_index: sceneIndex,
-            total_scenes: totalScenes,
-            outline: outlineScene,
-            previous_segment: previousSegment,
-            dynamic_context: useAppStore.getState().dynamicContext
-          },
-          characters,
-          genre: ["模板"].join('、'),
-          style: "流暢細膩、長篇敘事"
-        })
-      })
-
-      if (!response.ok) {
-        const result = await response.json()
-        if (result.errorType === "free_quota_exceeded") {
-          setShowSignupPrompt(true)
-          return null
-        }
-        if (result.errorType === "insufficient_words") {
-          setShowRechargePrompt(true)
-          return null
-        }
-        throw new Error(result.error || `第 ${sceneIndex} 段生成失敗`)
-      }
-
-      const data = await response.json()
-      return data.segment?.text || null
-    } catch (err) {
-      console.error(`Segment ${sceneIndex} generation failed:`, err)
-      return null
-    }
-  }
-
-  // V3: 異步提取動態上下文
-  const updateDynamicContextAsync = async (segmentText: string) => {
-    const { dynamicContext, updateDynamicContext } = useAppStore.getState()
-    const result = await extractDynamicContext(segmentText, dynamicContext)
-    updateDynamicContext(result)
-  }
-
-  // V5: Prompt Engine 新流程 - 先獲取角色和大綱，再生成故事
+  // V5: Prompt Engine - 獲取角色和大綱
   interface CharacterConfig {
     name: string
     age: string
@@ -692,7 +584,6 @@ ${perspectiveInstruction}
 
   // V2.5: 直接多段生成（跳過大綱）
   const generateStoryDirect = async () => {
-    console.log('[V2.5] generateStoryDirect started, canGenerate:', canGenerate, 'targetSegments:', targetSegments)
     if (!canGenerate) return
     
     // V5.1: 使用預生成的角色和大綱（如果有），否則實時生成
@@ -748,7 +639,7 @@ ${perspectiveInstruction}
     const { resetStreaming, setStreamingState, humanizeEnabled } = useAppStore.getState()
     resetStreaming()
     // V2.9: 設置流式狀態，啟動進度條。currentSceneIndex 從 1 開始（第一段）
-    setStreamingState({ isStreaming: true, currentSceneIndex: 1, totalScenes: targetSegments })
+    setStreamingState({ isStreaming: true, currentSceneIndex: 1, totalScenes: 1 })
     setIsGenerating(true)
     setError(null)
     setStoryOutput("")
@@ -936,18 +827,10 @@ ${perspectiveInstruction}
     }
   }
 
-  // V3: 舊的故事生成流程（已棄用，改用 generateStoryDirect）
-  const generateStoryV3 = async (skipCache: boolean = false) => {
-    // 直接調用 V2.5 版本
-    await generateStoryDirect()
-  }
+  // V3: 統一入口（向後兼容）
+  const generateStoryV3 = generateStoryDirect
 
-  // V4: 強制跳過緩存的生成（用於「再寫一次」功能）
-  const regenerateStory = async () => {
-    await generateStoryDirect()
-  }
-
-  // V1/V2: 續寫流程（保持原有邏輯）
+  // V1/V2: 續寫流程
   const continueStory = async () => {
     const { setStreamingState, humanizeEnabled } = useAppStore.getState()
     // 設置流式狀態，啟動進度條（續寫顯示為第 1/1 段）
@@ -1106,7 +989,7 @@ ${perspectiveInstruction}
         {!hasOutput ? (
           // 未有故事：顯示「開始創作」
           <Button
-            onClick={() => generateStoryV3(false)}
+            onClick={() => generateStoryV3()}
             disabled={!canGenerate || isGenerating}
             className="w-full bg-blue-600 hover:bg-blue-700"
           >

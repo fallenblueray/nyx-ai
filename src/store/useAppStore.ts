@@ -47,64 +47,43 @@ interface AppState {
   anonymousWordsLimit: number
 
   // 彈窗狀態：字數用完提示
-  showSignupPrompt: boolean    // 匿名用戶字數耗盡 → 彈出註冊提醒
+  showSignupPrompt: boolean
   setShowSignupPrompt: (v: boolean) => void
-  showRechargePrompt: boolean  // 登入用戶字數耗盡 → 彈出充值提醒
+  showRechargePrompt: boolean
   setShowRechargePrompt: (v: boolean) => void
 
-  // 重新生成標記（用戶按「再寫一次」時觸發）
+  // 重新生成標記
   shouldRegenerate: boolean
   setShouldRegenerate: (v: boolean) => void
 
-  // V3: 流式分段生成狀態
-  streamingSegments: string[]
+  // V5: 簡化流式狀態
   currentSceneIndex: number
   totalScenes: number
   isStreaming: boolean
-  streamingError: string | null
   setStreamingState: (state: {
-    segments?: string[]
+    isStreaming?: boolean
     currentSceneIndex?: number
     totalScenes?: number
-    isStreaming?: boolean
-    streamingError?: string | null
   }) => void
-  appendSegment: (text: string) => void
   resetStreaming: () => void
-  
-  // V2.8: 目標分段數（1/2/3段）
-  targetSegments: number
-  setTargetSegments: (n: number) => void
 
   // V2.9: Humanize 開關
   humanizeEnabled: boolean
   setHumanizeEnabled: (v: boolean) => void
-
-  // V3: 隱形大綱（用戶不可見）
-  storyOutline: unknown | null
-  setStoryOutline: (outline: unknown) => void
   
-  // V3: 動態上下文
-  dynamicContext: {
-    characters: { name: string; mood: string; status: string; isNew: boolean }[]
-    relationships: string[]
-    keyItems: string[]
-  }
-  updateDynamicContext: (context: Partial<AppState['dynamicContext']>) => void
-  
-  // V4.4: 人稱視角（第一人稱/第三人稱）
+  // V4.4: 人稱視角
   perspective: 'first-person' | 'third-person'
   setPerspective: (perspective: 'first-person' | 'third-person') => void
   
   // V4.5: 故事主題
   storyTheme: string
-  
-  // V5: Prompt Engine - 選中的模板
-  selectedTemplate: string | null
-  setSelectedTemplate: (templateId: string | null) => void
   setStoryTheme: (theme: string) => void
   
-  // V5.1: 生成的角色和大綱（用戶可編輯）
+  // V5: Prompt Engine
+  selectedTemplate: string | null
+  setSelectedTemplate: (templateId: string | null) => void
+  
+  // V5.1: 生成的角色和大綱
   generatedCharacters: { name: string; age: string; role: string; personality: string; appearance: string; desireStyle: string; traits: string[] }[] | null
   generatedOutline: { beginning: string; development: string; climax: string; preview: string } | null
   setGeneratedCharacters: (characters: { name: string; age: string; role: string; personality: string; appearance: string; desireStyle: string; traits: string[] }[] | null) => void
@@ -162,13 +141,12 @@ export const useAppStore = create<AppState>()(
           })
           if (!response.ok) {
             console.warn('[extractCharacters] API error:', response.status)
-            return // 失敗靜默處理
+            return
           }
           const data = await response.json()
           const newCharacters = data.characters || []
           if (newCharacters.length === 0) return
           
-          // 合併新角色（按名字去重）
           set((state) => {
             const existingNames = new Set(state.characters.map(c => c.name))
             const uniqueNewChars: Character[] = newCharacters
@@ -186,7 +164,6 @@ export const useAppStore = create<AppState>()(
           })
         } catch (err) {
           console.warn('[extractCharacters] Failed:', err)
-          // 後台提取失敗不影響用戶體驗
         } finally {
           set({ isExtractingCharacters: false })
         }
@@ -207,66 +184,33 @@ export const useAppStore = create<AppState>()(
       shouldRegenerate: false,
       setShouldRegenerate: (v) => set({ shouldRegenerate: v }),
 
-      // V3: 流式分段生成
-      streamingSegments: [],
+      // V5: 簡化流式狀態
       currentSceneIndex: 0,
-      totalScenes: 3,
+      totalScenes: 1,
       isStreaming: false,
-      streamingError: null,
       setStreamingState: (newState) => set((state) => ({
-        streamingSegments: newState.segments ?? state.streamingSegments,
         currentSceneIndex: newState.currentSceneIndex ?? state.currentSceneIndex,
         totalScenes: newState.totalScenes ?? state.totalScenes,
         isStreaming: newState.isStreaming ?? state.isStreaming,
-        streamingError: newState.streamingError ?? state.streamingError,
-      })),
-      appendSegment: (text) => set((state) => ({
-        streamingSegments: [...state.streamingSegments, text],
-        currentSceneIndex: state.currentSceneIndex + 1,
-        storyOutput: state.storyOutput + (state.storyOutput ? '\n\n' : '') + text,
       })),
       resetStreaming: () => set({
-        streamingSegments: [],
         currentSceneIndex: 0,
         isStreaming: false,
-        streamingError: null,
       }),
-      
-      // V2.8: 目標分段數（預設3段 = 消耗7500字，第4段中斷產生焦慮）
-      targetSegments: 3,
-      setTargetSegments: (n) => set({ targetSegments: Math.min(Math.max(n, 1), 3) }),
 
-      // V2.9: Humanize 開關（預設啟用）
+      // V2.9: Humanize
       humanizeEnabled: true,
       setHumanizeEnabled: (v) => set({ humanizeEnabled: v }),
 
-      // V3: 隱形大綱
-      storyOutline: null,
-      setStoryOutline: (outline) => set({ storyOutline: outline }),
-
-      // V3: 動態上下文
-      dynamicContext: {
-        characters: [] as { name: string; mood: string; status: string; isNew: boolean }[],
-        relationships: [],
-        keyItems: [],
-      },
-      updateDynamicContext: (context) => set((state) => ({
-        dynamicContext: {
-          characters: context.characters ?? state.dynamicContext.characters,
-          relationships: context.relationships ?? state.dynamicContext.relationships,
-          keyItems: context.keyItems ?? state.dynamicContext.keyItems,
-        },
-      })),
-      
-      // V4.4: 人稱視角（預設第一人稱）
+      // V4.4: 人稱視角
       perspective: 'first-person',
       setPerspective: (perspective) => set({ perspective }),
       
-      // V4.5: 故事主題（預設 Midnight Passion）
+      // V4.5: 故事主題
       storyTheme: 'midnight-passion',
       setStoryTheme: (theme) => set({ storyTheme: theme }),
       
-      // V5: Prompt Engine - 選中的模板
+      // V5: Prompt Engine
       selectedTemplate: null,
       setSelectedTemplate: (templateId) => set({ selectedTemplate: templateId }),
       
@@ -278,14 +222,11 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: 'nyx-ai-storage',
-      // 不持久化彈窗狀態和流式狀態
       partialize: (state) => ({
         isPanelCollapsed: state.isPanelCollapsed,
         storyInput: state.storyInput,
         storyOutput: state.storyOutput,
         characters: state.characters,
-        storyOutline: state.storyOutline,
-        dynamicContext: state.dynamicContext,
         perspective: state.perspective,
         storyTheme: state.storyTheme,
       }),

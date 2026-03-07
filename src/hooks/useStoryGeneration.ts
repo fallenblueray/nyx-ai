@@ -20,7 +20,6 @@ export function useStoryGeneration(options: UseStoryGenerationOptions = {}) {
   const {
     storyInput,
     characters,
-    targetSegments,
     setIsGenerating,
     setError,
     setStoryOutput,
@@ -60,13 +59,13 @@ export function useStoryGeneration(options: UseStoryGenerationOptions = {}) {
     setStreamingState({ 
       isStreaming: true, 
       currentSceneIndex: 0, 
-      totalScenes: targetSegments 
+      totalScenes: 1
     })
     setIsGenerating(true)
     setError(null)
     setStoryOutput("")
     setCurrentSegment(0)
-  }, [targetSegments, setIsGenerating, setError, setStoryOutput])
+  }, [setIsGenerating, setError, setStoryOutput])
 
   // 結束生成
   const finishGeneration = useCallback(() => {
