@@ -88,8 +88,12 @@ export default function AdminPromptsPage() {
         setTimeout(() => {
           setSaveSuccess(prev => ({ ...prev, [key]: false }))
         }, 3000)
-        // 刷新數據
-        loadPrompts()
+        // 更新本地數據，避免重置編輯內容
+        setPrompts(prev => prev.map(p => 
+          p.key === key 
+            ? { ...p, content: editedContent[key], version: data.data?.version || p.version, updated_at: new Date().toISOString() }
+            : p
+        ))
       } else {
         alert('保存失敗：' + data.error)
       }

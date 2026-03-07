@@ -55,11 +55,21 @@ export async function POST(request: Request) {
 
     const supabase = await createServerClient()
 
+    // 先獲取當前版本號
+    const { data: currentData } = await supabase
+      .from('admin_prompts')
+      .select('version')
+      .eq('key', key)
+      .single()
+
+    const newVersion = (currentData?.version || 0) + 1
+
     // 更新提示詞，同時增加版本號
     const { data, error } = await supabase
       .from('admin_prompts')
       .update({
         content,
+        version: newVersion,
         updated_at: new Date().toISOString()
       })
       .eq('key', key)
