@@ -343,11 +343,23 @@ export function parseCharacterResponse(response: string): CharacterPair | null {
       relation: relationText.length 
     })
     
-    const parseCharacter = (text: string): CharacterConfig => {
+    const parseCharacter = (text: string, label: string): CharacterConfig => {
+      console.log(`[PromptEngine] Parsing ${label}, text preview:`, text.slice(0, 100).replace(/\n/g, ' | '))
+      
       // 支持繁體和簡體
-      const name = text.match(/名[稱称]：(.+)/)?.[1]?.trim() || ""
-      const age = text.match(/年[齡龄]：(.+)/)?.[1]?.trim() || ""
-      const role = text.match(/身份：(.+)/)?.[1]?.trim() || ""
+      const nameMatch = text.match(/名[稱称]：(.+)/)
+      const ageMatch = text.match(/年[齡龄]：(.+)/)
+      const roleMatch = text.match(/身份：(.+)/)
+      
+      console.log(`[PromptEngine] ${label} matches:`, { 
+        name: nameMatch?.[1]?.slice(0, 20), 
+        age: ageMatch?.[1]?.slice(0, 10),
+        role: roleMatch?.[1]?.slice(0, 20)
+      })
+      
+      const name = nameMatch?.[1]?.trim() || ""
+      const age = ageMatch?.[1]?.trim() || ""
+      const role = roleMatch?.[1]?.trim() || ""
       const personality = text.match(/性格：(.+)/)?.[1]?.trim() || ""
       const appearance = text.match(/外貌：(.+)/)?.[1]?.trim() || ""
       const desireStyle = text.match(/欲望[風风]格：(.+)/)?.[1]?.trim() || ""
@@ -357,8 +369,8 @@ export function parseCharacterResponse(response: string): CharacterPair | null {
       return { name, age, role, personality, appearance, desireStyle, traits }
     }
     
-    const character1 = parseCharacter(char1Text)
-    const character2 = parseCharacter(char2Text)
+    const character1 = parseCharacter(char1Text, 'char1')
+    const character2 = parseCharacter(char2Text, 'char2')
     
     const relationship = relationText.match(/關[係系]類型：(.+)/)?.[1]?.trim() || ""
     const tension = relationText.match(/核心張力：(.+)/)?.[1]?.trim() || ""
