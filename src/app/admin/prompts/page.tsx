@@ -95,7 +95,7 @@ export default function AdminPromptsPage() {
             : p
         ))
       } else {
-        alert('保存失敗：' + data.error)
+        alert('保存失敗：' + (data.error || '未知錯誤'))
       }
     } catch (error) {
       alert('保存失敗，請重試')

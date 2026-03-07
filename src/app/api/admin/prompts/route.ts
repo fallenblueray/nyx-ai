@@ -55,39 +55,77 @@ export async function POST(request: Request) {
 
     const supabase = await createServerClient()
 
-    // 先獲取當前版本號
-    const { data: currentData } = await supabase
+    // 先檢查記錄是否存在
+    const { data: existingData, error: checkError } = await supabase
       .from('admin_prompts')
-      .select('version')
+      .select('*')
       .eq('key', key)
-      .single()
+      .maybeSingle()
 
-    const newVersion = (currentData?.version || 0) + 1
-
-    // 更新提示詞，同時增加版本號
-    const { data, error } = await supabase
-      .from('admin_prompts')
-      .update({
-        content,
-        version: newVersion,
-        updated_at: new Date().toISOString()
-      })
-      .eq('key', key)
-      .select()
-
-    if (error) {
-      console.error('[Admin Prompts API] Error updating prompt:', error)
+    if (checkError) {
+      console.error('[Admin Prompts API] Error checking prompt:', checkError)
       return NextResponse.json(
-        { success: false, error: 'Failed to update prompt' },
+        { success: false, error: 'Database error: ' + checkError.message },
         { status: 500 }
       )
     }
 
+    let result
+
+    if (existingData) {
+      // 更新現有記錄
+      const newVersion = (existingData.version || 0) + 1
+      console.log(`[Admin Prompts API] Updating existing prompt: ${key}, version: ${newVersion}`)
+
+      const { data, error } = await supabase
+        .from('admin_prompts')
+        .update({
+          content,
+          version: newVersion,
+          updated_at: new Date().toISOString()
+        })
+        .eq('key', key)
+        .select()
+
+      if (error) {
+        console.error('[Admin Prompts API] Error updating prompt:', error)
+        return NextResponse.json(
+          { success: false, error: 'Failed to update: ' + error.message },
+          { status: 500 }
+        )
+      }
+      result = data?.[0]
+    } else {
+      // 插入新記錄
+      console.log(`[Admin Prompts API] Creating new prompt: ${key}`)
+
+      const { data, error } = await supabase
+        .from('admin_prompts')
+        .insert({
+          key,
+          name: key === 'character' ? '角色生成提示詞' : key === 'outline' ? '大綱生成提示詞' : '故事生成提示詞',
+          description: '動態創建的提示詞',
+          content,
+          version: 1,
+          is_active: true
+        })
+        .select()
+
+      if (error) {
+        console.error('[Admin Prompts API] Error inserting prompt:', error)
+        return NextResponse.json(
+          { success: false, error: 'Failed to insert: ' + error.message },
+          { status: 500 }
+        )
+      }
+      result = data?.[0]
+    }
+
     // V5.3: 清除提示詞緩存，使新配置立即生效
     clearPromptCache()
-    console.log(`[Admin Prompts API] Prompt updated: ${key}, cache cleared`)
+    console.log(`[Admin Prompts API] Prompt saved: ${key}, cache cleared`)
 
-    return NextResponse.json({ success: true, data: data?.[0] })
+    return NextResponse.json({ success: true, data: result })
   } catch (error) {
     console.error('[Admin Prompts API] Unexpected error:', error)
     return NextResponse.json(
