@@ -70,7 +70,8 @@ async function generateCharacterAndOutline(
   template: Template,
   seed?: number
 ): Promise<OutlineResponse['data'] | null> {
-  const templateWorld = template.promptBuilder.systemPrompt || `你是一位頂級成人小說作家，專注於${template.category}題材的創作。`
+  // V5.3: 使用 baseScenario 作为模板世界观，不再使用兜底默认值
+  const templateWorld = template.promptBuilder.baseScenario
   
   console.log(`[Outline] Generating for template: ${template.id}, seed: ${seed}`)
   
