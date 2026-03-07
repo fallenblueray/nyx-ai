@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
       }
       
       finalSystemPrompt = template.promptBuilder.systemPrompt || `你是一位頂級成人小說作家，專注於${template.category}題材的創作。`
-      finalUserPrompt = buildStoryPrompt(
+      finalUserPrompt = await buildStoryPrompt(
         finalSystemPrompt,
         characters.character1,
         characters.character2,

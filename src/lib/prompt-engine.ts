@@ -1,7 +1,75 @@
 /**
  * NyxAI 高級 Prompt Engine - 爆款級敘事架構
  * 核心理念: 角色驅動 + 劇情節奏 + 情緒遞進
+ * 
+ * V5.3: 支持動態提示詞配置（從數據庫讀取）
  */
+
+// 動態提示詞緩存（避免頻繁查詢數據庫）
+let promptCache: Record<string, string> = {}
+let cacheTimestamp = 0
+const CACHE_DURATION = 60000 // 1分鐘緩存
+
+/**
+ * 從數據庫獲取提示詞配置
+ */
+export async function getPromptFromDB(key: string): Promise<string | null> {
+  // 檢查緩存
+  const now = Date.now()
+  if (now - cacheTimestamp < CACHE_DURATION && promptCache[key]) {
+    return promptCache[key]
+  }
+
+  try {
+    // 在服務端環境直接查詢數據庫
+    if (typeof window === 'undefined') {
+      // 動態導入 supabase 避免客戶端問題
+      const { createClient } = await import('@supabase/supabase-js')
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      )
+      
+      const { data, error } = await supabase
+        .from('admin_prompts')
+        .select('content')
+        .eq('key', key)
+        .eq('is_active', true)
+        .single()
+
+      if (error || !data) {
+        console.log(`[PromptEngine] Using default prompt for ${key}`)
+        return null
+      }
+
+      // 更新緩存
+      promptCache[key] = data.content
+      cacheTimestamp = now
+      
+      return data.content
+    }
+    
+    return null
+  } catch (error) {
+    console.error('[PromptEngine] Failed to fetch prompt from DB:', error)
+    return null
+  }
+}
+
+/**
+ * 簡單模板變數替換
+ */
+function replaceTemplateVars(template: string, vars: Record<string, any>): string {
+  return template.replace(/\{\{(\w+(?:\.\w+)*)\}\}/g, (match, path) => {
+    const keys = path.split('.')
+    let value: any = vars
+    for (const key of keys) {
+      value = value?.[key]
+      if (value === undefined) return match
+    }
+    return String(value)
+  })
+}
 
 // Character Engine - 角色驅動系統
 export interface CharacterConfig {
@@ -46,10 +114,23 @@ export const CHARACTER_TENSION_TEMPLATES = [
 
 /**
  * 生成角色配對 Prompt
+ * V5.3: 支持從數據庫讀取配置
  */
-export function buildCharacterPrompt(templateWorld: string): string {
+export async function buildCharacterPrompt(templateWorld: string): Promise<string> {
   const tensionTemplate = CHARACTER_TENSION_TEMPLATES[Math.floor(Math.random() * CHARACTER_TENSION_TEMPLATES.length)]
   
+  // 嘗試從數據庫獲取自定義提示詞
+  const customPrompt = await getPromptFromDB('character')
+  
+  if (customPrompt) {
+    return replaceTemplateVars(customPrompt, {
+      templateWorld,
+      tensionType: tensionTemplate.type,
+      examples: tensionTemplate.examples.join('、')
+    })
+  }
+  
+  // 使用默認提示詞（向後兼容）
   return `你是一位專業的角色設計師。請根據以下世界設定，創建一組具有強烈戲劇張力的角色配對。
 
 世界設定：
@@ -85,8 +166,21 @@ ${templateWorld}
 
 /**
  * 生成劇情大綱 Prompt
+ * V5.3: 支持從數據庫讀取配置
  */
-export function buildOutlinePrompt(templateWorld: string, character1: CharacterConfig, character2: CharacterConfig): string {
+export async function buildOutlinePrompt(templateWorld: string, character1: CharacterConfig, character2: CharacterConfig): Promise<string> {
+  // 嘗試從數據庫獲取自定義提示詞
+  const customPrompt = await getPromptFromDB('outline')
+  
+  if (customPrompt) {
+    return replaceTemplateVars(customPrompt, {
+      templateWorld,
+      character1,
+      character2
+    })
+  }
+  
+  // 使用默認提示詞
   return `你是一位專業的成人故事編劇。請根據以下信息，生成一個三段式劇情大綱。
 
 世界設定：
@@ -123,8 +217,9 @@ ${templateWorld}
 
 /**
  * 構建最終故事生成 Prompt
+ * V5.3: 支持從數據庫讀取配置
  */
-export function buildStoryPrompt(
+export async function buildStoryPrompt(
   templateWorld: string,
   character1: CharacterConfig,
   character2: CharacterConfig,
@@ -132,7 +227,23 @@ export function buildStoryPrompt(
   outlineDevelopment: string,
   outlineClimax: string,
   userInput?: string
-): string {
+): Promise<string> {
+  // 嘗試從數據庫獲取自定義提示詞
+  const customPrompt = await getPromptFromDB('story')
+  
+  if (customPrompt) {
+    return replaceTemplateVars(customPrompt, {
+      templateWorld,
+      character1,
+      character2,
+      outlineBeginning,
+      outlineDevelopment,
+      outlineClimax,
+      userInput: userInput ? `========== 用戶自定義劇情起點 ==========\n${userInput}` : ''
+    })
+  }
+  
+  // 使用默認提示詞
   return `你是一位頂級的成人小說作家。請根據以下完整設定，創作一篇沉浸式故事。
 
 ========== 世界設定 ==========
@@ -174,7 +285,8 @@ ${userInput}
 - 禁止使用段落標題或場景標記
 - 禁止重複內容或無意義填充
 
-請直接開始輸出故事，純故事內容，不要任何前言或後記。`}
+請直接開始輸出故事，純故事內容，不要任何前言或後記。`
+}
 
 /**
  * 解析角色生成結果
@@ -249,7 +361,7 @@ export async function generateCharacterPair(
   templateWorld: string,
   callAI: (prompt: string) => Promise<string>
 ): Promise<CharacterPair | null> {
-  const prompt = buildCharacterPrompt(templateWorld)
+  const prompt = await buildCharacterPrompt(templateWorld)
   const response = await callAI(prompt)
   return parseCharacterResponse(response)
 }
@@ -263,7 +375,7 @@ export async function generateOutline(
   character2: CharacterConfig,
   callAI: (prompt: string) => Promise<string>
 ): Promise<{ beginning: string; development: string; climax: string; preview: string } | null> {
-  const prompt = buildOutlinePrompt(templateWorld, character1, character2)
+  const prompt = await buildOutlinePrompt(templateWorld, character1, character2)
   const response = await callAI(prompt)
   return parseOutlineResponse(response)
 }
