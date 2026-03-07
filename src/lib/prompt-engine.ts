@@ -302,12 +302,25 @@ ${userInput}
 
 /**
  * 解析角色生成結果
+ * V5.3: 支持 === 和 ### 兩種格式
  */
 export function parseCharacterResponse(response: string): CharacterPair | null {
   try {
-    const char1Match = response.match(/===角色1===([\s\S]*?)(?====角色2===)/)
-    const char2Match = response.match(/===角色2===([\s\S]*?)(?====角色關係===)/)
-    const relationMatch = response.match(/===角色關係===([\s\S]*)/)
+    // 嘗試匹配 === 格式
+    let char1Match = response.match(/===角色1===([\s\S]*?)(?====角色2===|### 角色2)/)
+    let char2Match = response.match(/===角色2===([\s\S]*?)(?====角色關係===|### 角色關係|## 角色關係)/)
+    let relationMatch = response.match(/===角色關係===([\s\S]*)/)
+    
+    // 如果沒有匹配到，嘗試 ### 格式
+    if (!char1Match) {
+      char1Match = response.match(/### 角色1\s*\n([\s\S]*?)(?=### 角色2|## 角色2)/)
+    }
+    if (!char2Match) {
+      char2Match = response.match(/### 角色2\s*\n([\s\S]*?)(?=### 角色關係|## 角色關係)/)
+    }
+    if (!relationMatch) {
+      relationMatch = response.match(/### 角色關係\s*\n([\s\S]*)/)
+    }
     
     if (!char1Match || !char2Match) return null
     
