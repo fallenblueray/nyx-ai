@@ -1,12 +1,26 @@
-import { createServerClient } from "@/lib/supabase/server"
 import { NextResponse } from 'next/server'
 import { clearPromptCache } from '@/lib/prompt-engine'
+import { createClient } from '@supabase/supabase-js'
+
+// 創建管理員客戶端（使用 service_role key 繞過 RLS）
+function createAdminClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    }
+  )
+}
 
 // GET - 讀取所有提示詞配置
 export async function GET() {
   try {
     console.log('[Admin Prompts API] GET /api/admin/prompts')
-    const supabase = await createServerClient()
+    const supabase = createAdminClient()
 
     const { data, error } = await supabase
       .from('admin_prompts')
@@ -67,7 +81,7 @@ export async function POST(request: Request) {
       )
     }
 
-    const supabase = await createServerClient()
+    const supabase = createAdminClient()
 
     // 先檢查記錄是否存在
     const { data: existingData, error: checkError } = await supabase
