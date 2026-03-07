@@ -33,7 +33,8 @@ interface OutlineResponse {
  */
 async function callAI(prompt: string, seed?: number): Promise<string> {
   const apiKey = process.env.OPENROUTER_API_KEY
-  const model = process.env.STORY_GENERATION_MODEL || "deepseek/deepseek-chat"
+  // V5.3: 強制使用 DeepSeek R1 模型
+  const model = "deepseek/deepseek-r1-0528"
   
   // 加入隨機種子確保每次生成不同
   const randomSeed = seed || Date.now() + Math.floor(Math.random() * 1000000)
@@ -70,6 +71,8 @@ async function generateCharacterAndOutline(
   seed?: number
 ): Promise<OutlineResponse['data'] | null> {
   const templateWorld = template.promptBuilder.systemPrompt || `你是一位頂級成人小說作家，專注於${template.category}題材的創作。`
+  
+  console.log(`[Outline] Generating for template: ${template.id}, seed: ${seed}`)
   
   // 創建帶種子的 callAI 包裝函數
   const callAIWithSeed = (prompt: string) => callAI(prompt, seed)

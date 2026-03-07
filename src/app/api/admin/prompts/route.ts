@@ -1,5 +1,6 @@
 import { createServerClient } from "@/lib/supabase/server"
 import { NextResponse } from 'next/server'
+import { clearPromptCache } from '@/lib/prompt-engine'
 
 // GET - 讀取所有提示詞配置
 export async function GET() {
@@ -71,6 +72,10 @@ export async function POST(request: Request) {
         { status: 500 }
       )
     }
+
+    // V5.3: 清除提示詞緩存，使新配置立即生效
+    clearPromptCache()
+    console.log(`[Admin Prompts API] Prompt updated: ${key}, cache cleared`)
 
     return NextResponse.json({ success: true, data: data?.[0] })
   } catch (error) {

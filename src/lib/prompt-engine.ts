@@ -8,7 +8,17 @@
 // 動態提示詞緩存（避免頻繁查詢數據庫）
 let promptCache: Record<string, string> = {}
 let cacheTimestamp = 0
-const CACHE_DURATION = 60000 // 1分鐘緩存
+const CACHE_DURATION = 10000 // 10秒緩存（V5.3: 縮短以便即時生效）
+
+/**
+ * 清除提示詞緩存
+ * V5.3: 保存提示詞後立即清除
+ */
+export function clearPromptCache(): void {
+  promptCache = {}
+  cacheTimestamp = 0
+  console.log('[PromptEngine] Cache cleared')
+}
 
 /**
  * 從數據庫獲取提示詞配置
@@ -41,6 +51,8 @@ export async function getPromptFromDB(key: string): Promise<string | null> {
         console.log(`[PromptEngine] Using default prompt for ${key}`)
         return null
       }
+
+      console.log(`[PromptEngine] Loaded custom prompt: ${key}, length: ${data.content?.length || 0}`)
 
       // 更新緩存
       promptCache[key] = data.content

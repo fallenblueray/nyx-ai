@@ -1,10 +1,10 @@
-# NyxAI 系統說明書 (V5.2 統一 AI 生成)
+# NyxAI 系統說明書 (V5.3 管理員後台 & 動態提示詞)
 
 > **千螢維護協議**：每次開始任何 NyxAI 工作前，必須先完整讀取此文件。
 
 ---
 
-## 🗺️ 系統架構速覽 (V5.2)
+## 🗺️ 系統架構速覽 (V5.3)
 
 ```
 用戶選擇模板 / 輸入一句話
@@ -17,12 +17,25 @@
   ├─ 角色寫入 store.characters → 顯示在角色面板
   └─ 大綱寫入 store.storyInput → 顯示在劇情輸入框
     ↓
-[prompt-engine.ts]       ← 模板 + 角色 + 大綱 → 結構化 Prompt
+[prompt-engine.ts]       ← ✅ V5.3: 從數據庫動態讀取提示詞
     ↓
 [generate-story/route.ts] ← DeepSeek R1 單段生成 (~2000字)
     ↓
 SSE 流式輸出 → StoryOutput.tsx
+
+管理員流程：
+/admin/login → /admin/prompts → 編輯提示詞 → 保存到 Supabase
+                                          ↓
+                              即時影響所有新請求 (1分鐘緩存)
 ```
+
+**V5.3 重大變更** (相對於 V5.2):
+- ✅ **管理員後台**: `/admin/prompts` 頁面，可視化編輯提示詞
+- ✅ **動態提示詞**: 提示詞從 `prompt-engine.ts` 硬編碼 → Supabase 數據庫
+- ✅ **即時生效**: 修改提示詞後保存，立即影響所有新請求（無需重新部署）
+- ✅ **版本追蹤**: 每次保存自動更新版本號
+- ✅ **緩存機制**: 1分鐘客戶端緩存，平衡性能與即時性
+- ✅ **向後兼容**: 數據庫無記錄時自動 fallback 到默認提示詞
 
 **V5.2 重大變更** (相對於 V5.1):
 - ✅ **統一 AI 生成**：所有模板調用 `/api/story/outline` 生成角色+大綱
@@ -57,7 +70,9 @@ src/
 │   └── templates.ts                     # ✅ 50個官方模板數據
 │                                         #    ⚠️ V5.2: 已移除 characterConfig
 ├── lib/
-│   ├── prompt-engine.ts                 # ✅ V5 Prompt Engine (核心)
+│   ├── prompt-engine.ts                 # ✅ V5.3 Prompt Engine (動態配置)
+│   │                                     #    - getPromptFromDB() 從數據庫讀取
+│   │                                     #    - replaceTemplateVars() 模板變數替換
 │   │                                     #    - generateCharacterPair()
 │   │                                     #    - generateOutline()
 │   │                                     #    - buildStoryPrompt()
@@ -65,12 +80,19 @@ src/
 │   ├── story-utils.ts                   # 工具函數
 │   ├── themes.ts                        # 主題風格配置
 │   └── humanizer.ts                     # V2.9 文字潤色 (可選)
-├── app/api/
-│   ├── generate-story/route.ts          # ✅ 主生成入口
-│   ├── story/outline/route.ts           # ✅ V5 角色/大綱生成 (所有模板使用)
-│   └── story/segment/route.ts           # ⚠️ 僅備用
-├── app/app/page.tsx                     # ✅ 主界面 (含 V5.2 載入提示)
-├── app/page.tsx                         # Landing Page
+├── app/
+│   ├── api/
+│   │   ├── generate-story/route.ts      # ✅ 主生成入口
+│   │   ├── story/outline/route.ts       # ✅ V5 角色/大綱生成
+│   │   ├── story/segment/route.ts       # ⚠️ 僅備用
+│   │   └── admin/
+│   │       ├── prompts/route.ts         # ✅ V5.3 GET/POST 提示詞 CRUD
+│   │       └── verify/route.ts          # ✅ V5.3 管理員密碼驗證
+│   ├── admin/
+│   │   ├── login/page.tsx               # ✅ V5.3 登入頁面
+│   │   └── prompts/page.tsx             # ✅ V5.3 提示詞管理頁面
+│   ├── app/page.tsx                     # ✅ 主界面
+│   └── page.tsx                         # Landing Page
 ├── components/
 │   ├── StoryOutput.tsx                  # ✅ 故事顯示 + 生成按鈕
 │   ├── TemplateSelector.tsx             # ✅ V5.2: 統一調用 /api/story/outline
@@ -83,7 +105,7 @@ src/
 
 ---
 
-## ⚙️ 當前生成參數 (V5.1)
+## ⚙️ 當前生成參數 (V5.3)
 
 | 參數 | 值 | 說明 |
 |------|----|------|
@@ -94,6 +116,7 @@ src/
 | 緩存策略 | 強制跳過 | 所有請求 `skipCache: true` |
 | 段數 | 單段 | 不再分段，自然完結 |
 | **最小生成門檻** | **1000 字** | 少於此門檻直接拒絕 |
+| **提示詞緩存** | **60秒** | V5.3: `prompt-engine.ts` 客戶端緩存 |
 
 ---
 
@@ -102,7 +125,7 @@ src/
 ### 主入口: `/api/generate-story`
 
 ```typescript
-// V5.1 雙模式支持
+// V5.3 雙模式支持
 POST /api/generate-story
 
 // 模式 1: V5 新架構 (推薦)
@@ -135,7 +158,7 @@ Body: {
 4. 記憶層注入（登入用戶的偏好）
 5. 緩存層（被 `skipCache: true` 跳過）
 6. 調用 DeepSeek R1 生成
-7. **V5 Prompt Engine**: 根據 template 構建結構化 prompt
+7. **V5.3 Prompt Engine**: 從數據庫讀取提示詞模板
 8. 實時字數檢查 - 流式輸出過程中累計字數，超過剩餘字數立即停止
 9. 硬截斷處理（>2500字則找句子結束點）
 10. 內容清理（移除 `<thinking>` 標籤等）
@@ -169,6 +192,63 @@ Response: {
     }
   }
 }
+```
+
+### V5.3 管理員 API: `/api/admin/prompts`
+
+```typescript
+// 讀取當前提示詞配置
+GET /api/admin/prompts
+Response: {
+  prompts: [
+    { key: "character", name: "角色生成", content: "...", version: 1 },
+    { key: "outline", name: "大綱生成", content: "...", version: 1 },
+    { key: "story", name: "故事生成", content: "...", version: 1 }
+  ]
+}
+
+// 更新提示詞
+POST /api/admin/prompts
+Body: {
+  key: "character",     // "character" | "outline" | "story"
+  content: "新的提示詞內容..."
+}
+```
+
+**支持的模板變數**:
+- `{{templateWorld}}` - 模板世界設定
+- `{{character1.name}}`, `{{character1.age}}`, `{{character1.role}}` 等角色屬性
+- `{{character2.name}}`, `{{character2.age}}`, `{{character2.role}}` 等角色屬性
+- `{{outlineBeginning}}`, `{{outlineDevelopment}}`, `{{outlineClimax}}` - 大綱段落
+- `{{userInput}}` - 用戶自定義輸入
+
+---
+
+## 🧑‍💼 管理員後台 (V5.3 新增)
+
+### 登入
+- URL: `/admin/login`
+- 密碼: 環境變數 `ADMIN_PASSWORD` (默認: `nyx-admin-2024`)
+
+### 提示詞管理
+- URL: `/admin/prompts`
+- 功能: 編輯三種提示詞（角色、大綱、故事）
+- 界面: Tab 切換，變數說明面板，保存/重置按鈕
+
+### 數據庫表結構
+
+```sql
+CREATE TABLE admin_prompts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  key TEXT UNIQUE NOT NULL,           -- "character", "outline", "story"
+  name TEXT NOT NULL,                  -- 顯示名稱
+  description TEXT,                    -- 描述說明
+  content TEXT NOT NULL,               -- 提示詞內容
+  is_active BOOLEAN DEFAULT true,
+  version INTEGER DEFAULT 1,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
 ```
 
 ---
@@ -320,6 +400,7 @@ targetSegments: number          // ⚠️ 雖保留但實際固定為單段
 3. **API 錯誤** → OpenRouter key 和模型名稱 (deepseek/deepseek-r1-0528)
 4. **前端不顯示** → StoryOutput.tsx SSE 處理邏輯
 5. **模板無效** → 確認 templateId 存在於 officialTemplates
+6. **提示詞未更新** → 檢查 admin_prompts 表是否有記錄，或清除 1 分鐘後重試
 
 ---
 
@@ -346,6 +427,7 @@ npx vercel --prod --yes --token "$VERCEL_TOKEN"
 
 | 日期 | 版本 | 變更 |
 |------|------|------|
+| 2026-03-07 | V5.3 | 管理員後台 `/admin/prompts`，動態提示詞配置，從數據庫讀取 |
 | 2026-03-07 | V5.2 | 統一 AI 生成流程，移除模板預設角色，添加載入提示 |
 | 2026-03-07 | V5.1 | 系統文檔重構，明確 V5 Prompt Engine 架構 |
 | 2026-03-06 | V5 | 模板系統全面上線，移除題材芯片 |
@@ -355,4 +437,4 @@ npx vercel --prod --yes --token "$VERCEL_TOKEN"
 ---
 
 *最後更新：2026-03-07 by 千螢*
-*版本：V5.2 - 統一 AI 生成*
+*版本：V5.3 - 管理員後台 & 動態提示詞*
