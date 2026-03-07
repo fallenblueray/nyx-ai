@@ -333,11 +333,15 @@ export function parseCharacterResponse(response: string): CharacterPair | null {
     const parseCharacter = (text: string, label: string): CharacterConfig => {
       console.log(`[PromptEngine] Parsing ${label}, text preview:`, text.slice(0, 100).replace(/\n/g, ' | '))
       
-      // 支持繁體和簡體
-      const nameMatch = text.match(/名[稱称][：:](.+)/)
-      const ageMatch = text.match(/年[齡龄][：:](.+)/)
-      const roleMatch = text.match(/身份[：:](.+)/)
+      // 支持繁體和簡體 - 使用非貪婪匹配並限制到行尾
+      const nameMatch = text.match(/名[稱称][：:](.+?)(?:\n|$)/)
+      const ageMatch = text.match(/年[齡龄][：:](.+?)(?:\n|$)/)
+      const roleMatch = text.match(/身份[：:](.+?)(?:\n|$)/)
       
+      // 調試：顯示正則測試結果
+      const nameTest = /名[稱称][：:]/.test(text)
+      const ageTest = /年[齡龄][：:]/.test(text)
+      console.log(`[PromptEngine] ${label} regex tests:`, { nameTest, ageTest })
       console.log(`[PromptEngine] ${label} matches:`, { 
         name: nameMatch?.[1]?.slice(0, 20), 
         age: ageMatch?.[1]?.slice(0, 10),
