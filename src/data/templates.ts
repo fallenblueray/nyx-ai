@@ -38,16 +38,7 @@ export const officialTemplates: Template[] = [
       intensity: 'moderate',
       perspective: 'first'
     },
-    characterConfig: {
-      name: '林雅婷',
-      role: '初戀情人',
-      age: '28歲',
-      personality: '溫柔成熟，帶有距離感，內心仍未放下過去',
-      appearance: '長髮披肩，氣質優雅，穿著得體',
-      relationship: '初戀，曾經的戀人',
-      desireStyle: '含蓄內斂，需要時間融化防備'
-    },
-    isPremium: false,
+        isPremium: false,
     wordCostMultiplier: 1,
     isActive: true,
     createdAt: '2026-03-06T00:00:00Z',
@@ -70,16 +61,7 @@ export const officialTemplates: Template[] = [
       intensity: 'mild',
       perspective: 'first'
     },
-    characterConfig: {
-      name: '王小美',
-      role: '青梅竹馬',
-      age: '22歲',
-      personality: '活潑開朗，有點傲嬌，其實很在乎主角',
-      appearance: '清爽短髮，笑起來有酒窩',
-      relationship: '鄰居，從小一起長大',
-      desireStyle: '由友情慢慢轉變，需要契機突破'
-    },
-    isPremium: false,
+        isPremium: false,
     wordCostMultiplier: 1,
     isActive: true,
     createdAt: '2026-03-06T00:00:00Z',
@@ -242,16 +224,7 @@ export const officialTemplates: Template[] = [
       intensity: 'moderate',
       perspective: 'first'
     },
-    characterConfig: {
-      name: '陳雨琪',
-      role: '校花學姐',
-      age: '20歲',
-      personality: '外表高冷，內心火熱，喜歡掌控局面',
-      appearance: '長髮飄逸，身材高挑，氣質出眾',
-      relationship: '學姐，主動追求',
-      desireStyle: '主動大膽，喜歡引導和掌控'
-    },
-    isPremium: false,
+        isPremium: false,
     wordCostMultiplier: 1,
     isActive: true,
     createdAt: '2026-03-06T00:00:00Z',
@@ -274,16 +247,7 @@ export const officialTemplates: Template[] = [
       intensity: 'intense',
       perspective: 'first'
     },
-    characterConfig: {
-      name: '蘇心瑜',
-      role: '班主任/輔導老師',
-      age: '28歲',
-      personality: '成熟嫵媚，事業心強，對主角特別關注',
-      appearance: '長髮披肩，穿著得體但有韻味',
-      relationship: '師生，輔導關係',
-      desireStyle: '嫵媚主動，帶有引導性'
-    },
-    isPremium: false,
+        isPremium: false,
     wordCostMultiplier: 1,
     isActive: true,
     createdAt: '2026-03-06T00:00:00Z',
@@ -329,16 +293,7 @@ export const officialTemplates: Template[] = [
       intensity: 'moderate',
       perspective: 'first'
     },
-    characterConfig: {
-      name: '林小柔',
-      role: '學妹',
-      age: '18歲',
-      personality: '活潑可愛，敢愛敢恨',
-      appearance: '嬌小可愛，娃娃臉',
-      relationship: '學妹，追求學長',
-      desireStyle: '熱情主動，毫不掩飾'
-    },
-    isPremium: false,
+        isPremium: false,
     wordCostMultiplier: 1,
     isActive: true,
     createdAt: '2026-03-06T00:00:00Z',
@@ -501,16 +456,7 @@ export const officialTemplates: Template[] = [
       intensity: 'intense',
       perspective: 'first'
     },
-    characterConfig: {
-      name: '張美玲',
-      role: '鄰居太太',
-      age: '32歲',
-      personality: '寂寞難耐，渴望關注，內心火熱',
-      appearance: '成熟性感，凹凸有致，韻味十足',
-      relationship: '鄰居',
-      desireStyle: '成熟主動，經驗豐富'
-    },
-    isPremium: false,
+        isPremium: false,
     wordCostMultiplier: 1,
     isActive: true,
     createdAt: '2026-03-06T00:00:00Z',
@@ -742,16 +688,7 @@ export const officialTemplates: Template[] = [
       intensity: 'intense',
       perspective: 'first'
     },
-    characterConfig: {
-      name: '沈冰清',
-      role: '女上司/總經理',
-      age: '30歲',
-      personality: '高冷傲慢，工作狂，內心寂寞',
-      appearance: '職業套裝，氣質高貴，冰山美人',
-      relationship: '上司下屬',
-      desireStyle: '外冷內熱，需要時間融化'
-    },
-    isPremium: false,
+        isPremium: false,
     wordCostMultiplier: 1,
     isActive: true,
     createdAt: '2026-03-06T00:00:00Z',
@@ -1240,16 +1177,7 @@ export const officialTemplates: Template[] = [
       intensity: 'intense',
       perspective: 'first'
     },
-    characterConfig: {
-      name: '女王',
-      role: '支配者',
-      age: '26歲',
-      personality: '強勢霸氣，掌控一切',
-      appearance: '高冷威嚴，氣場強大',
-      relationship: '支配與被支配',
-      desireStyle: '完全掌控'
-    },
-    isPremium: true,
+        isPremium: true,
     wordCostMultiplier: 1.5,
     isActive: true,
     createdAt: '2026-03-06T00:00:00Z',

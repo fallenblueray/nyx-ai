@@ -41,7 +41,8 @@ export default function AppPage() {
     setCharacters,
     setError,
     isGenerating,
-    setSelectedTemplate
+    setSelectedTemplate,
+    isGeneratingTemplate
   } = useAppStore()
   
   const [historyOpen, setHistoryOpen] = useState(false)
@@ -297,11 +298,19 @@ export default function AppPage() {
                 {translations.app?.storyStart || "劇情起點"}
               </label>
               <TemplateSelector />
+              {/* V5.2: 模板生成載入提示 */}
+              {isGeneratingTemplate && (
+                <div className="flex items-center gap-2 text-sm text-purple-400 mb-2">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>正在生成角色與劇情大綱...</span>
+                </div>
+              )}
               <Textarea
                 value={storyInput}
                 onChange={(e) => setStoryInput(e.target.value)}
                 placeholder={translations.app?.inputPlaceholder || "輸入你的劇情起點或靈感..."}
                 className="min-h-[120px] nyx-input resize-none"
+                disabled={isGeneratingTemplate}
               />
               <Button
                 variant="outline"

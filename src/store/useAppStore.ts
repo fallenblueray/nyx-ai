@@ -39,6 +39,10 @@ interface AppState {
   
   // V2: 後台異步角色提取
   isExtractingCharacters: boolean
+  
+  // V5.2: 模板生成載入提示
+  isGeneratingTemplate: boolean
+  setIsGeneratingTemplate: (v: boolean) => void
   extractCharacters: (storyText: string) => Promise<void>
 
   // 匿名用戶額度
@@ -219,6 +223,10 @@ export const useAppStore = create<AppState>()(
       generatedOutline: null,
       setGeneratedCharacters: (characters) => set({ generatedCharacters: characters }),
       setGeneratedOutline: (outline) => set({ generatedOutline: outline }),
+      
+      // V5.2: 模板生成載入狀態
+      isGeneratingTemplate: false,
+      setIsGeneratingTemplate: (v) => set({ isGeneratingTemplate: v }),
     }),
     {
       name: 'nyx-ai-storage',

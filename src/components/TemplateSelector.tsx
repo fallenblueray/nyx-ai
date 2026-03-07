@@ -160,7 +160,8 @@ export function TemplateSelector() {
     setGeneratedCharacters,
     setGeneratedOutline,
     setIsGenerating,
-    setError
+    setError,
+    setIsGeneratingTemplate
   } = useAppStore()
 
   // 載入收藏和儲存模板
@@ -203,6 +204,7 @@ export function TemplateSelector() {
   const generateCharactersAndOutlineUnified = async (template: Template) => {
     console.log('[TemplateSelector] V5.2: Generating characters and outline for:', template.id)
     setIsGeneratingCharacters(true)
+    setIsGeneratingTemplate(true)
     setError(null)
     
     try {
@@ -281,6 +283,7 @@ ${outline.climax}`
       setStoryInput(template.promptBuilder?.baseScenario || template.description)
     } finally {
       setIsGeneratingCharacters(false)
+      setIsGeneratingTemplate(false)
     }
   }
   
