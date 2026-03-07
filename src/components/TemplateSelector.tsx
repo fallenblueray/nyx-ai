@@ -199,9 +199,9 @@ export function TemplateSelector() {
     role: string
   } | null>(null)
 
-  // V5.1: 調用 API 生成角色和大綱
-  const generateCharactersAndOutline = async (template: Template) => {
-    console.log('[TemplateSelector] Generating characters for template:', template.id)
+  // V5.2: 統一的角色+大綱生成函數（所有模板使用）
+  const generateCharactersAndOutlineUnified = async (template: Template) => {
+    console.log('[TemplateSelector] V5.2: Generating characters and outline for:', template.id)
     setIsGeneratingCharacters(true)
     setError(null)
     
@@ -210,8 +210,7 @@ export function TemplateSelector() {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
-          "Cache-Control": "no-cache, no-store, must-revalidate",
-          "Pragma": "no-cache"
+          "Cache-Control": "no-cache"
         },
         body: JSON.stringify({
           templateId: template.id,
@@ -220,50 +219,26 @@ export function TemplateSelector() {
         })
       })
       
-      console.log('[TemplateSelector] API response status:', response.status)
-      
       if (!response.ok) {
-        const errorText = await response.text()
-        console.warn("[TemplateSelector] Outline generation failed:", errorText)
-        return null
+        console.error("[TemplateSelector] API error:", response.status)
+        // 失敗時使用模板基本描述
+        setStoryInput(template.promptBuilder?.baseScenario || template.description)
+        return
       }
       
       const data = await response.json()
-      console.log('[TemplateSelector] API response data:', data.success ? 'success' : 'failed')
       
       if (!data.success || !data.data) {
-        console.warn('[TemplateSelector] Invalid response data')
-        return null
+        console.warn("[TemplateSelector] Invalid response")
+        setStoryInput(template.promptBuilder?.baseScenario || template.description)
+        return
       }
       
-      // 存儲生成的角色和大綱到 store
       const char1 = data.data.characters.character1
       const char2 = data.data.characters.character2
       const outline = data.data.outline
       
-      console.log('[TemplateSelector] Setting characters:', char1.name, char2.name)
-      
-      setGeneratedCharacters([char1, char2])
-      setGeneratedOutline(outline)
-      
-      // 格式化大綱並寫入 storyInput（方案一：用戶可見大綱）
-      const formattedOutline = `【模板：${template.name}】
-女主角：${char1.name}（${char1.age}，${char1.role}）
-男主角：${char2.name}（${char2.age}，${char2.role}）
-
-【開端】
-${outline.beginning}
-
-【發展】
-${outline.development}
-
-【高潮】
-${outline.climax}`
-      
-      setStoryInput(formattedOutline)
-      console.log('[TemplateSelector] Outline written to storyInput')
-      
-      // 同時更新舊版角色格式（兼容性）
+      // 寫入角色到 store（直接顯示在角色面板）
       const storeCharacters = [
         {
           id: `char-${char1.name}-${Date.now()}`,
@@ -279,65 +254,44 @@ ${outline.climax}`
         }
       ]
       setCharacters(storeCharacters)
+      setGeneratedCharacters([char1, char2])
       
-      return data.data
+      // 格式化大綱並寫入 storyInput
+      const formattedOutline = `【模板：${template.name}】
+女主角：${char1.name}（${char1.age}，${char1.role}）
+男主角：${char2.name}（${char2.age}，${char2.role}）
+
+【開端】
+${outline.beginning}
+
+【發展】
+${outline.development}
+
+【高潮】
+${outline.climax}`
+      
+      setStoryInput(formattedOutline)
+      setGeneratedOutline(outline)
+      
+      console.log('[TemplateSelector] V5.2: Characters and outline generated:', char1.name, char2.name)
+      
     } catch (err) {
-      console.error("[TemplateSelector] Failed to generate characters:", err)
-      return null
+      console.error("[TemplateSelector] Failed to generate:", err)
+      // 失敗時使用模板的基本描述
+      setStoryInput(template.promptBuilder?.baseScenario || template.description)
     } finally {
       setIsGeneratingCharacters(false)
     }
   }
-
-  // 套用模板（內部方法）
-  const applyTemplateInternal = async (template: Template, customChar?: typeof editedCharacter) => {
-    const legacy = convertToLegacy(template)
-    
-    // V5: 設置選中的模板 ID（Prompt Engine 使用）
+  
+  // 套用模板（入口）- V5.2: 所有模板統一調用 AI 生成角色+大綱
+  const handleSelectTemplate = async (template: Template) => {
+    // 設置選中的模板 ID
     setSelectedTemplate(template.id)
-    
-    setStoryInput(legacy.storyInput)
-    
-    // V5.1: 如果有角色配置，調用 API 生成新角色和大綱
-    if (template.characterConfig) {
-      await generateCharactersAndOutline(template)
-    }
-    
-    if (customChar) {
-      // 使用自定義角色
-      const desireStyle = template.characterConfig?.desireStyle || '主動'
-      legacy.characters = [{
-        id: `${template.id}-char-${Date.now()}`,
-        name: customChar.name,
-        description: `${customChar.age}歲，${customChar.role}。${customChar.personality}。${customChar.appearance}`,
-        traits: [customChar.role, desireStyle.split('，')[0] || '主動']
-      }]
-      setCharacters([])
-      legacy.characters.forEach(char => addCharacter(char))
-    }
-    
-    setIsPreviewOpen(false)
-    setPreviewTemplate(null)
+    // 關閉選擇器
     setIsOpen(false)
-  }
-
-  // 套用模板（入口）
-  const handleSelectTemplate = (template: Template) => {
-    // 如果有角色配置，顯示預覽
-    if (template.characterConfig) {
-      setPreviewTemplate(template)
-      setEditedCharacter({
-        name: template.characterConfig.name,
-        age: template.characterConfig.age,
-        personality: template.characterConfig.personality,
-        appearance: template.characterConfig.appearance,
-        role: template.characterConfig.role
-      })
-      setIsPreviewOpen(true)
-    } else {
-      // 無角色，直接套用
-      applyTemplateInternal(template)
-    }
+    // 調用 AI 生成角色和大綱（所有模板都走這條路）
+    await generateCharactersAndOutlineUnified(template)
   }
 
   // 套用 Trending
@@ -711,7 +665,26 @@ ${outline.climax}`
                     取消
                   </Button>
                   <Button
-                    onClick={() => applyTemplateInternal(previewTemplate, editedCharacter)}
+                    onClick={async () => {
+                      if (previewTemplate) {
+                        setIsPreviewOpen(false)
+                        await generateCharactersAndOutlineUnified(previewTemplate)
+                        // 如果用戶編輯了角色，更新第一個角色
+                        if (editedCharacter) {
+                          const currentChars = useAppStore.getState().characters
+                          const updatedChars = [
+                            {
+                              id: `${previewTemplate.id}-char-${Date.now()}`,
+                              name: editedCharacter.name,
+                              description: `${editedCharacter.age}歲，${editedCharacter.role}。${editedCharacter.personality}。${editedCharacter.appearance}`,
+                              traits: [editedCharacter.role]
+                            },
+                            ...currentChars.slice(1)
+                          ]
+                          setCharacters(updatedChars)
+                        }
+                      }
+                    }}
                     disabled={isGeneratingCharacters}
                     className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90"
                   >
