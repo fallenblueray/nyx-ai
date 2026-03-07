@@ -37,7 +37,7 @@ export async function POST(request: Request) {
     const body = await request.json()
     const { key, content, password } = body
 
-    // 簡單密碼驗證（實際應使用環境變數）
+    // 從環境變數獲取管理員密碼（默認為 nyx-admin-2024）
     const adminPassword = process.env.ADMIN_PASSWORD || 'nyx-admin-2024'
     if (password !== adminPassword) {
       return NextResponse.json(

@@ -6,15 +6,11 @@ export async function POST(request: Request) {
   try {
     const { password } = await request.json()
 
-    // 從環境變數獲取管理員密碼
-    const adminPassword = process.env.ADMIN_PASSWORD
+    // 從環境變數獲取管理員密碼（默認為 nyx-admin-2024）
+    const adminPassword = process.env.ADMIN_PASSWORD || 'nyx-admin-2024'
 
-    if (!adminPassword) {
-      console.error('[Admin Verify] ADMIN_PASSWORD not set')
-      return NextResponse.json(
-        { success: false, error: 'Server configuration error' },
-        { status: 500 }
-      )
+    if (!process.env.ADMIN_PASSWORD) {
+      console.warn('[Admin Verify] ADMIN_PASSWORD not set, using default')
     }
 
     if (password !== adminPassword) {
