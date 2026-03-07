@@ -308,20 +308,28 @@ export function parseCharacterResponse(response: string): CharacterPair | null {
   try {
     console.log('[PromptEngine] Raw response preview:', response.slice(0, 300))
     
-    // 找到角色1、角色2、角色關係的標記後的第一個換行位置
-    const char1Match = response.match(/[=\s]*角色1[=\s]*|角色[一壹]/i)
-    const char2Match = response.match(/[=\s]*角色2[=\s]*|角色[二貳]/i)
-    const relationMatch = response.match(/[=\s]*角色關[係系][=\s]*|關[係系]類型/i)
+    // 找到角色1、角色2、角色關係的標記（支持 ### ===角色1=== 或 ===角色1=== 或 角色1）
+    const char1Match = response.match(/#{0,3}\s*={0,3}\s*角色1\s*={0,3}|角色[一壹]/i)
+    const char2Match = response.match(/#{0,3}\s*={0,3}\s*角色2\s*={0,3}|角色[二貳]/i)
+    const relationMatch = response.match(/#{0,3}\s*={0,3}\s*角色關[係系]\s*={0,3}|關[係系]類型/i)
     
     if (!char1Match || !char2Match) {
       console.error('[PromptEngine] Could not find character sections')
       return null
     }
     
-    // 從標記後的換行開始提取內容
-    const char1Start = response.indexOf('\n', char1Match.index! + char1Match[0].length) + 1
-    const char2Start = response.indexOf('\n', char2Match.index! + char2Match[0].length) + 1
-    const relationStart = relationMatch ? response.indexOf('\n', relationMatch.index! + relationMatch[0].length) + 1 : -1
+    // 從標記所在行的換行之後開始提取內容
+    // 找到標記後的第一個換行，內容從下一行開始
+    const findContentStart = (matchIndex: number, matchText: string): number => {
+      // 找到匹配文本結束後的第一個換行
+      const afterMatch = matchIndex + matchText.length
+      const nextNewline = response.indexOf('\n', afterMatch)
+      return nextNewline !== -1 ? nextNewline + 1 : afterMatch
+    }
+    
+    const char1Start = findContentStart(char1Match.index!, char1Match[0])
+    const char2Start = findContentStart(char2Match.index!, char2Match[0])
+    const relationStart = relationMatch ? findContentStart(relationMatch.index!, relationMatch[0]) : -1
     
     const char2EndIndex = relationMatch ? relationMatch.index! : response.length
     
