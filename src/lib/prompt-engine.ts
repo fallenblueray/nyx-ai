@@ -331,24 +331,20 @@ export function parseCharacterResponse(response: string): CharacterPair | null {
     })
     
     const parseCharacter = (text: string, label: string): CharacterConfig => {
-      console.log(`[PromptEngine] Parsing ${label}, text preview:`, text.slice(0, 100).replace(/\n/g, ' | '))
+      // 去除 markdown 標記（**、*、> 等）
+      const cleanText = text.replace(/^[\s>*#-]+/, '').replace(/\*\*/g, '').trim()
+      console.log(`[PromptEngine] Parsing ${label}, text preview:`, cleanText.slice(0, 100).replace(/\n/g, ' | '))
       
       // 支持繁體和簡體 - 使用 Unicode 屬性匹配
-      // 名稱(U+540D U+7A31) / 名称(U+540D U+79F0)
-      // 年齡(U+5E74 U+9F61) / 年龄(U+5E74 U+9F84)
-      const nameMatch = text.match(/名(?:\u7a31|\u79f0|稱|称)[：:](.+?)(?:\n|$)/)
-      const ageMatch = text.match(/年(?:\u9f61|\u9f84|齡|龄)[：:](.+?)(?:\n|$)/)
-      const roleMatch = text.match(/身\u4efd[：:](.+?)(?:\n|$)/)
+      const nameMatch = cleanText.match(/名(?:\u7a31|\u79f0|稱|称)[：:](.+?)(?:\n|$)/)
+      const ageMatch = cleanText.match(/年(?:\u9f61|\u9f84|齡|龄)[：:](.+?)(?:\n|$)/)
+      const roleMatch = cleanText.match(/身\u4efd[：:](.+?)(?:\n|$)/)
       
       // 調試：顯示正則測試結果
-      const nameTest = /名/.test(text)
-      const colonTest = /[：:]/.test(text)
-      const firstLine = text.split('\n')[0]
+      const firstLine = cleanText.split('\n')[0]
       console.log(`[PromptEngine] ${label} debug:`, { 
-        nameTest, 
-        colonTest,
         firstLine: firstLine.slice(0, 30),
-        firstLineCodes: [...firstLine.slice(0, 10)].map(c => c.charCodeAt(0).toString(16))
+        firstLineCodes: [...firstLine.slice(0, 6)].map(c => c.charCodeAt(0).toString(16))
       })
       console.log(`[PromptEngine] ${label} matches:`, { 
         name: nameMatch?.[1]?.slice(0, 20), 
