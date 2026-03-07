@@ -5,6 +5,7 @@ import { clearPromptCache } from '@/lib/prompt-engine'
 // GET - 讀取所有提示詞配置
 export async function GET() {
   try {
+    console.log('[Admin Prompts API] GET /api/admin/prompts')
     const supabase = await createServerClient()
 
     const { data, error } = await supabase
@@ -19,6 +20,19 @@ export async function GET() {
         { success: false, error: 'Failed to fetch prompts' },
         { status: 500 }
       )
+    }
+
+    console.log(`[Admin Prompts API] Fetched ${data?.length || 0} prompts:`, 
+      data?.map((p: {key: string, version: number, id: string}) => `${p.key}(v${p.version}, id=${p.id.slice(0,8)})`).join(', '))
+    
+    // 檢查是否有重複 key
+    const keyCounts: Record<string, number> = {}
+    data?.forEach((p: {key: string}) => {
+      keyCounts[p.key] = (keyCounts[p.key] || 0) + 1
+    })
+    const duplicates = Object.entries(keyCounts).filter(([_, count]) => count > 1)
+    if (duplicates.length > 0) {
+      console.warn('[Admin Prompts API] Duplicate keys found:', duplicates)
     }
 
     return NextResponse.json({ success: true, data })
