@@ -333,15 +333,23 @@ export function parseCharacterResponse(response: string): CharacterPair | null {
     const parseCharacter = (text: string, label: string): CharacterConfig => {
       console.log(`[PromptEngine] Parsing ${label}, text preview:`, text.slice(0, 100).replace(/\n/g, ' | '))
       
-      // 支持繁體和簡體 - 使用非貪婪匹配並限制到行尾
-      const nameMatch = text.match(/名[稱称][：:](.+?)(?:\n|$)/)
-      const ageMatch = text.match(/年[齡龄][：:](.+?)(?:\n|$)/)
-      const roleMatch = text.match(/身份[：:](.+?)(?:\n|$)/)
+      // 支持繁體和簡體 - 使用 Unicode 屬性匹配
+      // 名稱(U+540D U+7A31) / 名称(U+540D U+79F0)
+      // 年齡(U+5E74 U+9F61) / 年龄(U+5E74 U+9F84)
+      const nameMatch = text.match(/名(?:\u7a31|\u79f0|稱|称)[：:](.+?)(?:\n|$)/)
+      const ageMatch = text.match(/年(?:\u9f61|\u9f84|齡|龄)[：:](.+?)(?:\n|$)/)
+      const roleMatch = text.match(/身\u4efd[：:](.+?)(?:\n|$)/)
       
       // 調試：顯示正則測試結果
-      const nameTest = /名[稱称][：:]/.test(text)
-      const ageTest = /年[齡龄][：:]/.test(text)
-      console.log(`[PromptEngine] ${label} regex tests:`, { nameTest, ageTest })
+      const nameTest = /名/.test(text)
+      const colonTest = /[：:]/.test(text)
+      const firstLine = text.split('\n')[0]
+      console.log(`[PromptEngine] ${label} debug:`, { 
+        nameTest, 
+        colonTest,
+        firstLine: firstLine.slice(0, 30),
+        firstLineCodes: [...firstLine.slice(0, 10)].map(c => c.charCodeAt(0).toString(16))
+      })
       console.log(`[PromptEngine] ${label} matches:`, { 
         name: nameMatch?.[1]?.slice(0, 20), 
         age: ageMatch?.[1]?.slice(0, 10),
