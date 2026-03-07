@@ -302,46 +302,57 @@ ${userInput}
 
 /**
  * 解析角色生成結果
- * V5.3: 支持 === 和 ### 兩種格式
+ * V5.3: 支持多種格式，更寬鬆的匹配
  */
 export function parseCharacterResponse(response: string): CharacterPair | null {
   try {
-    // 嘗試匹配 === 格式
-    let char1Match = response.match(/===角色1===([\s\S]*?)(?====角色2===|### 角色2)/)
-    let char2Match = response.match(/===角色2===([\s\S]*?)(?====角色關係===|### 角色關係|## 角色關係)/)
-    let relationMatch = response.match(/===角色關係===([\s\S]*)/)
+    console.log('[PromptEngine] Raw response preview:', response.slice(0, 300))
     
-    // 如果沒有匹配到，嘗試 ### 格式
-    if (!char1Match) {
-      char1Match = response.match(/### 角色1\s*\n([\s\S]*?)(?=### 角色2|## 角色2)/)
-    }
-    if (!char2Match) {
-      char2Match = response.match(/### 角色2\s*\n([\s\S]*?)(?=### 角色關係|## 角色關係)/)
-    }
-    if (!relationMatch) {
-      relationMatch = response.match(/### 角色關係\s*\n([\s\S]*)/)
+    // 標準化：找到角色1、角色2、角色關係的位置
+    const char1Index = response.search(/[=\s]*角色1[=\s]*|角色[一壹]/i)
+    const char2Index = response.search(/[=\s]*角色2[=\s]*|角色[二貳]/i)
+    const relationIndex = response.search(/[=\s]*角色關[係系][=\s]*|關[係系]類型/i)
+    
+    console.log('[PromptEngine] Section indices:', { char1Index, char2Index, relationIndex })
+    
+    if (char1Index === -1 || char2Index === -1) {
+      console.error('[PromptEngine] Could not find character sections')
+      return null
     }
     
-    if (!char1Match || !char2Match) return null
+    // 提取各個區塊的文本
+    const char1Text = response.slice(char1Index, char2Index)
+    const char2EndIndex = relationIndex !== -1 ? relationIndex : response.length
+    const char2Text = response.slice(char2Index, char2EndIndex)
+    const relationText = relationIndex !== -1 ? response.slice(relationIndex) : ''
+    
+    console.log('[PromptEngine] Extracted text lengths:', { 
+      char1: char1Text.length, 
+      char2: char2Text.length, 
+      relation: relationText.length 
+    })
     
     const parseCharacter = (text: string): CharacterConfig => {
-      const name = text.match(/名稱：(.+)/)?.[1]?.trim() || ""
-      const age = text.match(/年齡：(.+)/)?.[1]?.trim() || ""
+      // 支持繁體和簡體
+      const name = text.match(/名[稱称]：(.+)/)?.[1]?.trim() || ""
+      const age = text.match(/年[齡龄]：(.+)/)?.[1]?.trim() || ""
       const role = text.match(/身份：(.+)/)?.[1]?.trim() || ""
       const personality = text.match(/性格：(.+)/)?.[1]?.trim() || ""
       const appearance = text.match(/外貌：(.+)/)?.[1]?.trim() || ""
-      const desireStyle = text.match(/欲望風格：(.+)/)?.[1]?.trim() || ""
-      const traitsText = text.match(/特質：(.+)/)?.[1]?.trim() || ""
+      const desireStyle = text.match(/欲望[風风]格：(.+)/)?.[1]?.trim() || ""
+      const traitsText = text.match(/特[質质]：(.+)/)?.[1]?.trim() || ""
       const traits = traitsText.split(/[、,，\s]+/).filter(t => t)
       
       return { name, age, role, personality, appearance, desireStyle, traits }
     }
     
-    const character1 = parseCharacter(char1Match[1])
-    const character2 = parseCharacter(char2Match[1])
+    const character1 = parseCharacter(char1Text)
+    const character2 = parseCharacter(char2Text)
     
-    const relationship = relationMatch?.[1]?.match(/關係類型：(.+)/)?.[1]?.trim() || ""
-    const tension = relationMatch?.[1]?.match(/核心張力：(.+)/)?.[1]?.trim() || ""
+    const relationship = relationText.match(/關[係系]類型：(.+)/)?.[1]?.trim() || ""
+    const tension = relationText.match(/核心張力：(.+)/)?.[1]?.trim() || ""
+    
+    console.log('[PromptEngine] Parsed characters:', { char1: character1.name, char2: character2.name })
     
     return { character1, character2, relationship, tension }
   } catch (error) {
