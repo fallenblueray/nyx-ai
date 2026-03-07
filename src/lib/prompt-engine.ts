@@ -373,9 +373,22 @@ export async function generateCharacterPair(
   templateWorld: string,
   callAI: (prompt: string) => Promise<string>
 ): Promise<CharacterPair | null> {
+  console.log('[PromptEngine] Building character prompt for:', templateWorld.slice(0, 50))
   const prompt = await buildCharacterPrompt(templateWorld)
+  console.log('[PromptEngine] Character prompt built, length:', prompt.length)
+  
+  console.log('[PromptEngine] Calling AI for character generation...')
   const response = await callAI(prompt)
-  return parseCharacterResponse(response)
+  console.log('[PromptEngine] AI response received, length:', response.length)
+  
+  console.log('[PromptEngine] Parsing character response...')
+  const result = parseCharacterResponse(response)
+  if (!result) {
+    console.error('[PromptEngine] Failed to parse character response. Raw response preview:', response.slice(0, 200))
+  } else {
+    console.log('[PromptEngine] Character pair parsed:', result.character1.name, '+', result.character2.name)
+  }
+  return result
 }
 
 /**

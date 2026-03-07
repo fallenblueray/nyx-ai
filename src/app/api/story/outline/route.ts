@@ -75,7 +75,14 @@ async function generateCharacterAndOutline(
   console.log(`[Outline] Generating for template: ${template.id}, seed: ${seed}`)
   
   // 創建帶種子的 callAI 包裝函數
-  const callAIWithSeed = (prompt: string) => callAI(prompt, seed)
+  const callAIWithSeed = async (prompt: string) => {
+    try {
+      return await callAI(prompt, seed)
+    } catch (error) {
+      console.error('[Outline] callAI error:', error)
+      throw error
+    }
+  }
   
   // Step 1: 生成角色
   const characterPair = await generateCharacterPair(templateWorld, callAIWithSeed)
