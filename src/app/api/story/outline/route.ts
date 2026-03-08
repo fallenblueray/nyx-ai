@@ -16,7 +16,7 @@ interface OutlineRequest {
 
 async function callAI(prompt: string): Promise<string> {
   const apiKey = process.env.OPENROUTER_API_KEY || ""
-  const model = "openrouter/x-ai/grok-4.1-fast"
+  const model = "x-ai/grok-4.1-fast"
   
   const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
