@@ -184,3 +184,37 @@ export async function generateOutline(
   const response = await callAI(prompt)
   return parseOutlineResponse(response)
 }
+
+// V6.0: 簡化故事生成提示詞 - 兼容舊版接口
+export async function buildStoryPrompt(
+  templateWorld: string,
+  character1: CharacterConfig,
+  character2: CharacterConfig,
+  outlineBeginning: string,
+  outlineDevelopment: string,
+  outlineClimax: string,
+  userInput?: string
+): Promise<string> {
+  const customPrompt = await getPromptFromDB('story')
+  
+  if (customPrompt) {
+    return customPrompt
+      .replace(/\{\{templateWorld\}\}/g, templateWorld)
+      .replace(/\{\{userInput\}\}/g, userInput || '')
+  }
+  
+  return `你是一位頂級成人小說作家。請根據以下設定創作故事：
+
+世界設定：${templateWorld}
+${userInput ? `用戶輸入：${userInput}\n` : ''}
+
+角色1：${character1.name}，${character1.age}，${character1.role}。
+角色2：${character2.name}，${character2.age}，${character2.role}。
+
+劇情大綱：
+開端：${outlineBeginning}
+發展：${outlineDevelopment}
+高潮：${outlineClimax}
+
+要求：使用第一人稱，細膩描寫心理活動和場景氛圍，2500-3000字。`
+}
