@@ -290,9 +290,14 @@ ${char2Text}
 ${outlineText || '故事即將開始...'}`
       
       setStoryInput(formattedOutline)
-      setGeneratedOutline({ text: outlineText })
+      setGeneratedOutline({ 
+        beginning: outlineText.slice(0, 100) || '故事開始...',
+        development: outlineText.slice(100, 200) || '',
+        climax: outlineText.slice(200, 300) || '',
+        preview: outlineText.slice(0, 50) || '精彩故事...'
+      })
       
-      console.log('[TemplateSelector] V5.2: Characters and outline generated:', char1.name, char2.name)
+      console.log('[TemplateSelector] V6: Characters and outline generated')
       
     } catch (err) {
       console.error("[TemplateSelector] Failed to generate:", err)
