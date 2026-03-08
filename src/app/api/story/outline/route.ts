@@ -1,104 +1,22 @@
+/**
+ * V6.0: 簡化版 Outline API - 純文本生成
+ * 移除所有格式標記，直接返回自然語言描述
+ */
 import { NextRequest, NextResponse } from "next/server"
-import { officialTemplates, type Template } from "@/data/templates"
-import { generateCharacterPair, generateOutline, type CharacterConfig } from "@/lib/prompt-engine"
+import { officialTemplates } from "@/data/templates"
+import { generateCharacterPair, generateOutline } from "@/lib/prompt-engine"
 
-// V5.3.2: 延长超时时间到60秒（角色+大纲生成需要较长时间）
 export const maxDuration = 60
 
 interface OutlineRequest {
   templateId: string
-  userInput?: string
   timestamp?: number
   randomSeed?: number
 }
 
-interface OutlineResponse {
-  success: boolean
-  data?: {
-    characters: {
-      character1: CharacterConfig
-      character2: CharacterConfig
-    }
-    characterTension: string
-    relationship: string
-    outline: {
-      beginning: string
-      development: string
-      climax: string
-      preview: string // 只顯示給用戶的開端預覽
-    }
-  }
-  error?: string
-}
-
-/**
- * 調用 AI 生成角色或大綱（可靠版本，使用我們已知有效的 API key）
- */
-async function callAIFast(prompt: string, seed?: number): Promise<string> {
-  // 使用環境變數或默認 API key
-  const apiKey = process.env.OPENROUTER_API_KEY || "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"
-  // 使用 Grok 4.1 Fast 模型（無審查限制且速度快）
+async function callAI(prompt: string): Promise<string> {
+  const apiKey = process.env.OPENROUTER_API_KEY || ""
   const model = "openrouter/x-ai/grok-4.1-fast"
-  
-  // 加入隨機種子確保每次生成不同
-  const randomSeed = seed || Date.now() + Math.floor(Math.random() * 1000000)
-  const promptWithSeed = `${prompt}\n\n[隨機種子: ${randomSeed}]`
-  
-  console.log(`[Outline] Using reliable model ${model} for prompt length: ${prompt.length}`)
-  
-  // 創建 35 秒超時的 AbortController（角色生成需要較多token，給更多時間）
-  const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), 35000)
-  
-  try {
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model,
-        messages: [{ role: "user", content: promptWithSeed }],
-        temperature: 0.7,
-        max_tokens: 1500,    // 增加到 1500，確保能完整輸出兩個角色 + 關係
-      }),
-      signal: controller.signal
-    })
-
-    clearTimeout(timeoutId)
-
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error(`[Outline] API error (${response.status}): ${errorText.substring(0, 200)}`)
-      throw new Error(`API 錯誤 ${response.status}: ${errorText.substring(0, 100)}`)
-    }
-
-    const data = await response.json()
-    console.log(`[Outline] AI response received, length: ${data.choices[0]?.message?.content?.length || 0}`)
-    return data.choices[0]?.message?.content || ""
-  } catch (error: any) {
-    clearTimeout(timeoutId)
-    if (error?.name === 'AbortError') {
-      console.error('[Outline] Request timeout after 30 seconds')
-      throw new Error('AI 生成超時（30秒限制），請重試')
-    }
-    console.error('[Outline] Fetch error:', error?.message || error)
-    throw error
-  }
-}
-
-/**
- * 調用 AI 生成完整故事（保留 DeepSeek R1 用於最終故事生成）
- */
-async function callAI(prompt: string, seed?: number): Promise<string> {
-  const apiKey = process.env.OPENROUTER_API_KEY
-  // V5.3: 強制使用 DeepSeek R1 模型
-  const model = "deepseek/deepseek-r1-0528"
-  
-  // 加入隨機種子確保每次生成不同
-  const randomSeed = seed || Date.now() + Math.floor(Math.random() * 1000000)
-  const promptWithSeed = `${prompt}\n\n[隨機種子: ${randomSeed}]`
   
   const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
@@ -108,123 +26,73 @@ async function callAI(prompt: string, seed?: number): Promise<string> {
     },
     body: JSON.stringify({
       model,
-      messages: [{ role: "user", content: promptWithSeed }],
-      temperature: 0.9,
-      max_tokens: 2000,
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.7,
+      max_tokens: 1000,
     }),
   })
-
+  
   if (!response.ok) {
-    const error = await response.text()
-    throw new Error(`AI API error: ${error}`)
+    const err = await response.text()
+    throw new Error(`API ${response.status}: ${err.slice(0, 100)}`)
   }
-
+  
   const data = await response.json()
   return data.choices[0]?.message?.content || ""
 }
 
-/**
- * 合併角色和大綱生成为一次 API 调用
- */
-async function generateCharacterAndOutline(
-  template: Template,
-  seed?: number
-): Promise<OutlineResponse['data'] | null> {
-  // V5.3: 使用 baseScenario 作为模板世界观，不再使用兜底默认值
-  const templateWorld = template.promptBuilder.baseScenario
-  
-  console.log(`[Outline] Generating for template: ${template.id}, seed: ${seed}`)
-  
-  // 創建帶種子的 callAI 包裝函數（使用快速模型）
-  const callAIFastWithSeed = async (prompt: string) => {
-    try {
-      console.log(`[Outline] Using fast model for prompt: ${prompt.substring(0, 100)}...`)
-      return await callAIFast(prompt, seed)
-    } catch (error) {
-      console.error('[Outline] callAIFast error:', error)
-      throw error
-    }
-  }
-  
-  // Step 1: 生成角色（使用快速模型）
-  console.log(`[Outline] Step 1: Generating character pair with fast model`)
-  const characterPair = await generateCharacterPair(templateWorld, callAIFastWithSeed)
-  if (!characterPair) {
-    console.error('[Outline] Failed to generate character pair')
-    return null
-  }
-  console.log(`[Outline] Characters generated: ${characterPair.character1.name}, ${characterPair.character2.name}`)
-  
-  // Step 2: 生成大綱（使用快速模型）
-  console.log(`[Outline] Step 2: Generating outline with fast model`)
-  const outline = await generateOutline(
-    templateWorld,
-    characterPair.character1,
-    characterPair.character2,
-    callAIFastWithSeed
-  )
-  if (!outline) return null
-  
-  return {
-    characters: {
-      character1: characterPair.character1,
-      character2: characterPair.character2,
-    },
-    characterTension: characterPair.tension,
-    relationship: characterPair.relationship,
-    outline: outline,
-  }
-}
-
-export async function POST(request: NextRequest): Promise<NextResponse<OutlineResponse>> {
-  console.log('[Outline API] Starting POST request')
+export async function POST(request: NextRequest) {
+  console.log('[Outline V6] Starting request')
   
   try {
     const body: OutlineRequest = await request.json()
-    const { templateId, randomSeed } = body
+    const { templateId } = body
     
-    console.log(`[Outline API] TemplateId: ${templateId}, Seed: ${randomSeed}`)
-    
-    // 查找模板
     const template = officialTemplates.find(t => t.id === templateId)
     if (!template) {
-      console.error(`[Outline API] Template not found: ${templateId}`)
       return NextResponse.json(
         { success: false, error: "模板不存在" },
         { status: 404 }
       )
     }
     
-    console.log(`[Outline API] Found template: ${template.name}`)
+    const templateWorld = template.promptBuilder.baseScenario
     
-    // 生成角色和大綱
-    const data = await generateCharacterAndOutline(template, randomSeed)
+    // V6: 生成角色（純文本）
+    console.log('[Outline V6] Generating characters...')
+    const charResult = await generateCharacterPair(templateWorld, callAI)
     
-    if (!data) {
-      console.error('[Outline API] generateCharacterAndOutline returned null')
+    if (!charResult) {
       return NextResponse.json(
-        { success: false, error: "角色或大綱生成失敗，請重試" },
+        { success: false, error: "角色生成失敗" },
         { status: 500 }
       )
     }
     
-    // V5.3.3: 驗證返回數據完整性
-    if (!data.characters?.character1?.name || !data.characters?.character2?.name) {
-      console.error('[Outline API] Invalid character data:', data.characters)
-      return NextResponse.json(
-        { success: false, error: "角色數據不完整，請重試" },
-        { status: 500 }
-      )
-    }
+    console.log('[Outline V6] Characters:', charResult.char1.slice(0, 30), '...')
     
-    console.log(`[Outline API] Success: characters generated (${data.characters.character1.name}, ${data.characters.character2.name})`)
+    // V6: 生成大綱（純文本）
+    console.log('[Outline V6] Generating outline...')
+    const outlineText = await generateOutline(templateWorld, charResult.char1, charResult.char2, callAI)
     
-    return NextResponse.json({ success: true, data })
+    console.log('[Outline V6] Outline:', outlineText.slice(0, 100), '...')
+    
+    // V6: 返回簡化格式
+    return NextResponse.json({
+      success: true,
+      data: {
+        characters: {
+          character1: charResult.char1,
+          character2: charResult.char2,
+        },
+        outline: outlineText,
+      }
+    })
     
   } catch (error: any) {
-    console.error("[Outline API] Error:", error)
+    console.error("[Outline V6] Error:", error)
     return NextResponse.json(
-      { success: false, error: error.message || "服務器錯誤，請重試" },
+      { success: false, error: error.message || "生成失败" },
       { status: 500 }
     )
   }
