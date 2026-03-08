@@ -152,9 +152,9 @@ export function CharacterManager() {
             </CardHeader>
             <CardContent className="pt-0">
               <p className="text-xs nyx-text-muted">{char.description}</p>
-              {char.traits.length > 0 && (
+              {char.traits && char.traits.length > 0 && (
                 <div className="flex flex-wrap gap-1 mt-2">
-                  {char.traits.map((trait, idx) => (
+                  {(char.traits || []).map((trait, idx) => (
                     <span key={idx} className="px-1.5 py-0.5 nyx-surface-3 rounded text-xs nyx-text-secondary">
                       {trait}
                     </span>

@@ -68,18 +68,16 @@ export default function AppPage() {
         // 記錄選中的模板（V5: Prompt Engine 使用）
         setSelectedTemplate(templateId)
         
-        // 如果有角色，自動創建
-        if (template.characterConfig) {
+        // 只有當沒有現有角色時才創建 URL 模板角色（避免覆蓋 AI 生成的角色）
+        const currentState = useAppStore.getState()
+        if (currentState.characters.length === 0 && template.characterConfig) {
           const char = {
             id: `${template.id}-char-${Date.now()}`,
             name: template.characterConfig.name,
             description: `${template.characterConfig.age}，${template.characterConfig.role}。${template.characterConfig.personality}。${template.characterConfig.appearance}`,
-            traits: [template.characterConfig.role, template.characterConfig.desireStyle.split('、')[0]]
+            traits: [template.characterConfig.role, ...(template.characterConfig.desireStyle ? template.characterConfig.desireStyle.split('、') : [])].filter(Boolean)
           }
-          // 清空現有角色並添加新角色
           setCharacters([char])
-        } else {
-          setCharacters([])
         }
       }
     } else if (promptFromUrl && !storyInput) {

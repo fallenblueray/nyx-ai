@@ -241,20 +241,23 @@ export function TemplateSelector() {
       const outline = data.data.outline
       
       // 寫入角色到 store（直接顯示在角色面板）
+      console.log('[TemplateSelector] Raw characters from API:', { char1, char2 })
+      
       const storeCharacters = [
         {
           id: `char-${char1.name}-${Date.now()}`,
           name: char1.name,
-          description: `${char1.age}，${char1.role}。${char1.personality}`,
-          traits: char1.traits
+          description: `${char1.age || ''}，${char1.role || ''}。${char1.personality || ''}`,
+          traits: char1.traits || []
         },
         {
           id: `char-${char2.name}-${Date.now()}`,
           name: char2.name,
-          description: `${char2.age}，${char2.role}。${char2.personality}`,
-          traits: char2.traits
+          description: `${char2.age || ''}，${char2.role || ''}。${char2.personality || ''}`,
+          traits: char2.traits || []
         }
       ]
+      console.log('[TemplateSelector] Setting characters:', storeCharacters)
       setCharacters(storeCharacters)
       setGeneratedCharacters([char1, char2])
       
