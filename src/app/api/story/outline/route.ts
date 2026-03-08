@@ -46,9 +46,9 @@ async function callAIFast(prompt: string, seed?: number): Promise<string> {
   
   console.log(`[Outline] Using reliable model ${model} for prompt length: ${prompt.length}`)
   
-  // 創建 25 秒超時的 AbortController（總函數限制 60 秒，需要給兩次調用留時間）
+  // 創建 35 秒超時的 AbortController（角色生成需要較多token，給更多時間）
   const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), 25000)
+  const timeoutId = setTimeout(() => controller.abort(), 35000)
   
   try {
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -60,8 +60,8 @@ async function callAIFast(prompt: string, seed?: number): Promise<string> {
       body: JSON.stringify({
         model,
         messages: [{ role: "user", content: promptWithSeed }],
-        temperature: 0.5,  // 進一步降低 temperature 以最快速度生成
-        max_tokens: 800,     // 減少 token 確保快速生成（角色+大綱需要快速完成）
+        temperature: 0.7,
+        max_tokens: 1500,    // 增加到 1500，確保能完整輸出兩個角色 + 關係
       }),
       signal: controller.signal
     })
