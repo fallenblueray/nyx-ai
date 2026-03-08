@@ -37,8 +37,8 @@ interface OutlineResponse {
 async function callAIFast(prompt: string, seed?: number): Promise<string> {
   // 使用環境變數或默認 API key
   const apiKey = process.env.OPENROUTER_API_KEY || "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"
-  // 使用可靠的 Kimi K2.5 模型（我們知道它有效）
-  const model = "moonshotai/kimi-k2.5"
+  // 使用更快的模型（角色+大綱需要快速完成）
+  const model = "openrouter/anthropic/claude-haiku-4.5"
   
   // 加入隨機種子確保每次生成不同
   const randomSeed = seed || Date.now() + Math.floor(Math.random() * 1000000)
@@ -46,9 +46,9 @@ async function callAIFast(prompt: string, seed?: number): Promise<string> {
   
   console.log(`[Outline] Using reliable model ${model} for prompt length: ${prompt.length}`)
   
-  // 創建 30 秒超時的 AbortController（留出緩衝）
+  // 創建 25 秒超時的 AbortController（總函數限制 60 秒，需要給兩次調用留時間）
   const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), 30000)
+  const timeoutId = setTimeout(() => controller.abort(), 25000)
   
   try {
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -60,8 +60,8 @@ async function callAIFast(prompt: string, seed?: number): Promise<string> {
       body: JSON.stringify({
         model,
         messages: [{ role: "user", content: promptWithSeed }],
-        temperature: 0.7,  // 降低 temperature 以加速生成
-        max_tokens: 1200,  // 減少 token 確保快速生成
+        temperature: 0.5,  // 進一步降低 temperature 以最快速度生成
+        max_tokens: 800,     // 減少 token 確保快速生成（角色+大綱需要快速完成）
       }),
       signal: controller.signal
     })
