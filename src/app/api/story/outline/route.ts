@@ -38,7 +38,8 @@ async function callAIFast(prompt: string, seed?: number): Promise<string> {
   // 使用環境變數或默認 API key
   const apiKey = process.env.OPENROUTER_API_KEY || "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"
   // 使用更快的模型（角色+大綱需要快速完成）
-  const model = "openrouter/anthropic/claude-haiku-4.5"
+  // 注意：OpenRouter支持的Haiku格式是 anthropic/claude-3-haiku
+  const model = "anthropic/claude-3-haiku-20240307"
   
   // 加入隨機種子確保每次生成不同
   const randomSeed = seed || Date.now() + Math.floor(Math.random() * 1000000)
