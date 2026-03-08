@@ -77,13 +77,13 @@ async function callAIFast(prompt: string, seed?: number): Promise<string> {
     const data = await response.json()
     console.log(`[Outline] AI response received, length: ${data.choices[0]?.message?.content?.length || 0}`)
     return data.choices[0]?.message?.content || ""
-  } catch (error) {
+  } catch (error: any) {
     clearTimeout(timeoutId)
-    if (error.name === 'AbortError') {
+    if (error?.name === 'AbortError') {
       console.error('[Outline] Request timeout after 30 seconds')
       throw new Error('AI 生成超時（30秒限制），請重試')
     }
-    console.error('[Outline] Fetch error:', error.message)
+    console.error('[Outline] Fetch error:', error?.message || error)
     throw error
   }
 }
