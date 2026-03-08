@@ -238,55 +238,59 @@ export function TemplateSelector() {
         return
       }
       
-      const char1 = data.data.characters.character1
-      const char2 = data.data.characters.character2
-      const outline = data.data.outline
+      // V6.0: 支持純文本格式
+      const char1Text = data.data.characters.character1
+      const char2Text = data.data.characters.character2
+      const outlineText = data.data.outline
       
-      // V5.3.3: 驗證角色數據完整性
-      if (!char1?.name || !char2?.name) {
-        console.error("[TemplateSelector] Invalid character data:", { char1, char2 })
+      // 驗證數據
+      if (!char1Text || !char2Text) {
+        console.error("[TemplateSelector] Invalid character data:", { char1Text, char2Text })
         setError("角色生成失敗，請重試")
         setStoryInput(template.promptBuilder?.baseScenario || template.description)
         return
       }
       
-      // 寫入角色到 store（直接顯示在角色面板）
-      console.log('[TemplateSelector] Raw characters from API:', { char1, char2 })
+      // V6: 從描述文本提取名字用於ID
+      const extractName = (text: string) => {
+        const match = text.match(/^([^，,。]+)/)
+        return match ? match[1].slice(0, 10) : '角色'
+      }
+      
+      // 寫入角色到 store（純文本描述）
+      console.log('[TemplateSelector] V6 characters:', { char1Text, char2Text })
       
       const storeCharacters = [
         {
-          id: `char-${char1.name}-${Date.now()}`,
-          name: char1.name,
-          description: `${char1.age || ''}，${char1.role || ''}。${char1.personality || ''}`,
-          traits: char1.traits || []
+          id: `char-${extractName(char1Text)}-${Date.now()}`,
+          name: extractName(char1Text),
+          description: char1Text.slice(0, 100) + (char1Text.length > 100 ? '...' : ''),
+          traits: ['角色一']
         },
         {
-          id: `char-${char2.name}-${Date.now()}`,
-          name: char2.name,
-          description: `${char2.age || ''}，${char2.role || ''}。${char2.personality || ''}`,
-          traits: char2.traits || []
+          id: `char-${extractName(char2Text)}-${Date.now()}`,
+          name: extractName(char2Text),
+          description: char2Text.slice(0, 100) + (char2Text.length > 100 ? '...' : ''),
+          traits: ['角色二']
         }
       ]
       console.log('[TemplateSelector] Setting characters:', storeCharacters)
       setCharacters(storeCharacters)
-      setGeneratedCharacters([char1, char2])
       
       // 格式化大綱並寫入 storyInput
       const formattedOutline = `【模板：${template.name}】
-女主角：${char1.name}（${char1.age}，${char1.role}）
-男主角：${char2.name}（${char2.age}，${char2.role}）
 
-【開端】
-${outline?.beginning || '暫無'}
+角色一：
+${char1Text}
 
-【發展】
-${outline?.development || '暫無'}
+角色二：
+${char2Text}
 
-【高潮】
-${outline?.climax || '暫無'}`
+劇情大綱：
+${outlineText || '故事即將開始...'}`
       
       setStoryInput(formattedOutline)
-      setGeneratedOutline(outline)
+      setGeneratedOutline({ text: outlineText })
       
       console.log('[TemplateSelector] V5.2: Characters and outline generated:', char1.name, char2.name)
       
