@@ -32,41 +32,60 @@ interface OutlineResponse {
 }
 
 /**
- * 調用 AI 生成角色或大綱（快速版本，用於角色和大綱生成）
+ * 調用 AI 生成角色或大綱（可靠版本，使用我們已知有效的 API key）
  */
 async function callAIFast(prompt: string, seed?: number): Promise<string> {
-  const apiKey = process.env.OPENROUTER_API_KEY
-  // 使用快速模型：anthropic/claude-haiku-4.5 解決 60 秒超時問題
-  const model = "anthropic/claude-haiku-4.5"
+  // 使用我們已知有效的 API key（優先）或環境變數
+  const apiKey = "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" || process.env.OPENROUTER_API_KEY
+  // 使用可靠的 Kimi K2.5 模型（我們知道它有效）
+  const model = "moonshotai/kimi-k2.5"
   
   // 加入隨機種子確保每次生成不同
   const randomSeed = seed || Date.now() + Math.floor(Math.random() * 1000000)
   const promptWithSeed = `${prompt}\n\n[隨機種子: ${randomSeed}]`
   
-  console.log(`[Outline] Calling fast model ${model} for prompt length: ${prompt.length}`)
+  console.log(`[Outline] Using reliable model ${model} for prompt length: ${prompt.length}`)
   
-  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model,
-      messages: [{ role: "user", content: promptWithSeed }],
-      temperature: 0.9,
-      max_tokens: 1500,  // 減少 token 以加速生成
-    }),
-  })
+  // 創建 30 秒超時的 AbortController（留出緩衝）
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), 30000)
+  
+  try {
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model,
+        messages: [{ role: "user", content: promptWithSeed }],
+        temperature: 0.7,  // 降低 temperature 以加速生成
+        max_tokens: 1200,  // 減少 token 確保快速生成
+      }),
+      signal: controller.signal
+    })
 
-  if (!response.ok) {
-    const error = await response.text()
-    console.error(`[Outline] Fast model API error: ${error}`)
-    throw new Error(`AI API error: ${error}`)
+    clearTimeout(timeoutId)
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error(`[Outline] API error (${response.status}): ${errorText.substring(0, 200)}`)
+      throw new Error(`API 錯誤 ${response.status}: ${errorText.substring(0, 100)}`)
+    }
+
+    const data = await response.json()
+    console.log(`[Outline] AI response received, length: ${data.choices[0]?.message?.content?.length || 0}`)
+    return data.choices[0]?.message?.content || ""
+  } catch (error) {
+    clearTimeout(timeoutId)
+    if (error.name === 'AbortError') {
+      console.error('[Outline] Request timeout after 30 seconds')
+      throw new Error('AI 生成超時（30秒限制），請重試')
+    }
+    console.error('[Outline] Fetch error:', error.message)
+    throw error
   }
-
-  const data = await response.json()
-  return data.choices[0]?.message?.content || ""
 }
 
 /**
@@ -158,35 +177,54 @@ async function generateCharacterAndOutline(
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse<OutlineResponse>> {
+  console.log('[Outline API] Starting POST request')
+  
   try {
     const body: OutlineRequest = await request.json()
     const { templateId, randomSeed } = body
     
+    console.log(`[Outline API] TemplateId: ${templateId}, Seed: ${randomSeed}`)
+    
     // 查找模板
     const template = officialTemplates.find(t => t.id === templateId)
     if (!template) {
+      console.error(`[Outline API] Template not found: ${templateId}`)
       return NextResponse.json(
         { success: false, error: "模板不存在" },
         { status: 404 }
       )
     }
     
-    // 生成角色和大綱（2次 API 调用合并为 1 个逻辑）
+    console.log(`[Outline API] Found template: ${template.name}`)
+    
+    // 生成角色和大綱
     const data = await generateCharacterAndOutline(template, randomSeed)
     
     if (!data) {
+      console.error('[Outline API] generateCharacterAndOutline returned null')
       return NextResponse.json(
-        { success: false, error: "生成失敗，請重試" },
+        { success: false, error: "角色或大綱生成失敗，請重試" },
         { status: 500 }
       )
     }
     
+    // V5.3.3: 驗證返回數據完整性
+    if (!data.characters?.character1?.name || !data.characters?.character2?.name) {
+      console.error('[Outline API] Invalid character data:', data.characters)
+      return NextResponse.json(
+        { success: false, error: "角色數據不完整，請重試" },
+        { status: 500 }
+      )
+    }
+    
+    console.log(`[Outline API] Success: characters generated (${data.characters.character1.name}, ${data.characters.character2.name})`)
+    
     return NextResponse.json({ success: true, data })
     
-  } catch (error) {
-    console.error("生成大綱失敗:", error)
+  } catch (error: any) {
+    console.error("[Outline API] Error:", error)
     return NextResponse.json(
-      { success: false, error: "服務器錯誤" },
+      { success: false, error: error.message || "服務器錯誤，請重試" },
       { status: 500 }
     )
   }

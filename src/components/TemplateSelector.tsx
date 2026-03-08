@@ -222,8 +222,9 @@ export function TemplateSelector() {
       })
       
       if (!response.ok) {
-        console.error("[TemplateSelector] API error:", response.status)
-        // 失敗時使用模板基本描述
+        const errorText = await response.text()
+        console.error("[TemplateSelector] API error:", response.status, errorText)
+        setError(`生成失敗 (${response.status})：${errorText.substring(0, 100)}`)
         setStoryInput(template.promptBuilder?.baseScenario || template.description)
         return
       }
@@ -231,7 +232,8 @@ export function TemplateSelector() {
       const data = await response.json()
       
       if (!data.success || !data.data) {
-        console.warn("[TemplateSelector] Invalid response")
+        console.warn("[TemplateSelector] Invalid response:", data)
+        setError(data.error || "生成失敗，請重試")
         setStoryInput(template.promptBuilder?.baseScenario || template.description)
         return
       }
@@ -239,6 +241,14 @@ export function TemplateSelector() {
       const char1 = data.data.characters.character1
       const char2 = data.data.characters.character2
       const outline = data.data.outline
+      
+      // V5.3.3: 驗證角色數據完整性
+      if (!char1?.name || !char2?.name) {
+        console.error("[TemplateSelector] Invalid character data:", { char1, char2 })
+        setError("角色生成失敗，請重試")
+        setStoryInput(template.promptBuilder?.baseScenario || template.description)
+        return
+      }
       
       // 寫入角色到 store（直接顯示在角色面板）
       console.log('[TemplateSelector] Raw characters from API:', { char1, char2 })
@@ -267,13 +277,13 @@ export function TemplateSelector() {
 男主角：${char2.name}（${char2.age}，${char2.role}）
 
 【開端】
-${outline.beginning}
+${outline?.beginning || '暫無'}
 
 【發展】
-${outline.development}
+${outline?.development || '暫無'}
 
 【高潮】
-${outline.climax}`
+${outline?.climax || '暫無'}`
       
       setStoryInput(formattedOutline)
       setGeneratedOutline(outline)
@@ -282,7 +292,7 @@ ${outline.climax}`
       
     } catch (err) {
       console.error("[TemplateSelector] Failed to generate:", err)
-      // 失敗時使用模板的基本描述
+      setError("網絡錯誤，請檢查連接後重試")
       setStoryInput(template.promptBuilder?.baseScenario || template.description)
     } finally {
       setIsGeneratingCharacters(false)
