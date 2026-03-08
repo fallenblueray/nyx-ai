@@ -398,12 +398,26 @@ export function parseOutlineResponse(response: string): {
   preview: string
 } | null {
   try {
-    const beginningMatch = response.match(/===開端===([\s\S]*?)(?====發展===)/)
-    const developmentMatch = response.match(/===發展===([\s\S]*?)(?====高潮===)/)
-    const climaxMatch = response.match(/===高潮===([\s\S]*?)(?====用戶預覽（開端）===)/)
+    console.log('[PromptEngine] Parsing outline response, length:', response.length)
+    console.log('[PromptEngine] Preview:', response.slice(0, 200))
+    
+    // 嘗試匹配各個部分
+    const beginningMatch = response.match(/===開端===([\s\S]*?)(?=(?:===發展===|$))/)
+    const developmentMatch = response.match(/===發展===([\s\S]*?)(?=(?:===高潮===|$))/)
+    const climaxMatch = response.match(/===高潮===([\s\S]*?)(?=(?:===用戶預覽（開端）===|$))/)
     const previewMatch = response.match(/===用戶預覽（開端）===([\s\S]*)/)
     
-    if (!beginningMatch || !developmentMatch || !climaxMatch) return null
+    console.log('[PromptEngine] Outline matches:', {
+      beginning: !!beginningMatch,
+      development: !!developmentMatch,
+      climax: !!climaxMatch,
+      preview: !!previewMatch
+    })
+    
+    if (!beginningMatch || !developmentMatch || !climaxMatch) {
+      console.error('[PromptEngine] Failed to parse outline sections, response:', response.slice(0, 300))
+      return null
+    }
     
     return {
       beginning: beginningMatch[1].trim(),
@@ -412,7 +426,7 @@ export function parseOutlineResponse(response: string): {
       preview: previewMatch?.[1]?.trim() || "精彩故事即將開始..."
     }
   } catch (error) {
-    console.error("解析大綱失敗:", error)
+    console.error("[PromptEngine] 解析大綱失敗:", error)
     return null
   }
 }
