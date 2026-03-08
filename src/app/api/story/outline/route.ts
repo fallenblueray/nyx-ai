@@ -37,8 +37,8 @@ interface OutlineResponse {
 async function callAIFast(prompt: string, seed?: number): Promise<string> {
   // 使用環境變數或默認 API key
   const apiKey = process.env.OPENROUTER_API_KEY || "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"
-  // 使用 DeepSeek 模型（無審查限制且速度快）
-  const model = "deepseek/deepseek-chat-v3"
+  // 使用 Grok 4.1 Fast 模型（無審查限制且速度快）
+  const model = "openrouter/x-ai/grok-4.1-fast"
   
   // 加入隨機種子確保每次生成不同
   const randomSeed = seed || Date.now() + Math.floor(Math.random() * 1000000)
