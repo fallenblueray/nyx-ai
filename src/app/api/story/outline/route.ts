@@ -32,7 +32,45 @@ interface OutlineResponse {
 }
 
 /**
- * 調用 AI 生成角色或大綱
+ * 調用 AI 生成角色或大綱（快速版本，用於角色和大綱生成）
+ */
+async function callAIFast(prompt: string, seed?: number): Promise<string> {
+  const apiKey = process.env.OPENROUTER_API_KEY
+  // 使用快速模型：anthropic/claude-haiku-4.5 解決 60 秒超時問題
+  const model = "anthropic/claude-haiku-4.5"
+  
+  // 加入隨機種子確保每次生成不同
+  const randomSeed = seed || Date.now() + Math.floor(Math.random() * 1000000)
+  const promptWithSeed = `${prompt}\n\n[隨機種子: ${randomSeed}]`
+  
+  console.log(`[Outline] Calling fast model ${model} for prompt length: ${prompt.length}`)
+  
+  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model,
+      messages: [{ role: "user", content: promptWithSeed }],
+      temperature: 0.9,
+      max_tokens: 1500,  // 減少 token 以加速生成
+    }),
+  })
+
+  if (!response.ok) {
+    const error = await response.text()
+    console.error(`[Outline] Fast model API error: ${error}`)
+    throw new Error(`AI API error: ${error}`)
+  }
+
+  const data = await response.json()
+  return data.choices[0]?.message?.content || ""
+}
+
+/**
+ * 調用 AI 生成完整故事（保留 DeepSeek R1 用於最終故事生成）
  */
 async function callAI(prompt: string, seed?: number): Promise<string> {
   const apiKey = process.env.OPENROUTER_API_KEY
@@ -78,26 +116,33 @@ async function generateCharacterAndOutline(
   
   console.log(`[Outline] Generating for template: ${template.id}, seed: ${seed}`)
   
-  // 創建帶種子的 callAI 包裝函數
-  const callAIWithSeed = async (prompt: string) => {
+  // 創建帶種子的 callAI 包裝函數（使用快速模型）
+  const callAIFastWithSeed = async (prompt: string) => {
     try {
-      return await callAI(prompt, seed)
+      console.log(`[Outline] Using fast model for prompt: ${prompt.substring(0, 100)}...`)
+      return await callAIFast(prompt, seed)
     } catch (error) {
-      console.error('[Outline] callAI error:', error)
+      console.error('[Outline] callAIFast error:', error)
       throw error
     }
   }
   
-  // Step 1: 生成角色
-  const characterPair = await generateCharacterPair(templateWorld, callAIWithSeed)
-  if (!characterPair) return null
+  // Step 1: 生成角色（使用快速模型）
+  console.log(`[Outline] Step 1: Generating character pair with fast model`)
+  const characterPair = await generateCharacterPair(templateWorld, callAIFastWithSeed)
+  if (!characterPair) {
+    console.error('[Outline] Failed to generate character pair')
+    return null
+  }
+  console.log(`[Outline] Characters generated: ${characterPair.character1.name}, ${characterPair.character2.name}`)
   
-  // Step 2: 生成大綱
+  // Step 2: 生成大綱（使用快速模型）
+  console.log(`[Outline] Step 2: Generating outline with fast model`)
   const outline = await generateOutline(
     templateWorld,
     characterPair.character1,
     characterPair.character2,
-    callAIWithSeed
+    callAIFastWithSeed
   )
   if (!outline) return null
   
