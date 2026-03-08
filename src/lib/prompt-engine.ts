@@ -3,7 +3,10 @@
  * 核心理念: 角色驅動 + 劇情節奏 + 情緒遞進
  * 
  * V5.3: 支持動態提示詞配置（從數據庫讀取）
+ * V5.3.2: 集成 Robust AI Parser 提升解析穩定性
  */
+
+import { parseCharacterPair as robustParseCharacterPair, cleanAIOutput } from './ai-parser'
 
 // 動態提示詞緩存（避免頻繁查詢數據庫）
 let promptCache: Record<string, string> = {}

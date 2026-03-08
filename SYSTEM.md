@@ -401,6 +401,10 @@ targetSegments: number          // ⚠️ 雖保留但實際固定為單段
 4. **前端不顯示** → StoryOutput.tsx SSE 處理邏輯
 5. **模板無效** → 確認 templateId 存在於 officialTemplates
 6. **提示詞未更新** → 檢查 admin_prompts 表是否有記錄，或清除 1 分鐘後重試
+7. **角色解析失敗** (`matches: {name: undefined}`):
+   - 原因：AI 輸出包含 markdown 標記 `**名稱：**` 或繁簡體混用
+   - 修復：`prompt-engine.ts` 先 `cleanText.replace(/\*\*/g, '')` 去除 markdown 標記
+   - 使用 Unicode 碼點匹配繁簡體：`名(?:\u7a31|\u79f0|稱|称)`
 
 ---
 
@@ -427,6 +431,7 @@ npx vercel --prod --yes --token "$VERCEL_TOKEN"
 
 | 日期 | 版本 | 變更 |
 |------|------|------|
+| 2026-03-07 | V5.3.1 | 修復角色解析：Unicode 碼點匹配繁簡體 + 去除 markdown 標記 |
 | 2026-03-07 | V5.3 | 管理員後台 `/admin/prompts`，動態提示詞配置，從數據庫讀取 |
 | 2026-03-07 | V5.2 | 統一 AI 生成流程，移除模板預設角色，添加載入提示 |
 | 2026-03-07 | V5.1 | 系統文檔重構，明確 V5 Prompt Engine 架構 |

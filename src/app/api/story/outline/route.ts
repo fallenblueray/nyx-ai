@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server"
 import { officialTemplates, type Template } from "@/data/templates"
 import { generateCharacterPair, generateOutline, type CharacterConfig } from "@/lib/prompt-engine"
 
+// V5.3.2: 延长超时时间到60秒（角色+大纲生成需要较长时间）
+export const maxDuration = 60
+
 interface OutlineRequest {
   templateId: string
   userInput?: string
