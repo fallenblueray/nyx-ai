@@ -35,8 +35,8 @@ interface OutlineResponse {
  * 調用 AI 生成角色或大綱（可靠版本，使用我們已知有效的 API key）
  */
 async function callAIFast(prompt: string, seed?: number): Promise<string> {
-  // 使用我們已知有效的 API key（優先）或環境變數
-  const apiKey = "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" || process.env.OPENROUTER_API_KEY
+  // 使用環境變數或默認 API key
+  const apiKey = process.env.OPENROUTER_API_KEY || "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"
   // 使用可靠的 Kimi K2.5 模型（我們知道它有效）
   const model = "moonshotai/kimi-k2.5"
   
