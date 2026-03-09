@@ -19,8 +19,8 @@ export const metadata: Metadata = {
   keywords: "AI故事, AI生成, 故事創作, 小說生成, AI寫作",
 };
 
-// 網頁版本號 - 每次新增功能或修改內容 +0.001
-const VERSION = 'v1.001'
+// 網頁版本號 - 小更新 +0.001，大型更新（如重構系統）+0.1
+const VERSION = 'v1.068'
 
 export default function RootLayout({
   children,
