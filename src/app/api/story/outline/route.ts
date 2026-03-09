@@ -19,21 +19,27 @@ interface OutlineRequest {
   }
 }
 
-async function callAI(prompt: string): Promise<string> {
+async function callAI(prompt: string, randomSeed?: number): Promise<string> {
   const apiKey = process.env.OPENROUTER_API_KEY || ""
   const model = "x-ai/grok-4.1-fast"
+  
+  // Generate a random seed if not provided
+  const seed = randomSeed || Math.floor(Math.random() * 1000000)
   
   const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       "Authorization": `Bearer ${apiKey}`,
+      "X-Seed": seed.toString(), // Add seed header for cache busting
     },
     body: JSON.stringify({
       model,
       messages: [{ role: "user", content: prompt }],
-      temperature: 0.7,
+      temperature: 1.0, // Increase randomness
       max_tokens: 1000,
+      // Add seed to body if API supports it
+      seed: seed,
     }),
   })
   

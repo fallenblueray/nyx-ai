@@ -223,6 +223,9 @@ export function TemplateSelector() {
     setError(null)
     
     try {
+      const uniqueSeed = Math.floor(Math.random() * 1000000)
+      console.log('[TemplateSelector] Using random seed:', uniqueSeed)
+      
       const response = await fetch("/api/story/outline", {
         method: "POST",
         headers: { 
@@ -232,7 +235,7 @@ export function TemplateSelector() {
         body: JSON.stringify({
           templateId: template.id,
           timestamp: Date.now(),
-          randomSeed: Math.floor(Math.random() * 1000000)
+          randomSeed: uniqueSeed
         })
       })
       
