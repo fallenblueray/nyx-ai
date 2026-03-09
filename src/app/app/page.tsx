@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils"
 import Link from "next/link"
 import { saveStory, shareStory } from "@/app/actions/story"
 import { useTranslation } from "@/components/TranslationContext"
+import { RefreshCw, Users, BookOpen } from "lucide-react"
 
 interface StoryData {
   id: string
@@ -42,7 +43,9 @@ export default function AppPage() {
     setError,
     isGenerating,
     setSelectedTemplate,
-    isGeneratingTemplate
+    isGeneratingTemplate,
+    setGeneratedOutline,
+    selectedTemplate
   } = useAppStore()
   
   const [historyOpen, setHistoryOpen] = useState(false)
@@ -51,6 +54,8 @@ export default function AppPage() {
   const [shareCopied, setShareCopied] = useState(false)
   const [title, setTitle] = useState("")
   const [saved, setSaved] = useState(false)
+  const [isRegeneratingCharacters, setIsRegeneratingCharacters] = useState(false)
+  const [isRegeneratingOutline, setIsRegeneratingOutline] = useState(false)
   
   // ========== Phase 5: 從 URL 讀取模板參數 ==========
   useEffect(() => {
@@ -159,6 +164,143 @@ export default function AppPage() {
     // 清空所有輸入內容
     setStoryInput("")
     useAppStore.getState().setCharacters([])
+  }
+
+  // ========== V6.6: 單獨刷新功能 ==========
+  
+  // 只換角色，保留現有劇情
+  const handleRegenerateCharacters = async () => {
+    if (!selectedTemplate) {
+      setError("請先選擇一個模板")
+      return
+    }
+    
+    setIsRegeneratingCharacters(true)
+    setError(null)
+    
+    try {
+      const response = await fetch("/api/story/outline", {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "Cache-Control": "no-cache"
+        },
+        body: JSON.stringify({
+          templateId: selectedTemplate,
+          timestamp: Date.now(),
+          randomSeed: Math.floor(Math.random() * 1000000),
+          mode: 'characters-only'
+        })
+      })
+      
+      if (!response.ok) throw new Error(`API ${response.status}`)
+      
+      const data = await response.json()
+      if (!data.success || !data.data?.characters) throw new Error("生成失敗")
+      
+      const char1Text = data.data.characters.character1
+      const char2Text = data.data.characters.character2
+      
+      // 更新角色
+      const extractName = (text: string) => {
+        const cleaned = text.replace(/^(?:角色[12][：:]?|[，。、\s]+)+/, '').trim()
+        const match = cleaned.match(/^([^，,。\s]+)/)
+        return match ? match[1].slice(0, 10) : '角色'
+      }
+      
+      const cleanDesc = (text: string) => {
+        return text.replace(/^(?:角色[12][：:]?|[，。、\s]+)+/, '').trim()
+      }
+      
+      const storeCharacters = [
+        {
+          id: `char-${extractName(char1Text)}-${Date.now()}`,
+          name: extractName(char1Text),
+          description: cleanDesc(char1Text).slice(0, 100) + (char1Text.length > 100 ? '...' : ''),
+          traits: ['角色一']
+        },
+        {
+          id: `char-${extractName(char2Text)}-${Date.now()}`,
+          name: extractName(char2Text),
+          description: cleanDesc(char2Text).slice(0, 100) + (char2Text.length > 100 ? '...' : ''),
+          traits: ['角色二']
+        }
+      ]
+      
+      setCharacters(storeCharacters)
+      console.log('[Page] Characters regenerated')
+      
+    } catch (err) {
+      console.error("[Page] Failed to regenerate characters:", err)
+      setError("換角色失敗，請重試")
+    } finally {
+      setIsRegeneratingCharacters(false)
+    }
+  }
+  
+  // 只換劇情，保留現有角色
+  const handleRegenerateOutline = async () => {
+    if (!selectedTemplate) {
+      setError("請先選擇一個模板")
+      return
+    }
+    
+    if (characters.length < 2) {
+      setError("請先生成角色")
+      return
+    }
+    
+    setIsRegeneratingOutline(true)
+    setError(null)
+    
+    try {
+      const response = await fetch("/api/story/outline", {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "Cache-Control": "no-cache"
+        },
+        body: JSON.stringify({
+          templateId: selectedTemplate,
+          timestamp: Date.now(),
+          randomSeed: Math.floor(Math.random() * 1000000),
+          mode: 'outline-only',
+          existingCharacters: {
+            character1: characters[0]?.description || '',
+            character2: characters[1]?.description || ''
+          }
+        })
+      })
+      
+      if (!response.ok) throw new Error(`API ${response.status}`)
+      
+      const data = await response.json()
+      if (!data.success || !data.data?.outline) throw new Error("生成失敗")
+      
+      const outlineText = data.data.outline
+      const template = officialTemplates.find(t => t.id === selectedTemplate)
+      
+      // 更新劇情
+      const formattedOutline = `【模板：${template?.name || '自定義'}】
+
+${outlineText || '故事即將開始...'}`
+      
+      setStoryInput(formattedOutline)
+      setGeneratedOutline({ 
+        beginning: outlineText.slice(0, 100) || '故事開始...',
+        development: outlineText.slice(100, 200) || '',
+        climax: outlineText.slice(200, 300) || '',
+        preview: outlineText.slice(0, 50) || '精彩故事...'
+      })
+      
+      console.log('[Page] Outline regenerated')
+      
+    } catch (err) {
+      console.error("[Page] Failed to regenerate outline:", err)
+      setError("換劇情失敗，請重試")
+    } finally {
+      setIsRegeneratingOutline(false)
+    }
   }
   
   return (
@@ -319,6 +461,42 @@ export default function AppPage() {
                 <Save className="w-4 h-4 mr-2" />
                 {translations.app?.saveDraft || "儲存草稿"}
               </Button>
+              
+              {/* V6.6: 單獨刷新按鈕 */}
+              {selectedTemplate && (
+                <div className="flex gap-2 mt-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleRegenerateCharacters}
+                    disabled={isRegeneratingCharacters || isRegeneratingOutline}
+                    className="flex-1 nyx-border nyx-text-secondary hover:nyx-surface-2"
+                    title="換角色（保留劇情）"
+                  >
+                    {isRegeneratingCharacters ? (
+                      <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                    ) : (
+                      <Users className="w-4 h-4 mr-1" />
+                    )}
+                    換角色
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleRegenerateOutline}
+                    disabled={isRegeneratingOutline || isRegeneratingCharacters || characters.length < 2}
+                    className="flex-1 nyx-border nyx-text-secondary hover:nyx-surface-2"
+                    title="換劇情（保留角色）"
+                  >
+                    {isRegeneratingOutline ? (
+                      <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                    ) : (
+                      <BookOpen className="w-4 h-4 mr-1" />
+                    )}
+                    換劇情
+                  </Button>
+                </div>
+              )}
             </div>
             
             <div className="space-y-2">
