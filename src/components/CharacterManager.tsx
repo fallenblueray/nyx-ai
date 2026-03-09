@@ -123,14 +123,16 @@ export function CharacterManager() {
         </div>
       )}
 
-      {/* 角色列表 */}
+      {/* 角色列表 - V6: 純文本顯示 */}
       <div className="space-y-2">
         {characters.map((char) => (
           <Card key={char.id} className="nyx-surface-2 nyx-border">
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-sm nyx-text-primary">{char.name}</CardTitle>
-                <div className="flex gap-1">
+            <CardContent className="py-3">
+              <div className="flex items-start justify-between gap-2">
+                <p className="text-sm nyx-text-primary leading-relaxed flex-1">
+                  {char.description || char.name}
+                </p>
+                <div className="flex gap-1 shrink-0">
                   <Button
                     variant="ghost"
                     size="sm"
@@ -149,18 +151,6 @@ export function CharacterManager() {
                   </Button>
                 </div>
               </div>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <p className="text-xs nyx-text-muted">{char.description}</p>
-              {char.traits && char.traits.length > 0 && (
-                <div className="flex flex-wrap gap-1 mt-2">
-                  {(char.traits || []).map((trait, idx) => (
-                    <span key={idx} className="px-1.5 py-0.5 nyx-surface-3 rounded text-xs nyx-text-secondary">
-                      {trait}
-                    </span>
-                  ))}
-                </div>
-              )}
             </CardContent>
           </Card>
         ))}
