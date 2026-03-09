@@ -1,21 +1,78 @@
 import { NextResponse } from 'next/server'
 import { officialTemplates } from '@/data/templates'
-import { writeFileSync } from 'fs'
-import { join } from 'path'
+import { createAdminClient } from '@/lib/supabase-admin'
 
 function verifyAdmin(password: string): boolean {
   const adminPassword = process.env.ADMIN_PASSWORD || 'nyx-admin-2024'
   return password === adminPassword
 }
 
+// GET: Fetch templates from Supabase (fallback to local file)
 export async function GET() {
   try {
     console.log('[Admin Templates API] GET request')
+    
+    // Try Supabase first
+    try {
+      const supabase = createAdminClient()
+      const { data: templates, error } = await supabase
+        .from('templates')
+        .select('*')
+        .order('category', { ascending: true })
+        .order('id', { ascending: true })
+
+      if (!error && templates && templates.length > 0) {
+        // Transform to frontend format
+        const formattedTemplates = templates.map((t: any) => ({
+          id: t.id,
+          slug: t.slug,
+          name: t.name,
+          category: t.category,
+          description: t.description,
+          baseScenario: t.base_scenario,
+          writingStyle: t.writing_style,
+          atmosphere: t.atmosphere,
+          pace: t.pace || 'medium',
+          intensity: t.intensity || 'moderate',
+          isPremium: t.is_premium,
+          isActive: t.is_active,
+          tags: t.tags || []
+        }))
+
+        return NextResponse.json({
+          success: true,
+          data: formattedTemplates,
+          count: formattedTemplates.length,
+          source: 'supabase'
+        })
+      }
+    } catch (supabaseError) {
+      console.log('[Admin Templates API] Supabase unavailable, using local:', supabaseError)
+    }
+
+    // Fallback to local templates
+    console.log('[Admin Templates API] Using local templates')
     return NextResponse.json({
       success: true,
-      data: officialTemplates,
-      count: officialTemplates.length
+      data: officialTemplates.map(t => ({
+        id: t.id,
+        slug: t.slug,
+        name: t.name,
+        category: t.category,
+        description: t.description,
+        baseScenario: t.promptBuilder?.baseScenario || '',
+        writingStyle: t.promptBuilder?.writingStyle || '',
+        atmosphere: t.promptBuilder?.atmosphere || '',
+        pace: t.promptBuilder?.pace || 'medium',
+        intensity: t.promptBuilder?.intensity || 'moderate',
+        isPremium: t.isPremium,
+        isActive: t.isActive,
+        tags: t.tags || []
+      })),
+      count: officialTemplates.length,
+      source: 'local'
     })
+
   } catch (error) {
     console.error('[Admin Templates API] Error:', error)
     return NextResponse.json(
@@ -25,6 +82,7 @@ export async function GET() {
   }
 }
 
+// POST: Update templates in Supabase
 export async function POST(request: Request) {
   try {
     const body = await request.json()
@@ -44,103 +102,58 @@ export async function POST(request: Request) {
       )
     }
 
-    const templatesPath = join(process.cwd(), 'src', 'data', 'templates.ts')
-    const fs = await import('fs')
-    let fileContent = fs.readFileSync(templatesPath, 'utf-8')
+    const supabase = createAdminClient()
     let updatedCount = 0
+    let errorDetails: string[] = []
 
     for (const template of templates) {
       const { id, ...updates } = template
       if (!id) continue
 
-      // Escape special characters for regex
-      const escapedId = id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-      const searchPattern = "id: '" + escapedId + "'"
-      const index = fileContent.indexOf(searchPattern)
+      // Transform camelCase to snake_case
+      const dbUpdates: any = {}
+      if (updates.name !== undefined) dbUpdates.name = updates.name
+      if (updates.category !== undefined) dbUpdates.category = updates.category
+      if (updates.description !== undefined) dbUpdates.description = updates.description
+      if (updates.baseScenario !== undefined) dbUpdates.base_scenario = updates.baseScenario
+      if (updates.writingStyle !== undefined) dbUpdates.writing_style = updates.writingStyle
+      if (updates.atmosphere !== undefined) dbUpdates.atmosphere = updates.atmosphere
+      if (updates.pace !== undefined) dbUpdates.pace = updates.pace
+      if (updates.intensity !== undefined) dbUpdates.intensity = updates.intensity
+      if (updates.isPremium !== undefined) dbUpdates.is_premium = updates.isPremium
+      if (updates.isActive !== undefined) dbUpdates.is_active = updates.isActive
 
-      if (index === -1) continue
+      if (Object.keys(dbUpdates).length === 0) continue
 
-      // Find end of this template
-      let endIndex = fileContent.indexOf("id: '", index + searchPattern.length)
-      if (endIndex === -1) {
-        endIndex = fileContent.lastIndexOf(']') - 1
+      const { error } = await supabase
+        .from('templates')
+        .update(dbUpdates)
+        .eq('id', id)
+
+      if (error) {
+        console.error(`[Admin Templates API] Failed to update ${id}:`, error)
+        errorDetails.push(`${id}: ${error.message}`)
+      } else {
+        updatedCount++
+        console.log(`[Admin Templates API] Updated: ${id}`)
       }
-
-      let templateBlock = fileContent.substring(index, endIndex)
-
-      // Update fields using simple string replacement
-      if (updates.baseScenario) {
-        const oldValueMatch = templateBlock.match(/baseScenario: '([^']*)'/)
-        if (oldValueMatch) {
-          const escapedValue = updates.baseScenario.replace(/'/g, "\\'")
-          templateBlock = templateBlock.replace(
-            oldValueMatch[0],
-            "baseScenario: '" + escapedValue + "'"
-          )
-        }
-      }
-
-      if (updates.writingStyle) {
-        const oldValueMatch = templateBlock.match(/writingStyle: '([^']*)'/)
-        if (oldValueMatch) {
-          const escapedValue = updates.writingStyle.replace(/'/g, "\\'")
-          templateBlock = templateBlock.replace(
-            oldValueMatch[0],
-            "writingStyle: '" + escapedValue + "'"
-          )
-        }
-      }
-
-      if (updates.atmosphere) {
-        const oldValueMatch = templateBlock.match(/atmosphere: '([^']*)'/)
-        if (oldValueMatch) {
-          const escapedValue = updates.atmosphere.replace(/'/g, "\\'")
-          templateBlock = templateBlock.replace(
-            oldValueMatch[0],
-            "atmosphere: '" + escapedValue + "'"
-          )
-        }
-      }
-
-      if (updates.name) {
-        const oldValueMatch = templateBlock.match(/name: '([^']*)'/)
-        if (oldValueMatch) {
-          const escapedValue = updates.name.replace(/'/g, "\\'")
-          templateBlock = templateBlock.replace(
-            oldValueMatch[0],
-            "name: '" + escapedValue + "'"
-          )
-        }
-      }
-
-      if (updates.description) {
-        const oldValueMatch = templateBlock.match(/description: '([^']*)'/)
-        if (oldValueMatch) {
-          const escapedValue = updates.description.replace(/'/g, "\\'")
-          templateBlock = templateBlock.replace(
-            oldValueMatch[0],
-            "description: '" + escapedValue + "'"
-          )
-        }
-      }
-
-      // Replace in original content
-      fileContent = fileContent.substring(0, index) + templateBlock + fileContent.substring(endIndex)
-      updatedCount++
     }
 
-    fs.writeFileSync(templatesPath, fileContent, 'utf-8')
     console.log('[Admin Templates API] Updated', updatedCount, 'templates')
 
     return NextResponse.json({
-      success: true,
+      success: errorDetails.length === 0,
       updated: updatedCount,
-      message: 'Updated ' + updatedCount + ' templates. Redeploy to apply changes.'
+      errors: errorDetails.length > 0 ? errorDetails : undefined,
+      message: errorDetails.length === 0 
+        ? `Successfully updated ${updatedCount} templates`
+        : `Updated ${updatedCount} templates with errors`
     })
+
   } catch (error) {
     console.error('[Admin Templates API] Update error:', error)
     return NextResponse.json(
-      { success: false, error: 'Failed to update templates' },
+      { success: false, error: 'Failed to update templates: ' + (error as Error).message },
       { status: 500 }
     )
   }
