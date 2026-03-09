@@ -62,8 +62,15 @@ export interface CharacterPair {
   tension: string
 }
 
-// V6.0: 簡化角色提示詞 - 純文本描述
+// V6.1: 從數據庫讀取角色提示詞，支持動態更新
 export async function buildCharacterPrompt(templateWorld: string): Promise<string> {
+  const customPrompt = await getPromptFromDB('character')
+  
+  if (customPrompt) {
+    return customPrompt.replace(/\{\{templateWorld\}\}/g, templateWorld)
+  }
+  
+  // 默認提示詞
   return `根據以下世界設定，創建兩個角色，用自然語言描述：
 
 世界設定：${templateWorld}
@@ -80,12 +87,21 @@ export async function buildCharacterPrompt(templateWorld: string): Promise<strin
 角色2：[男主角名字]，[年齡]歲，[身份]。他[性格特點]，[外貌描述]，[欲望風格]。`
 }
 
-// V6.0: 簡化大綱提示詞 - 純文本描述
+// V6.1: 從數據庫讀取大綱提示詞，支持動態更新
 export async function buildOutlinePrompt(
-  templateWorld: string, 
-  char1Desc: string, 
+  templateWorld: string,
+  char1Desc: string,
   char2Desc: string
 ): Promise<string> {
+  const customPrompt = await getPromptFromDB('outline')
+  
+  if (customPrompt) {
+    return customPrompt
+      .replace(/\{\{templateWorld\}\}/g, templateWorld)
+      .replace(/\{\{characterPair\}\}/g, `${char1Desc}\n${char2Desc}`)
+  }
+  
+  // 默認提示詞
   return `根據以下設定，創作一個劇情摘要（約300字）：
 
 世界設定：${templateWorld}
