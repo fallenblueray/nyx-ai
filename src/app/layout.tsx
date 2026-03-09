@@ -20,7 +20,7 @@ export const metadata: Metadata = {
 };
 
 // 網頁版本號 - 小更新 +0.001，大型更新（如重構系統）+0.1
-const VERSION = 'v1.068'
+const VERSION = 'v1.069'
 
 export default function RootLayout({
   children,

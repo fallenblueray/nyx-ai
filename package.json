@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "npm run sync-prompts && next build",
+    "sync-prompts": "node scripts/sync-prompts.js",
     "start": "next start",
     "lint": "eslint",
     "test": "vitest",
