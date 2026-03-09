@@ -287,7 +287,7 @@ export function TemplateSelector() {
       // 格式化大綱並寫入 storyInput (只顯示劇情大綱)
       const formattedOutline = `【模板：${template.name}】
 
-${outlineText || '故事即將開始...'}
+${outlineText || '故事即將開始...'}`
       
       setStoryInput(formattedOutline)
       setGeneratedOutline({ 
