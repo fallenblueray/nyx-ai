@@ -30,7 +30,6 @@ export default function AdminTemplatesPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const router = useRouter()
 
-  // 檢查登入狀態
   useEffect(() => {
     const token = localStorage.getItem('admin_token')
     if (!token) {
@@ -221,6 +220,17 @@ export default function AdminTemplatesPage() {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {/* 模板名稱 */}
+                  <div>
+                    <label className="text-sm text-slate-400 block mb-1">模板名稱</label>
+                    <Input
+                      value={edited.name ?? template.name}
+                      onChange={(e) => handleFieldChange(template.id, 'name', e.target.value)}
+                      className="bg-slate-800 border-slate-700 text-white"
+                      placeholder="輸入模板名稱"
+                    />
+                  </div>
+                  
                   {/* 描述 */}
                   <div>
                     <label className="text-sm text-slate-400 block mb-1">描述</label>
@@ -228,6 +238,7 @@ export default function AdminTemplatesPage() {
                       value={edited.description ?? template.description}
                       onChange={(e) => handleFieldChange(template.id, 'description', e.target.value)}
                       className="bg-slate-800 border-slate-700 text-white"
+                      placeholder="輸入簡短描述"
                     />
                   </div>
                   
@@ -238,6 +249,7 @@ export default function AdminTemplatesPage() {
                       value={edited.baseScenario ?? template.baseScenario}
                       onChange={(e) => handleFieldChange(template.id, 'baseScenario', e.target.value)}
                       className="bg-slate-800 border-slate-700 text-white min-h-[80px]"
+                      placeholder="輸入基礎情境設定"
                     />
                   </div>
 
@@ -249,6 +261,7 @@ export default function AdminTemplatesPage() {
                         value={edited.writingStyle ?? template.writingStyle}
                         onChange={(e) => handleFieldChange(template.id, 'writingStyle', e.target.value)}
                         className="bg-slate-800 border-slate-700 text-white min-h-[60px]"
+                        placeholder="輸入寫作風格"
                       />
                     </div>
                     
@@ -259,6 +272,7 @@ export default function AdminTemplatesPage() {
                         value={edited.atmosphere ?? template.atmosphere}
                         onChange={(e) => handleFieldChange(template.id, 'atmosphere', e.target.value)}
                         className="bg-slate-800 border-slate-700 text-white min-h-[60px]"
+                        placeholder="輸入氛圍描述"
                       />
                     </div>
                   </div>
