@@ -1,0 +1,46 @@
+{
+  "templates": [
+    {
+      "id": "classic-001",
+      "slug": "first-love",
+      "name": "初戀回憶",
+      "category": "classic",
+      "description": "那年夏天的初戀，還記得她微笑的樣子嗎？",
+      "base_scenario": "高中畢業典禮後，你終於鼓起勇氣向暗戀三年的班花告白。她紅著臉說『其實我也喜歡你很久了』。於是你們約定在進入大學前的這個暑假，一起創造屬於你們的回憶...",
+      "writing_style": "純真浪漫風格，注重情感細節、青澀氛圍、夏日場景描寫（蟬鳴、汗珠、裙子飄逸）",
+      "atmosphere": "青澀甜蜜、時間有限的急迫感、青春的無限可能",
+      "pace": "slow",
+      "intensity": "mild",
+      "is_premium": false,
+      "tags": ["初戀", "校園", "告白", "純情"]
+    },
+    {
+      "id": "classic-002",
+      "slug": "childhood-sweetheart",
+      "name": "青梅竹馬",
+      "category": "classic",
+      "description": "那個從小一起長大的女孩，什麼時候變得這麼迷人了？",
+      "base_scenario": "你們是住在隔壁的青梅竹馬，從小一起上下學。她總是大大咧咧地穿著睡衣來你家蹭飯，從不把你當外人。但最近你發現，這個從小看到大的女孩，身材越來越成熟，笑容也越來越讓人心跳加速...",
+      "writing_style": "日常溫馨中帶有微妙張力，注重細節描寫（睡衣領口、髮香、不經意的肢體接觸）",
+      "atmosphere": "青澀曖昧，帶有「太熟了反而不好下手」的糾結",
+      "pace": "slow",
+      "intensity": "mild",
+      "is_premium": false,
+      "tags": ["青梅竹馬", "日久生情", "鄰家"]
+    },
+    {
+      "id": "classic-003",
+      "slug": "reunion-after-years",
+      "name": "久別重逢",
+      "category": "classic",
+      "description": "多年未見的老同學聚會，曾經暗戀的對象如今更加耀眼",
+      "base_scenario": "高中同學會上，你意外重逢了當年暗戀的校花。她已不再是那個羞澀的女孩，而是散發著成熟魅力的女人。她也注意到了你，而且似乎對你當年的告白念念不忘...",
+      "writing_style": "對比今昔變化，注重眼神交流和氛圍營造",
+      "atmosphere": "懷舊中帶著遺憾與重新開始的期待",
+      "pace": "slow",
+      "intensity": "moderate",
+      "is_premium": false,
+      "tags": ["重逢", "初戀", 「同學會」]
+    }
+  ]
+}
