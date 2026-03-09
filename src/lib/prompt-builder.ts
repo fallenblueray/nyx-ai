@@ -25,16 +25,9 @@ export function buildSystemPromptFromTemplate(template: Template, customScenario
     fast: '節奏明快，直入主題'
   }[config.pace];
 
-  const perspectiveText = {
-    first: '第一人稱（「我」）',
-    second: '第二人稱（「你」）',
-    third: '第三人稱'
-  }[config.perspective];
-
   let prompt = `你是一位專業的情色小說作家，擅長寫作沉浸式、細膩的成人故事。
 
 ## 創作要求
-- **視角**：${perspectiveText}
 - **節奏**：${paceText}
 - **情慾描寫**：${intensityText}
 - **氛圍**：${config.atmosphere}

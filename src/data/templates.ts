@@ -36,7 +36,6 @@ export const officialTemplates: Template[] = [
       atmosphere: '懷舊與曖昧交織，帶有淡淡的憂傷',
       pace: 'slow',
       intensity: 'moderate',
-      perspective: 'first'
     },
         isPremium: false,
     wordCostMultiplier: 1,
@@ -59,7 +58,6 @@ export const officialTemplates: Template[] = [
       atmosphere: '青澀曖昧，帶有「太熟了反而不好下手」的糾結',
       pace: 'slow',
       intensity: 'mild',
-      perspective: 'first'
     },
         isPremium: false,
     wordCostMultiplier: 1,
@@ -82,7 +80,6 @@ export const officialTemplates: Template[] = [
       atmosphere: '懷念與心動交織，帶有競爭意味',
       pace: 'medium',
       intensity: 'moderate',
-      perspective: 'first'
     },
     isPremium: false,
     wordCostMultiplier: 1,
@@ -105,7 +102,6 @@ export const officialTemplates: Template[] = [
       atmosphere: '緊張曖昧，帶有罪惡感',
       pace: 'medium',
       intensity: 'moderate',
-      perspective: 'first'
     },
     isPremium: false,
     wordCostMultiplier: 1,
@@ -128,7 +124,6 @@ export const officialTemplates: Template[] = [
       atmosphere: '心跳加速，帶有冒險感',
       pace: 'medium',
       intensity: 'moderate',
-      perspective: 'first'
     },
     isPremium: false,
     wordCostMultiplier: 1,
@@ -151,7 +146,6 @@ export const officialTemplates: Template[] = [
       atmosphere: '命中註定的浪漫，帶有懸念',
       pace: 'medium',
       intensity: 'moderate',
-      perspective: 'first'
     },
     isPremium: false,
     wordCostMultiplier: 1,
@@ -174,7 +168,6 @@ export const officialTemplates: Template[] = [
       atmosphere: '緊張期待，帶有夢幻感',
       pace: 'slow',
       intensity: 'mild',
-      perspective: 'first'
     },
     isPremium: false,
     wordCostMultiplier: 1,
@@ -197,7 +190,6 @@ export const officialTemplates: Template[] = [
       atmosphere: '自由放鬆，帶有冒險感',
       pace: 'fast',
       intensity: 'intense',
-      perspective: 'first'
     },
     isPremium: false,
     wordCostMultiplier: 1,
@@ -222,7 +214,6 @@ export const officialTemplates: Template[] = [
       atmosphere: '心動緊張，帶有虛榮感',
       pace: 'medium',
       intensity: 'moderate',
-      perspective: 'first'
     },
         isPremium: false,
     wordCostMultiplier: 1,
@@ -245,7 +236,6 @@ export const officialTemplates: Template[] = [
       atmosphere: '緊張曖昧，帶有背德感',
       pace: 'medium',
       intensity: 'intense',
-      perspective: 'first'
     },
         isPremium: false,
     wordCostMultiplier: 1,
@@ -268,7 +258,6 @@ export const officialTemplates: Template[] = [
       atmosphere: '曖昧升溫，帶有試探',
       pace: 'medium',
       intensity: 'intense',
-      perspective: 'first'
     },
     isPremium: false,
     wordCostMultiplier: 1,
@@ -291,7 +280,6 @@ export const officialTemplates: Template[] = [
       atmosphere: '甜寵戀愛，主動被動交換',
       pace: 'fast',
       intensity: 'moderate',
-      perspective: 'first'
     },
         isPremium: false,
     wordCostMultiplier: 1,
@@ -314,7 +302,6 @@ export const officialTemplates: Template[] = [
       atmosphere: '震驚意外，帶有獵奇',
       pace: 'medium',
       intensity: 'intense',
-      perspective: 'first'
     },
     isPremium: false,
     wordCostMultiplier: 1,
@@ -337,7 +324,6 @@ export const officialTemplates: Template[] = [
       atmosphere: '深夜曖昧，孤獨感拉近距離',
       pace: 'slow',
       intensity: 'moderate',
-      perspective: 'first'
     },
     isPremium: false,
     wordCostMultiplier: 1,
@@ -360,7 +346,6 @@ export const officialTemplates: Template[] = [
       atmosphere: '熱血心動，帶有征服感',
       pace: 'fast',
       intensity: 'moderate',
-      perspective: 'first'
     },
     isPremium: false,
     wordCostMultiplier: 1,
@@ -383,7 +368,6 @@ export const officialTemplates: Template[] = [
       atmosphere: '書香曖昧，日久生情',
       pace: 'slow',
       intensity: 'mild',
-      perspective: 'first'
     },
     isPremium: false,
     wordCostMultiplier: 1,
@@ -406,7 +390,6 @@ export const officialTemplates: Template[] = [
       atmosphere: '緊張期待，偷跑感',
       pace: 'medium',
       intensity: 'intense',
-      perspective: 'first'
     },
     isPremium: false,
     wordCostMultiplier: 1,
@@ -429,7 +412,6 @@ export const officialTemplates: Template[] = [
       atmosphere: '浪漫曖昧，才華吸引',
       pace: 'slow',
       intensity: 'moderate',
-      perspective: 'first'
     },
     isPremium: false,
     wordCostMultiplier: 1,
@@ -454,7 +436,6 @@ export const officialTemplates: Template[] = [
       atmosphere: '深夜寂寞，孤男寡女',
       pace: 'medium',
       intensity: 'intense',
-      perspective: 'first'
     },
         isPremium: false,
     wordCostMultiplier: 1,
@@ -477,7 +458,6 @@ export const officialTemplates: Template[] = [
       atmosphere: '緊張刺激，帶有背德感',
       pace: 'medium',
       intensity: 'intense',
-      perspective: 'first'
     },
     isPremium: false,
     wordCostMultiplier: 1,
@@ -500,7 +480,6 @@ export const officialTemplates: Template[] = [
       atmosphere: '愧疚與渴望交織',
       pace: 'medium',
       intensity: 'intense',
-      perspective: 'first'
     },
     isPremium: false,
     wordCostMultiplier: 1,
@@ -523,7 +502,6 @@ export const officialTemplates: Template[] = [
       atmosphere: '空虛孤獨，需要填補',
       pace: 'slow',
       intensity: 'moderate',
-      perspective: 'first'
     },
     isPremium: false,
     wordCostMultiplier: 1,
@@ -546,7 +524,6 @@ export const officialTemplates: Template[] = [
       atmosphere: '解脫與新生，帶有報復性',
       pace: 'fast',
       intensity: 'intense',
-      perspective: 'first'
     },
     isPremium: false,
     wordCostMultiplier: 1,
@@ -569,7 +546,6 @@ export const officialTemplates: Template[] = [
       atmosphere: '禁忌與好奇',
       pace: 'medium',
       intensity: 'moderate',
-      perspective: 'first'
     },
     isPremium: false,
     wordCostMultiplier: 1,
@@ -592,7 +568,6 @@ export const officialTemplates: Template[] = [
       atmosphere: '禁忌快感，內心掙扎',
       pace: 'slow',
       intensity: 'moderate',
-      perspective: 'first'
     },
     isPremium: false,
     wordCostMultiplier: 1,
@@ -615,7 +590,6 @@ export const officialTemplates: Template[] = [
       atmosphere: '心疼與心動',
       pace: 'medium',
       intensity: 'moderate',
-      perspective: 'first'
     },
     isPremium: false,
     wordCostMultiplier: 1,
@@ -638,7 +612,6 @@ export const officialTemplates: Template[] = [
       atmosphere: '親切但心動',
       pace: 'medium',
       intensity: 'moderate',
-      perspective: 'first'
     },
     isPremium: false,
     wordCostMultiplier: 1,
@@ -661,7 +634,6 @@ export const officialTemplates: Template[] = [
       atmosphere: '日常親密，日久生情',
       pace: 'slow',
       intensity: 'mild',
-      perspective: 'first'
     },
     isPremium: false,
     wordCostMultiplier: 1,
@@ -686,7 +658,6 @@ export const officialTemplates: Template[] = [
       atmosphere: '緊張曖昧，冰山融化',
       pace: 'medium',
       intensity: 'intense',
-      perspective: 'first'
     },
         isPremium: false,
     wordCostMultiplier: 1,
@@ -709,7 +680,6 @@ export const officialTemplates: Template[] = [
       atmosphere: '權力與性感',
       pace: 'fast',
       intensity: 'intense',
-      perspective: 'first'
     },
     isPremium: false,
     wordCostMultiplier: 1,
@@ -732,7 +702,6 @@ export const officialTemplates: Template[] = [
       atmosphere: '脆弱與依賴',
       pace: 'slow',
       intensity: 'moderate',
-      perspective: 'first'
     },
     isPremium: false,
     wordCostMultiplier: 1,
@@ -755,7 +724,6 @@ export const officialTemplates: Template[] = [
       atmosphere: '高空浪漫，萍水相逢',
       pace: 'medium',
       intensity: 'moderate',
-      perspective: 'first'
     },
     isPremium: false,
     wordCostMultiplier: 1,
@@ -778,7 +746,6 @@ export const officialTemplates: Template[] = [
       atmosphere: '緊張刺激，權力遊戲',
       pace: 'fast',
       intensity: 'intense',
-      perspective: 'first'
     },
     isPremium: false,
     wordCostMultiplier: 1,
@@ -801,7 +768,6 @@ export const officialTemplates: Template[] = [
       atmosphere: '贴身指导，亲密接触',
       pace: 'medium',
       intensity: 'intense',
-      perspective: 'first'
     },
     isPremium: false,
     wordCostMultiplier: 1,
@@ -824,7 +790,6 @@ export const officialTemplates: Template[] = [
       atmosphere: '精英氛圍，事業女性',
       pace: 'medium',
       intensity: 'moderate',
-      perspective: 'first'
     },
     isPremium: false,
     wordCostMultiplier: 1,
@@ -847,7 +812,6 @@ export const officialTemplates: Template[] = [
       atmosphere: '办公室恋情萌芽',
       pace: 'slow',
       intensity: 'mild',
-      perspective: 'first'
     },
     isPremium: false,
     wordCostMultiplier: 1,
@@ -870,7 +834,6 @@ export const officialTemplates: Template[] = [
       atmosphere: '地位懸殊，禁忌快感',
       pace: 'medium',
       intensity: 'intense',
-      perspective: 'first'
     },
     isPremium: false,
     wordCostMultiplier: 1,
@@ -893,7 +856,6 @@ export const officialTemplates: Template[] = [
       atmosphere: '萍水相逢，旅途艳遇',
       pace: 'fast',
       intensity: 'moderate',
-      perspective: 'first'
     },
     isPremium: false,
     wordCostMultiplier: 1,
@@ -918,7 +880,6 @@ export const officialTemplates: Template[] = [
       atmosphere: '社會眼光，內心掙扎',
       pace: 'medium',
       intensity: 'moderate',
-      perspective: 'first'
     },
     isPremium: false,
     wordCostMultiplier: 1,
@@ -941,7 +902,6 @@ export const officialTemplates: Template[] = [
       atmosphere: '緊張刺激，禁忌快感',
       pace: 'medium',
       intensity: 'intense',
-      perspective: 'first'
     },
     isPremium: false,
     wordCostMultiplier: 1,
@@ -964,7 +924,6 @@ export const officialTemplates: Template[] = [
       atmosphere: '震驚與掙扎',
       pace: 'medium',
       intensity: 'moderate',
-      perspective: 'first'
     },
     isPremium: false,
     wordCostMultiplier: 1,
@@ -987,7 +946,6 @@ export const officialTemplates: Template[] = [
       atmosphere: '糾結與沉淪',
       pace: 'slow',
       intensity: 'intense',
-      perspective: 'first'
     },
     isPremium: false,
     wordCostMultiplier: 1,
@@ -1010,7 +968,6 @@ export const officialTemplates: Template[] = [
       atmosphere: '痛苦與甜蜜',
       pace: 'slow',
       intensity: 'moderate',
-      perspective: 'first'
     },
     isPremium: false,
     wordCostMultiplier: 1,
@@ -1033,7 +990,6 @@ export const officialTemplates: Template[] = [
       atmosphere: '職場潛規則',
       pace: 'medium',
       intensity: 'intense',
-      perspective: 'first'
     },
     isPremium: false,
     wordCostMultiplier: 1,
@@ -1058,7 +1014,6 @@ export const officialTemplates: Template[] = [
       atmosphere: '晴天霹靂',
       pace: 'fast',
       intensity: 'intense',
-      perspective: 'first'
     },
     isPremium: false,
     wordCostMultiplier: 1,
@@ -1081,7 +1036,6 @@ export const officialTemplates: Template[] = [
       atmosphere: '吃醋與競爭',
       pace: 'medium',
       intensity: 'moderate',
-      perspective: 'first'
     },
     isPremium: false,
     wordCostMultiplier: 1,
@@ -1104,7 +1058,6 @@ export const officialTemplates: Template[] = [
       atmosphere: '復仇火焰',
       pace: 'fast',
       intensity: 'intense',
-      perspective: 'first'
     },
     isPremium: false,
     wordCostMultiplier: 1,
@@ -1127,7 +1080,6 @@ export const officialTemplates: Template[] = [
       atmosphere: '抑鬱無奈',
       pace: 'slow',
       intensity: 'intense',
-      perspective: 'first'
     },
     isPremium: false,
     wordCostMultiplier: 1,
@@ -1150,7 +1102,6 @@ export const officialTemplates: Template[] = [
       atmosphere: '極度混亂',
       pace: 'fast',
       intensity: 'intense',
-      perspective: 'first'
     },
     isPremium: true,
     wordCostMultiplier: 1.5,
@@ -1175,7 +1126,6 @@ export const officialTemplates: Template[] = [
       atmosphere: '極度緊張',
       pace: 'fast',
       intensity: 'intense',
-      perspective: 'first'
     },
         isPremium: true,
     wordCostMultiplier: 1.5,
@@ -1198,7 +1148,6 @@ export const officialTemplates: Template[] = [
       atmosphere: '熱鬧混亂',
       pace: 'fast',
       intensity: 'intense',
-      perspective: 'first'
     },
     isPremium: true,
     wordCostMultiplier: 2,
@@ -1221,7 +1170,6 @@ export const officialTemplates: Template[] = [
       atmosphere: '甜蜜恐怖',
       pace: 'medium',
       intensity: 'intense',
-      perspective: 'first'
     },
     isPremium: true,
     wordCostMultiplier: 1.5,
@@ -1244,7 +1192,6 @@ export const officialTemplates: Template[] = [
       atmosphere: '震驚意外',
       pace: 'medium',
       intensity: 'intense',
-      perspective: 'first'
     },
     isPremium: true,
     wordCostMultiplier: 1.5,
@@ -1267,7 +1214,6 @@ export const officialTemplates: Template[] = [
       atmosphere: '對抗與吸引',
       pace: 'fast',
       intensity: 'intense',
-      perspective: 'first'
     },
     isPremium: true,
     wordCostMultiplier: 1.5,
@@ -1290,7 +1236,6 @@ export const officialTemplates: Template[] = [
       atmosphere: '少女心爆棚',
       pace: 'fast',
       intensity: 'intense',
-      perspective: 'first'
     },
     isPremium: true,
     wordCostMultiplier: 2,

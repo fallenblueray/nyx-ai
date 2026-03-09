@@ -59,7 +59,7 @@ export interface PromptConfig {
   atmosphere: string;        // 氛圍描述
   pace: 'slow' | 'medium' | 'fast';  // 節奏
   intensity: 'mild' | 'moderate' | 'intense';  // 情慾強度
-  perspective: 'first' | 'second' | 'third';  // 視角
+  // perspective removed - now controlled by user settings only
 }
 
 // 角色卡配置
