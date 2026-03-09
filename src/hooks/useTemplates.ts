@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from "react"
 import type { Template } from "@/types/template"
-import { officialTemplates as localTemplates } from "@/data/templates"
+import { officialTemplates } from "@/data/templates"
 
 export function useTemplates() {
-  const [templates, setTemplates] = useState<Template[]>(localTemplates)
+  const [templates, setTemplates] = useState<Template[]>(officialTemplates)
   const [loading, setLoading] = useState(true)
   const [source, setSource] = useState<'local' | 'supabase'>('local')
 
