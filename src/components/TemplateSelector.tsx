@@ -309,6 +309,163 @@ ${outlineText || '故事即將開始...'}`
     }
   }
   
+  // ========== V6.5: 單獨刷新功能 ==========
+  
+  // 只換角色，保留現有劇情
+  const regenerateCharactersOnly = async () => {
+    const templateId = useAppStore.getState().selectedTemplate
+    if (!templateId) {
+      setError("請先選擇一個模板")
+      return
+    }
+    
+    const template = officialTemplates.find(t => t.id === templateId)
+    if (!template) {
+      setError("找不到模板")
+      return
+    }
+    
+    console.log('[TemplateSelector] Regenerating characters only...')
+    setIsGeneratingCharacters(true)
+    setError(null)
+    
+    try {
+      // 保存現有劇情
+      const currentOutline = useAppStore.getState().storyInput
+      
+      const response = await fetch("/api/story/outline", {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "Cache-Control": "no-cache"
+        },
+        body: JSON.stringify({
+          templateId: template.id,
+          timestamp: Date.now(),
+          randomSeed: Math.floor(Math.random() * 1000000),
+          mode: 'characters-only' // 告訴 API 只生成角色
+        })
+      })
+      
+      if (!response.ok) throw new Error(`API ${response.status}`)
+      
+      const data = await response.json()
+      if (!data.success || !data.data?.characters) throw new Error("生成失敗")
+      
+      const char1Text = data.data.characters.character1
+      const char2Text = data.data.characters.character2
+      
+      // 更新角色但保留原劇情
+      const extractName = (text: string) => {
+        const cleaned = text.replace(/^(?:角色[12][：:]?|[，。、\s]+)+/, '').trim()
+        const match = cleaned.match(/^([^，,。\s]+)/)
+        return match ? match[1].slice(0, 10) : '角色'
+      }
+      
+      const cleanDesc = (text: string) => {
+        return text.replace(/^(?:角色[12][：:]?|[，。、\s]+)+/, '').trim()
+      }
+      
+      const storeCharacters = [
+        {
+          id: `char-${extractName(char1Text)}-${Date.now()}`,
+          name: extractName(char1Text),
+          description: cleanDesc(char1Text).slice(0, 100) + (char1Text.length > 100 ? '...' : ''),
+          traits: ['角色一']
+        },
+        {
+          id: `char-${extractName(char2Text)}-${Date.now()}`,
+          name: extractName(char2Text),
+          description: cleanDesc(char2Text).slice(0, 100) + (char2Text.length > 100 ? '...' : ''),
+          traits: ['角色二']
+        }
+      ]
+      
+      setCharacters(storeCharacters)
+      console.log('[TemplateSelector] Characters regenerated, outline preserved')
+      
+    } catch (err) {
+      console.error("[TemplateSelector] Failed to regenerate characters:", err)
+      setError("換角色失敗，請重試")
+    } finally {
+      setIsGeneratingCharacters(false)
+    }
+  }
+  
+  // 只換劇情，保留現有角色
+  const regenerateOutlineOnly = async () => {
+    const templateId = useAppStore.getState().selectedTemplate
+    if (!templateId) {
+      setError("請先選擇一個模板")
+      return
+    }
+    
+    const template = officialTemplates.find(t => t.id === templateId)
+    if (!template) {
+      setError("找不到模板")
+      return
+    }
+    
+    const currentCharacters = useAppStore.getState().characters
+    if (currentCharacters.length < 2) {
+      setError("請先生成角色")
+      return
+    }
+    
+    console.log('[TemplateSelector] Regenerating outline only...')
+    setIsGeneratingTemplate(true)
+    setError(null)
+    
+    try {
+      const response = await fetch("/api/story/outline", {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "Cache-Control": "no-cache"
+        },
+        body: JSON.stringify({
+          templateId: template.id,
+          timestamp: Date.now(),
+          randomSeed: Math.floor(Math.random() * 1000000),
+          mode: 'outline-only', // 告訴 API 只生成劇情
+          // 傳入現有角色描述
+          existingCharacters: {
+            character1: currentCharacters[0]?.description || '',
+            character2: currentCharacters[1]?.description || ''
+          }
+        })
+      })
+      
+      if (!response.ok) throw new Error(`API ${response.status}`)
+      
+      const data = await response.json()
+      if (!data.success || !data.data?.outline) throw new Error("生成失敗")
+      
+      const outlineText = data.data.outline
+      
+      // 只更新劇情，保留原角色
+      const formattedOutline = `【模板：${template.name}】
+
+${outlineText || '故事即將開始...'}`
+      
+      setStoryInput(formattedOutline)
+      setGeneratedOutline({ 
+        beginning: outlineText.slice(0, 100) || '故事開始...',
+        development: outlineText.slice(100, 200) || '',
+        climax: outlineText.slice(200, 300) || '',
+        preview: outlineText.slice(0, 50) || '精彩故事...'
+      })
+      
+      console.log('[TemplateSelector] Outline regenerated, characters preserved')
+      
+    } catch (err) {
+      console.error("[TemplateSelector] Failed to regenerate outline:", err)
+      setError("換劇情失敗，請重試")
+    } finally {
+      setIsGeneratingTemplate(false)
+    }
+  }
+
   // 套用模板（入口）- V5.2: 所有模板統一調用 AI 生成角色+大綱
   const handleSelectTemplate = async (template: Template) => {
     // 設置選中的模板 ID

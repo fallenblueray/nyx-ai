@@ -12,6 +12,11 @@ interface OutlineRequest {
   templateId: string
   timestamp?: number
   randomSeed?: number
+  mode?: 'full' | 'characters-only' | 'outline-only'
+  existingCharacters?: {
+    character1: string
+    character2: string
+  }
 }
 
 async function callAI(prompt: string): Promise<string> {
@@ -46,7 +51,7 @@ export async function POST(request: NextRequest) {
   
   try {
     const body: OutlineRequest = await request.json()
-    const { templateId } = body
+    const { templateId, mode = 'full', existingCharacters } = body
     
     const template = officialTemplates.find(t => t.id === templateId)
     if (!template) {
@@ -58,34 +63,51 @@ export async function POST(request: NextRequest) {
     
     const templateWorld = template.promptBuilder.baseScenario
     
-    // V6: 生成角色（純文本）
-    console.log('[Outline V6] Generating characters...')
-    const charResult = await generateCharacterPair(templateWorld, callAI)
+    let charResult: { char1: string; char2: string } | null = null
+    let outlineText: string = ''
     
-    if (!charResult) {
-      return NextResponse.json(
-        { success: false, error: "角色生成失敗" },
-        { status: 500 }
+    // V6.5: 支持不同模式
+    if (mode === 'outline-only' && existingCharacters) {
+      // 只生成劇情，使用提供的角色
+      console.log('[Outline V6] Mode: outline-only with existing characters')
+      outlineText = await generateOutline(
+        templateWorld, 
+        existingCharacters.character1, 
+        existingCharacters.character2, 
+        callAI
       )
+      console.log('[Outline V6] Outline:', outlineText.slice(0, 100), '...')
+    } else {
+      // 生成角色（mode !== 'outline-only'）
+      console.log('[Outline V6] Generating characters...')
+      charResult = await generateCharacterPair(templateWorld, callAI)
+      
+      if (!charResult) {
+        return NextResponse.json(
+          { success: false, error: "角色生成失敗" },
+          { status: 500 }
+        )
+      }
+      
+      console.log('[Outline V6] Characters:', charResult.char1.slice(0, 30), '...')
+      
+      // 如果不是只生成角色，則生成劇情
+      if (mode !== 'characters-only') {
+        console.log('[Outline V6] Generating outline...')
+        outlineText = await generateOutline(templateWorld, charResult.char1, charResult.char2, callAI)
+        console.log('[Outline V6] Outline:', outlineText.slice(0, 100), '...')
+      }
     }
-    
-    console.log('[Outline V6] Characters:', charResult.char1.slice(0, 30), '...')
-    
-    // V6: 生成大綱（純文本）
-    console.log('[Outline V6] Generating outline...')
-    const outlineText = await generateOutline(templateWorld, charResult.char1, charResult.char2, callAI)
-    
-    console.log('[Outline V6] Outline:', outlineText.slice(0, 100), '...')
     
     // V6: 返回簡化格式
     return NextResponse.json({
       success: true,
       data: {
-        characters: {
+        characters: charResult ? {
           character1: charResult.char1,
           character2: charResult.char2,
-        },
-        outline: outlineText,
+        } : undefined,
+        outline: outlineText || undefined,
       }
     })
     
