@@ -37,8 +37,8 @@ export function PerspectiveSelector() {
             className={cn(
               "flex-1 px-3 py-2 rounded-lg border text-left transition-all",
               perspective === option.id
-                ? "bg-purple-600/20 border-purple-500/50 text-purple-200"
-                : "bg-white/5 border-white/10 text-white/60 hover:bg-white/10 hover:border-white/20"
+                ? "bg-[var(--accent-bg)] border-[var(--accent-border)] text-[var(--accent)]"
+                : "bg-[var(--surface-2)] border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--surface-3)] hover:border-[var(--border-subtle)]"
             )}
           >
             <div className="text-sm font-medium">{option.label}</div>

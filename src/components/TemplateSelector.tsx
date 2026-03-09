@@ -51,8 +51,8 @@ function CategoryTab({
       className={cn(
         "flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-medium transition-all whitespace-nowrap",
         active
-          ? "bg-purple-600 text-white"
-          : "bg-white/5 text-white/60 hover:bg-white/10 hover:text-white"
+          ? "bg-[var(--accent)] text-[var(--surface)]"
+          : "bg-[var(--surface-2)] text-[var(--text-secondary)] hover:bg-[var(--surface-3)] hover:text-[var(--text-primary)]"
       )}
     >
       <span>{emoji}</span>
@@ -74,7 +74,7 @@ function TemplateCard({
     <div
       className={cn(
         "group relative rounded-xl border p-4 cursor-pointer transition-all duration-200",
-        "bg-white/5 hover:bg-white/10 border-white/10 hover:border-purple-500/50"
+        "bg-[var(--surface-2)] hover:bg-[var(--surface-3)] border-[var(--border)] hover:border-[var(--accent-border)]"
       )}
       onClick={() => onSelect(template)}
     >
@@ -100,8 +100,8 @@ function TemplateCard({
       </div>
 
       {/* 內容 */}
-      <h3 className="text-sm font-semibold text-white pr-8">{template.name}</h3>
-      <p className="text-xs text-white/50 mt-1 line-clamp-2">{template.description}</p>
+      <h3 className="text-sm font-semibold text-[var(--text-primary)] pr-8">{template.name}</h3>
+      <p className="text-xs text-[var(--text-secondary)] mt-1 line-clamp-2">{template.description}</p>
 
       {/* 角色名稱 */}
       {template.characterConfig && (
@@ -546,13 +546,13 @@ ${outlineText || '故事即將開始...'}`
           {/* 搜索框 */}
           <div className="px-6 py-3">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <input
                 type="text"
                 placeholder="搜索模板..."
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm placeholder:text-white/30 focus:outline-none focus:border-purple-500/50"
+                className="w-full pl-9 pr-4 py-2 rounded-lg bg-muted border border-border text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:border-purple-500/50"
               />
               {searchQuery && (
                 <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2">

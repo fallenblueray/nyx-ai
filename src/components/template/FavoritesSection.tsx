@@ -53,11 +53,11 @@ export function FavoritesSection({
       <div className={className}>
         <div className="flex items-center gap-2 mb-3">
           <Bookmark className="h-4 w-4 text-blue-500" />
-          <h3 className="text-sm font-medium text-muted-foreground">我的收藏</h3>
+          <h3 className="text-sm font-medium text-[var(--text-secondary)]">我的收藏</h3>
         </div>
-        <div className="p-4 rounded-lg bg-muted/50 text-center">
-          <Heart className="h-8 w-8 mx-auto mb-2 text-muted-foreground/50" />
-          <p className="text-sm text-muted-foreground">登入後可收藏常用模板</p>
+        <div className="p-4 rounded-lg bg-[var(--surface-2)] border border-[var(--border)] text-center">
+          <Heart className="h-8 w-8 mx-auto mb-2 text-[var(--text-muted)]" />
+          <p className="text-sm text-[var(--text-secondary)]">登入後可收藏常用模板</p>
         </div>
       </div>
     )
@@ -68,13 +68,13 @@ export function FavoritesSection({
       <div className={className}>
         <div className="flex items-center gap-2 mb-3">
           <Bookmark className="h-4 w-4 text-blue-500" />
-          <h3 className="text-sm font-medium text-muted-foreground">我的收藏</h3>
+          <h3 className="text-sm font-medium text-[var(--text-secondary)]">我的收藏</h3>
         </div>
         <div className="flex gap-3 overflow-x-auto pb-2">
           {Array.from({ length: 3 }).map((_, i) => (
             <div
               key={i}
-              className="h-20 w-40 flex-shrink-0 rounded-lg bg-muted animate-pulse"
+              className="h-20 w-40 flex-shrink-0 rounded-lg bg-[var(--surface-2)] animate-pulse"
             />
           ))}
         </div>
@@ -88,12 +88,12 @@ export function FavoritesSection({
       <div className={className}>
         <div className="flex items-center gap-2 mb-3">
           <Bookmark className="h-4 w-4 text-blue-500" />
-          <h3 className="text-sm font-medium text-muted-foreground">我的收藏</h3>
+          <h3 className="text-sm font-medium text-[var(--text-secondary)]">我的收藏</h3>
         </div>
-        <div className="p-4 rounded-lg bg-muted/50 text-center">
-          <Heart className="h-8 w-8 mx-auto mb-2 text-muted-foreground/50" />
-          <p className="text-sm text-muted-foreground">還沒有收藏模板</p>
-          <p className="text-xs text-muted-foreground/70 mt-1">
+        <div className="p-4 rounded-lg bg-[var(--surface-2)] border border-[var(--border)] text-center">
+          <Heart className="h-8 w-8 mx-auto mb-2 text-[var(--text-muted)]" />
+          <p className="text-sm text-[var(--text-secondary)]">還沒有收藏模板</p>
+          <p className="text-xs text-[var(--text-muted)] mt-1">
             點擊模板上的 ♡ 收藏
           </p>
         </div>
@@ -120,7 +120,7 @@ export function FavoritesSection({
             onClick={() => onSelectTemplate(template)}
             className="group relative flex-shrink-0 text-left"
           >
-            <div className="w-40 p-3 rounded-lg border bg-blue-50/50 border-blue-200 hover:border-blue-300 transition-all duration-200">
+            <div className="w-40 p-3 rounded-lg border bg-card border-border hover:border-[var(--accent-border)] transition-all duration-200">
               {/* 模板名稱 */}
               <p className="font-medium text-sm line-clamp-1 mb-1">
                 {template.name}

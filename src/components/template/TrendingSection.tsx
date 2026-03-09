@@ -68,7 +68,7 @@ export function TrendingSection({
     <div className={className}>
       <div className="flex items-center gap-2 mb-3">
         <Flame className="h-4 w-4 text-orange-500" />
-        <h3 className="text-sm font-medium text-muted-foreground">今天熱門</h3>
+        <h3 className="text-sm font-medium text-[var(--text-secondary)]">今天熱門</h3>
       </div>
       
       <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
@@ -81,8 +81,8 @@ export function TrendingSection({
             <div className={`
               relative w-40 p-3 rounded-lg border transition-all duration-200
               ${index < 3 
-                ? "bg-gradient-to-br from-orange-50 to-amber-50 border-orange-200 hover:border-orange-300" 
-                : "bg-muted/50 border-border hover:border-border/80"
+                ? "bg-gradient-to-br from-orange-500/10 to-amber-500/10 border-orange-500/30 hover:border-orange-500/50 dark:from-orange-500/20 dark:to-amber-500/20" 
+                : "bg-[var(--surface-2)] border-[var(--border)] hover:border-[var(--border-subtle)]"
               }
             `}>
               {/* 排名標識 */}
