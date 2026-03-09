@@ -1,0 +1,114 @@
+{
+ "exportInfo": {
+ "totalTemplates": 62,
+ "exportDate": "2026-03-09",
+ "version": "v1.0",
+ "format": "JSON for easy editing"
+ },
+ "templates": [
+ {
+ "id": "classic-001",
+ "slug": "first-love-reunion",
+ "name": "初戀重逢",
+ "description": "多年後與初戀意外相遇，舊情復燃",
+ "category": "classic",
+ "tags": ["初戀", "重逢", "情感", "舊情復燃"],
+ "baseScenario": "多年後在街頭偶遇初戀，她已經變得更加成熟迷人",
+ "writingStyle": "細膩情感描寫，注重心理變化，緩慢醞釀",
+ "atmosphere": "懷舊與曖昧交織，帶有淡淡的憂傷",
+ "pace": "slow",
+ "intensity": "moderate"
+ },
+ {
+ "id": "classic-002",
+ "slug": "childhood-sweetheart",
+ "name": "青梅竹馬",
+ "description": "那個從小一起長大的女孩，什麼時候變得這麼迷人了？",
+ "category": "classic",
+ "tags": ["青梅竹馬", "日久生情", "鄰家"],
+ "baseScenario": "你們是住在隔壁的青梅竹馬，從小一起上下學。她總是大大咧咧地穿著睡衣來你家蹭飯，從不把你當外人。但最近你發現，這個從小看到大的女孩，身材越來越成熟，笑容也越來越讓人心跳加速...",
+ "writingStyle": "日常溫馨中帶有微妙張力，注重細節描寫（睡衣領口、髮香、不經意的肢體接觸）",
+ "atmosphere": "青澀曖昧，帶有「太熟了反而不好下手」的糾結",
+ "pace": "slow",
+ "intensity": "mild"
+ },
+ {
+ "id": "classic-003",
+ "slug": "reunion-after-years",
+ "name": "久別重逢",
+ "description": "多年未見的老同學聚會重逢",
+ "category": "classic",
+ "tags": ["同學會", "重逢", "變化"],
+ "baseScenario": "多年未見的老同學聚會，曾經暗戀的對象如今更加耀眼",
+ "writingStyle": "對比今昔，注重眼神交流和氛圍營造",
+ "atmosphere": "懷念與心動交織，帶有競爭意味",
+ "pace": "medium",
+ "intensity": "moderate"
+ },
+ {
+ "id": "classic-004",
+ "slug": "friend-becomes-lover",
+ "name": "朋友變戀人",
+ "description": "多年異性好友，友情意外昇華",
+ "category": "classic",
+ "tags": ["友情", "日久生情", "告白"],
+ "baseScenario": "多年異性好友，一次意外讓關係發生質變",
+ "writingStyle": "注重心理描寫，展現內心掙扎",
+ "atmosphere": "緊張曖昧，帶有罪惡感",
+ "pace": "medium",
+ "intensity": "moderate"
+ },
+ {
+ "id": "classic-005",
+ "slug": "online-love-meetup",
+ "name": "網戀奔現",
+ "description": "網友多年曖昧，終於線下見面",
+ "category": "classic",
+ "tags": ["網戀", "奔現", "見面"],
+ "baseScenario": "網聊多年的網友終於約好見面，現實與想像有落差",
+ "writingStyle": "期待與緊張交織，注重場景描寫",
+ "atmosphere": "心跳加速，帶有冒險感",
+ "pace": "medium",
+ "intensity": "moderate"
+ },
+ {
+ "id": "classic-006",
+ "slug": "chance-encounter",
+ "name": "命運邂逅",
+ "description": "陌生人之間的命運相遇",
+ "category": "classic",
+ "tags": ["邂逅", "命運", "陌生人"],
+ "baseScenario": "在不該相遇的地方相遇，卻產生奇妙吸引力",
+ "writingStyle": "電影感描寫，注重氛圍營造",
+ "atmosphere": "命中註定的浪漫，帶有懸念",
+ "pace": "medium",
+ "intensity": "moderate"
+ },
+ {
+ "id": "classic-007",
+ "slug": "secret-crush",
+ "name": "暗戀成真",
+ "description": "長期暗戀終於表白成功",
+ "category": "classic",
+ "tags": ["暗戀", "表白", "單相思"],
+ "baseScenario": "長期暗戀某個人，終於找到機會表白",
+ "writingStyle": "內心戲豐富，情感細膩",
+ "atmosphere": "緊張期待，帶有夢幻感",
+ "pace": "slow",
+ "intensity": "mild"
+ },
+ {
+ "id": "classic-008",
+ "slug": "vacation-flirtation",
+ "name": "度假艳遇",
+ "description": "旅行中遇到的短暂浪漫",
+ "category": "classic",
+ "tags": ["旅行", "艳遇", "短暂"],
+ "baseScenario": "在度假勝地遇到心動的陌生人，沒有負擔的短暫時光",
+ "writingStyle": "浪漫唯美，注重氛圍",
+ "atmosphere": "自由放鬆，帶有冒險感",
+ "pace": "fast",
+ "intensity": "intense"
+ }
+ ]
+}
