@@ -18,7 +18,32 @@ interface Template {
   baseScenario: string
   writingStyle: string
   atmosphere: string
+  pace: string
+  intensity: string
 }
+
+const CATEGORIES = [
+  { value: 'classic', label: '經典' },
+  { value: 'campus', label: '校園' },
+  { value: 'mature', label: '人妻' },
+  { value: 'career', label: '職場' },
+  { value: 'taboo', label: '禁忌' },
+  { value: 'ntr', label: 'NTR' },
+  { value: 'extreme', label: '高級' },
+  { value: 'premium', label: 'Premium' }
+]
+
+const PACE_OPTIONS = [
+  { value: 'slow', label: '慢節奏' },
+  { value: 'medium', label: '中等節奏' },
+  { value: 'fast', label: '快節奏' }
+]
+
+const INTENSITY_OPTIONS = [
+  { value: 'mild', label: '溫和' },
+  { value: 'moderate', label: '中等' },
+  { value: 'intense', label: '激烈' }
+]
 
 export default function AdminTemplatesPage() {
   const [templates, setTemplates] = useState<Template[]>([])
@@ -26,6 +51,7 @@ export default function AdminTemplatesPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
   const [password, setPassword] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const router = useRouter()
@@ -62,6 +88,7 @@ export default function AdminTemplatesPage() {
         [field]: value
       }
     }))
+    setSaveError(null)
   }
 
   const hasChanges = (id: string): boolean => {
@@ -70,17 +97,19 @@ export default function AdminTemplatesPage() {
 
   const handleSaveAll = async () => {
     if (!password) {
-      alert('請輸入管理員密碼')
+      setSaveError('請輸入管理員密碼')
       return
     }
 
     const changedTemplates = Object.values(editedTemplates).filter(t => t.id)
     if (changedTemplates.length === 0) {
-      alert('沒有修改的內容')
+      setSaveError('沒有修改的內容')
       return
     }
 
     setSaving(true)
+    setSaveError(null)
+    
     try {
       const res = await fetch('/api/admin/templates', {
         method: 'POST',
@@ -99,10 +128,10 @@ export default function AdminTemplatesPage() {
         setTimeout(() => setSaveSuccess(false), 3000)
         loadTemplates()
       } else {
-        alert('保存失敗：' + (data.error || '未知錯誤'))
+        setSaveError(data.error || '保存失敗')
       }
     } catch (error) {
-      alert('保存失敗，請重試')
+      setSaveError('保存失敗，請重試')
     } finally {
       setSaving(false)
     }
@@ -150,9 +179,12 @@ export default function AdminTemplatesPage() {
               className="bg-slate-800 text-white px-3 py-2 rounded border border-slate-700"
             >
               <option value="all">全部類別</option>
-              {categories.map(cat => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))}
+              {categories.map(cat => {
+                const label = CATEGORIES.find(c => c.value === cat)?.label || cat
+                return (
+                  <option key={cat} value={cat}>{label} ({cat})</option>
+                )
+              })}
             </select>
             
             <div className="flex items-center gap-2">
@@ -182,14 +214,25 @@ export default function AdminTemplatesPage() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-6 py-6">
+        {saveError && (
+          <div className="mb-4 p-3 bg-red-900/50 border border-red-700 rounded text-red-200">
+            <AlertCircle className="w-4 h-4 inline mr-1" />
+            {saveError}
+          </div>
+        )}
+        
         <div className="mb-4 text-sm text-slate-400">
           <AlertCircle className="w-4 h-4 inline mr-1" />
-          提示：點擊字段即可編輯，修改後點擊「保存修改」按鈴生效
+          提示：點擊字段即可編輯，修改後點擊「保存修改」按鈴生效（數據存儲於 Supabase）
         </div>
 
         <div className="space-y-4">
           {filteredTemplates.map((template) => {
             const edited = editedTemplates[template.id] || {}
+            const currentCategory = edited.category ?? template.category
+            const currentPace = edited.pace ?? template.pace
+            const currentIntensity = edited.intensity ?? template.intensity
+            
             return (
               <Card 
                 key={template.id} 
@@ -200,88 +243,4 @@ export default function AdminTemplatesPage() {
               >
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <BookOpen className="w-5 h-5 text-purple-400" />
-                      <CardTitle className="text-white text-lg">
-                        {edited.name ?? template.name}
-                      </CardTitle>
-                      <Badge variant="secondary" className="text-xs">
-                        {template.category}
-                      </Badge>
-                      <Badge variant="outline" className="text-xs text-slate-400">
-                        {template.id}
-                      </Badge>
-                    </div>
-                    {hasChanges(template.id) && (
-                      <Badge className="bg-purple-600 text-white text-xs">
-                        已修改
-                      </Badge>
-                    )}
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* 模板名稱 */}
-                  <div>
-                    <label className="text-sm text-slate-400 block mb-1">模板名稱</label>
-                    <Input
-                      value={edited.name ?? template.name}
-                      onChange={(e) => handleFieldChange(template.id, 'name', e.target.value)}
-                      className="bg-slate-800 border-slate-700 text-white"
-                      placeholder="輸入模板名稱"
-                    />
-                  </div>
-                  
-                  {/* 描述 */}
-                  <div>
-                    <label className="text-sm text-slate-400 block mb-1">描述</label>
-                    <Input
-                      value={edited.description ?? template.description}
-                      onChange={(e) => handleFieldChange(template.id, 'description', e.target.value)}
-                      className="bg-slate-800 border-slate-700 text-white"
-                      placeholder="輸入簡短描述"
-                    />
-                  </div>
-                  
-                  {/* 基礎情境 */}
-                  <div>
-                    <label className="text-sm text-slate-400 block mb-1">基礎情境 (baseScenario)</label>
-                    <Textarea
-                      value={edited.baseScenario ?? template.baseScenario}
-                      onChange={(e) => handleFieldChange(template.id, 'baseScenario', e.target.value)}
-                      className="bg-slate-800 border-slate-700 text-white min-h-[80px]"
-                      placeholder="輸入基礎情境設定"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* 寫作風格 */}
-                    <div>
-                      <label className="text-sm text-slate-400 block mb-1">寫作風格 (writingStyle)</label>
-                      <Textarea
-                        value={edited.writingStyle ?? template.writingStyle}
-                        onChange={(e) => handleFieldChange(template.id, 'writingStyle', e.target.value)}
-                        className="bg-slate-800 border-slate-700 text-white min-h-[60px]"
-                        placeholder="輸入寫作風格"
-                      />
-                    </div>
-                    
-                    {/* 氛圍 */}
-                    <div>
-                      <label className="text-sm text-slate-400 block mb-1">氛圍 (atmosphere)</label>
-                      <Textarea
-                        value={edited.atmosphere ?? template.atmosphere}
-                        onChange={(e) => handleFieldChange(template.id, 'atmosphere', e.target.value)}
-                        className="bg-slate-800 border-slate-700 text-white min-h-[60px]"
-                        placeholder="輸入氛圍描述"
-                      />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )
-          })}
-        </div>
-      </main>
-    </div>
-  )
-}
+                    <div className="
