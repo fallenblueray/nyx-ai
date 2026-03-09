@@ -228,7 +228,15 @@ export default function AppPage() {
       ]
       
       setCharacters(storeCharacters)
-      console.log('[Page] Characters regenerated')
+      
+      // V6.7.1: 更新劇情輸入框，提示角色已變更
+      const template = officialTemplates.find(t => t.id === selectedTemplate)
+      const updatedOutline = `【模板：${template?.name || '自定義'}】（角色已更新）
+
+${storyInput.replace(/^【模板：[^】]+】.*\n+/m, '')}`
+      setStoryInput(updatedOutline)
+      
+      console.log('[Page] Characters regenerated, outline updated with notice')
       
     } catch (err) {
       console.error("[Page] Failed to regenerate characters:", err)
