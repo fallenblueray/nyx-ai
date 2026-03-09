@@ -11,7 +11,7 @@ import { TrendingSection } from "./template/TrendingSection"
 import { FavoritesSection } from "./template/FavoritesSection"
 import { FavoriteButton } from "./template/FavoriteButton"
 import { cn } from "@/lib/utils"
-import { CATEGORY_CONFIG } from "@/data/templates"
+import { officialTemplates, CATEGORY_CONFIG } from "@/data/templates"
 import type { Template, TemplateCategory } from "@/types/template"
 import { buildSystemPromptFromTemplate, buildUserPromptFromTemplate } from "@/lib/prompt-builder"
 
@@ -902,7 +902,7 @@ ${outlineText || '故事即將開始...'}`
 }
 
 // ========== 向後相容：舊版 PRESET_TEMPLATES 導出 ==========
-export const PRESET_TEMPLATES = templates.slice(0, 5).map(t => ({
+export const PRESET_TEMPLATES = officialTemplates.slice(0, 5).map(t => ({
   id: t.id,
   name: t.name,
   description: t.description,
