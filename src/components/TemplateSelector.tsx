@@ -11,8 +11,11 @@ import { TrendingSection } from "./template/TrendingSection"
 import { FavoritesSection } from "./template/FavoritesSection"
 import { FavoriteButton } from "./template/FavoriteButton"
 import { cn } from "@/lib/utils"
-import { officialTemplates, CATEGORY_CONFIG } from "@/data/templates"
+import { officialTemplates as localTemplates, CATEGORY_CONFIG } from "@/data/templates"
 import type { Template, TemplateCategory } from "@/types/template"
+
+// API 模板數據
+const supabaseTemplates: Template[] = []
 import { buildSystemPromptFromTemplate, buildUserPromptFromTemplate } from "@/lib/prompt-builder"
 
 // ========== 舊版相容類型（給 useAppStore 用）==========
