@@ -11,11 +11,8 @@ import { TrendingSection } from "./template/TrendingSection"
 import { FavoritesSection } from "./template/FavoritesSection"
 import { FavoriteButton } from "./template/FavoriteButton"
 import { cn } from "@/lib/utils"
-import { officialTemplates, CATEGORY_CONFIG } from "@/data/templates"
+import { CATEGORY_CONFIG } from "@/data/templates"
 import type { Template, TemplateCategory } from "@/types/template"
-
-// API 模板數據
-const supabaseTemplates: Template[] = []
 import { buildSystemPromptFromTemplate, buildUserPromptFromTemplate } from "@/lib/prompt-builder"
 
 // ========== 舊版相容類型（給 useAppStore 用）==========
@@ -145,6 +142,8 @@ const TRENDING_ITEMS = [
 // ========== 主組件 ==========
 export function TemplateSelector() {
   const [isOpen, setIsOpen] = useState(false)
+  const [templates, setTemplates] = useState<Template[]>([])
+  const [loading, setLoading] = useState(true)
   const [activeCategory, setActiveCategory] = useState<TemplateCategory | 'all' | 'favorite' | 'trending'>('all')
   const [searchQuery, setSearchQuery] = useState("")
   const [favorites, setFavorites] = useState<string[]>([])
@@ -152,6 +151,19 @@ export function TemplateSelector() {
   const [showSaveDialog, setShowSaveDialog] = useState(false)
   const [saveForm, setSaveForm] = useState({ name: "", description: "" })
   const [isGeneratingCharacters, setIsGeneratingCharacters] = useState(false)
+
+  // Load templates from API
+  useEffect(() => {
+    fetch('/api/templates')
+      .then(r => r.json())
+      .then(data => {
+        if (data.success && data.data.length > 0) {
+          setTemplates(data.data)
+        }
+      })
+      .catch(err => console.error('[TemplateSelector] Failed to load templates:', err))
+      .finally(() => setLoading(false))
+  }, [])
 
   const {
     setStoryInput,
@@ -180,7 +192,7 @@ export function TemplateSelector() {
   }, [])
 
   // 過濾模板
-  const filteredTemplates = officialTemplates.filter(t => {
+  const filteredTemplates = templates.filter(t => {
     if (!t.isActive) return false
     if (activeCategory === 'favorite') return favorites.includes(t.id)
     if (activeCategory === 'trending') return false // trending 在單獨區塊顯示
@@ -322,7 +334,7 @@ ${outlineText || '故事即將開始...'}`
       return
     }
     
-    const template = officialTemplates.find(t => t.id === templateId)
+    const template = templates.find(t => t.id === templateId)
     if (!template) {
       setError("找不到模板")
       return
@@ -403,7 +415,7 @@ ${outlineText || '故事即將開始...'}`
       return
     }
     
-    const template = officialTemplates.find(t => t.id === templateId)
+    const template = templates.find(t => t.id === templateId)
     if (!template) {
       setError("找不到模板")
       return
@@ -636,7 +648,7 @@ ${outlineText || '故事即將開始...'}`
                 />
                 <h3 className="text-sm font-semibold text-white/70 mb-3">更多熱門模板</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {officialTemplates
+                  {templates
                     .filter(t => t.isActive)
                     .slice(0, 10)
                     .map(template => (
@@ -890,7 +902,7 @@ ${outlineText || '故事即將開始...'}`
 }
 
 // ========== 向後相容：舊版 PRESET_TEMPLATES 導出 ==========
-export const PRESET_TEMPLATES = officialTemplates.slice(0, 5).map(t => ({
+export const PRESET_TEMPLATES = templates.slice(0, 5).map(t => ({
   id: t.id,
   name: t.name,
   description: t.description,
