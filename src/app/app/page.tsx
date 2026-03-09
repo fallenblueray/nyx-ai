@@ -168,7 +168,7 @@ export default function AppPage() {
 
   // ========== V6.6: 單獨刷新功能 ==========
   
-  // 只換角色，保留現有劇情
+  // V6.8: 換角色及劇情（重新生成全套）
   const handleRegenerateCharacters = async () => {
     if (!selectedTemplate) {
       setError("請先選擇一個模板")
@@ -189,7 +189,7 @@ export default function AppPage() {
           templateId: selectedTemplate,
           timestamp: Date.now(),
           randomSeed: Math.floor(Math.random() * 1000000),
-          mode: 'characters-only'
+          mode: 'full' // V6.8: 重新生成角色+劇情
         })
       })
       
@@ -200,6 +200,7 @@ export default function AppPage() {
       
       const char1Text = data.data.characters.character1
       const char2Text = data.data.characters.character2
+      const outlineText = data.data.outline
       
       // 更新角色
       const extractName = (text: string) => {
@@ -229,17 +230,23 @@ export default function AppPage() {
       
       setCharacters(storeCharacters)
       
-      // V6.7.1: 更新劇情輸入框，提示角色已變更
+      // V6.8: 同時更新劇情輸入框
       const template = officialTemplates.find(t => t.id === selectedTemplate)
-      const updatedOutline = `【模板：${template?.name || '自定義'}】（角色已更新）
+      const formattedOutline = `【模板：${template?.name || '自定義'}】
 
-${storyInput.replace(/^【模板：[^】]+】.*\n+/m, '')}`
-      setStoryInput(updatedOutline)
+${outlineText || '故事即將開始...'}`
+      setStoryInput(formattedOutline)
+      setGeneratedOutline({ 
+        beginning: outlineText?.slice(0, 100) || '故事開始...',
+        development: outlineText?.slice(100, 200) || '',
+        climax: outlineText?.slice(200, 300) || '',
+        preview: outlineText?.slice(0, 50) || '精彩故事...'
+      })
       
-      console.log('[Page] Characters regenerated, outline updated with notice')
+      console.log('[Page] Characters and outline regenerated')
       
     } catch (err) {
-      console.error("[Page] Failed to regenerate characters:", err)
+      console.error("[Page] Failed to regenerate:", err)
       setError("換角色失敗，請重試")
     } finally {
       setIsRegeneratingCharacters(false)
@@ -479,14 +486,14 @@ ${outlineText || '故事即將開始...'}`
                     onClick={handleRegenerateCharacters}
                     disabled={isRegeneratingCharacters || isRegeneratingOutline}
                     className="flex-1 nyx-border nyx-text-secondary hover:nyx-surface-2"
-                    title="換角色（保留劇情）"
+                    title="換角色及劇情（重新生成全套）"
                   >
                     {isRegeneratingCharacters ? (
                       <Loader2 className="w-4 h-4 mr-1 animate-spin" />
                     ) : (
                       <Users className="w-4 h-4 mr-1" />
                     )}
-                    換角色
+                    換角色及劇情
                   </Button>
                   <Button
                     variant="outline"
