@@ -253,41 +253,41 @@ export function TemplateSelector() {
       
       // V6: 從描述文本提取名字用於ID
       const extractName = (text: string) => {
-        const match = text.match(/^([^，,。]+)/)
+        // 清理開頭的標點和「角色1/2」等標記
+        const cleaned = text.replace(/^(?:角色[12][：:]?|[，。、\s]+)+/, '').trim()
+        const match = cleaned.match(/^([^，,。\s]+)/)
         return match ? match[1].slice(0, 10) : '角色'
       }
       
       // 寫入角色到 store（純文本描述）
       console.log('[TemplateSelector] V6 characters:', { char1Text, char2Text })
       
+      // 清理角色描述（移除開頭標記）
+      const cleanDesc = (text: string) => {
+        return text.replace(/^(?:角色[12][：:]?|[，。、\s]+)+/, '').trim()
+      }
+      
       const storeCharacters = [
         {
           id: `char-${extractName(char1Text)}-${Date.now()}`,
           name: extractName(char1Text),
-          description: char1Text.slice(0, 100) + (char1Text.length > 100 ? '...' : ''),
+          description: cleanDesc(char1Text).slice(0, 100) + (char1Text.length > 100 ? '...' : ''),
           traits: ['角色一']
         },
         {
           id: `char-${extractName(char2Text)}-${Date.now()}`,
           name: extractName(char2Text),
-          description: char2Text.slice(0, 100) + (char2Text.length > 100 ? '...' : ''),
+          description: cleanDesc(char2Text).slice(0, 100) + (char2Text.length > 100 ? '...' : ''),
           traits: ['角色二']
         }
       ]
       console.log('[TemplateSelector] Setting characters:', storeCharacters)
       setCharacters(storeCharacters)
       
-      // 格式化大綱並寫入 storyInput
+      // 格式化大綱並寫入 storyInput (只顯示劇情大綱)
       const formattedOutline = `【模板：${template.name}】
 
-角色一：
-${char1Text}
-
-角色二：
-${char2Text}
-
-劇情大綱：
-${outlineText || '故事即將開始...'}`
+${outlineText || '故事即將開始...'}
       
       setStoryInput(formattedOutline)
       setGeneratedOutline({ 
