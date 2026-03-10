@@ -59,30 +59,37 @@ export async function POST(request: NextRequest) {
     const body: OutlineRequest = await request.json()
     const { templateId, mode = 'full', existingCharacters, randomSeed } = body
 
-    // Try to get template from Supabase first
+    // Get template - try Supabase first with timeout, fallback to local
     let templateWorld = ''
     let templateName = ''
     let templateCategory = ''
     
     try {
-      const supabase = await createServerClient()
-      const { data: dbTemplate, error } = await supabase
-        .from('templates')
-        .select('name, category, base_scenario, atmosphere, writing_style')
-        .eq('id', templateId)
-        .single()
+      // Quick Supabase query with 2-second timeout
+      const supabasePromise = createServerClient().then(client => 
+        client.from('templates')
+          .select('name, category, base_scenario')
+          .eq('id', templateId)
+          .single()
+      )
       
-      if (!error && dbTemplate) {
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Supabase timeout')), 2000)
+      )
+      
+      const { data: dbTemplate, error } = await Promise.race([supabasePromise, timeoutPromise])
+      
+      if (!error && dbTemplate && dbTemplate.base_scenario) {
         console.log('[Outline V6] Using Supabase template:', dbTemplate.name)
         templateWorld = dbTemplate.base_scenario
         templateName = dbTemplate.name
         templateCategory = dbTemplate.category
       }
-    } catch (supabaseError) {
-      console.log('[Outline V6] Supabase error, falling back to local:', supabaseError)
+    } catch (e) {
+      console.log('[Outline V6] Supabase error or timeout, using local:', e)
     }
     
-    // Fallback to local if Supabase not available
+    // Fallback to local if Supabase failed
     if (!templateWorld) {
       const { officialTemplates } = await import('@/data/templates')
       const template = officialTemplates.find(t => t.id === templateId)
@@ -92,7 +99,7 @@ export async function POST(request: NextRequest) {
           { status: 404 }
         )
       }
-      templateWorld = template.promptBuilder.baseScenario
+      templateWorld = template.promptBuilder?.baseScenario || template.baseScenario || ''
       templateName = template.name
       templateCategory = template.category
       console.log('[Outline V6] Using local template:', templateName)
