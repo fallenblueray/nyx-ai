@@ -4,7 +4,7 @@
  */
 import { NextRequest, NextResponse } from "next/server"
 import { generateCharacterPair, generateOutline } from "@/lib/prompt-engine"
-import { createClient } from "@/lib/supabase"
+import { createServerClient } from "@/lib/supabase/server"
 
 export const maxDuration = 60
 
@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
     let templateCategory = ''
     
     try {
-      const supabase = createClient()
+      const supabase = createServerClient()
       const { data: dbTemplate, error } = await supabase
         .from('templates')
         .select('name, category, base_scenario, atmosphere, writing_style')
