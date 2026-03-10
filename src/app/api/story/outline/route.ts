@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
     let templateCategory = ''
     
     try {
-      const supabase = createServerClient()
+      const supabase = await createServerClient()
       const { data: dbTemplate, error } = await supabase
         .from('templates')
         .select('name, category, base_scenario, atmosphere, writing_style')
