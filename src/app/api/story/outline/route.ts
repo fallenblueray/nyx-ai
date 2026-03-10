@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
     const { officialTemplates } = await import('@/data/templates')
     const localTemplate = officialTemplates.find(t => t.id === templateId)
     
-    let templateWorld = localTemplate?.promptBuilder?.baseScenario || localTemplate?.baseScenario || ''
+    let templateWorld = localTemplate?.promptBuilder?.baseScenario || ''
     let templateName = localTemplate?.name || ''
     let templateCategory = localTemplate?.category || ''
     
