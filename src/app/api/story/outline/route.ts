@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
     const { templateId, mode = 'full', existingCharacters, randomSeed } = body
 
     // V8.1: 優先從數據庫獲取模板（包含用戶保存的角色原型）
-    const supabase = createServerClient()
+    const supabase = await createServerClient()
     let templateWorld = ''
     let templateName = ''
     let characterArchetypes = undefined
@@ -96,7 +96,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { success: false, error: "模板不存在或缺少基礎情境" },
         { status: 404 }
-      )
+      );
+    }
 
     let charResult: { char1: string; char2: string } | null = null
     let openingScene: string = ''
