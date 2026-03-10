@@ -64,12 +64,19 @@ export async function POST(request: NextRequest) {
     let characterArchetypes = undefined
     let wordCostMultiplier = 1
     
-    // 1. 嘗試從數據庫獲取
-    const { data: dbTemplate } = await supabase
-      .from('templates')
-      .select('name, prompt_builder, word_cost_multiplier')
-      .eq('id', templateId)
-      .single()
+    // 1. 嘗試從數據庫獲取（使用 maybeSingle 避免找不到時拋錯）
+    let dbTemplate = null
+    try {
+      const result = await supabase
+        .from('templates')
+        .select('name, prompt_builder, word_cost_multiplier')
+        .eq('id', templateId)
+        .maybeSingle()
+      dbTemplate = result.data
+      console.log('[Outline V8.1] DB query result:', dbTemplate ? 'found' : 'not found')
+    } catch (dbError) {
+      console.error('[Outline V8.1] DB query error:', dbError)
+    }
     
     if (dbTemplate?.prompt_builder) {
       // 使用數據庫中的模板數據
