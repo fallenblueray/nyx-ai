@@ -1,4 +1,7 @@
 #!/usr/bin/env node
+// 載入 .env.local 環境變量
+require("dotenv").config({ path: ".env.local" });
+
 /**
  * V1.068: Deploy Hook - Auto-sync prompts on deployment
  * 

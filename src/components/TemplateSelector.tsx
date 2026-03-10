@@ -285,6 +285,9 @@ export function TemplateSelector() {
         return text.replace(/^(?:角色[12][：:]?|[，。、\s]+)+/, '').trim()
       }
       
+      // V7.1: 同時保存兩種格式的角色數據
+      
+      // 1. 簡單格式（給 CharacterManager 顯示）
       const storeCharacters = [
         {
           id: `char-${extractName(char1Text)}-${Date.now()}`,
@@ -302,18 +305,46 @@ export function TemplateSelector() {
       console.log('[TemplateSelector] Setting characters:', storeCharacters)
       setCharacters(storeCharacters)
       
-      // 格式化大綱並寫入 storyInput (只顯示劇情大綱)
+      // 2. 完整格式（給 StoryOutput 使用）
+      const parseCharacterFromText = (text: string) => {
+        const nameMatch = text.match(/^[^，,\s]+/)
+        const name = nameMatch ? nameMatch[0].trim() : '角色'
+        const ageMatch = text.match(/(\d{1,2})\s*[歲岁]/)
+        const age = ageMatch ? ageMatch[1] : ''
+        const roleMatch = text.match(/\d{1,2}\s*[歲岁]，([^，。]+)/)
+        const role = roleMatch ? roleMatch[1].trim() : ''
+        const personalityMatch = text.match(/[她他][是性格]*([^，。]{2,20})/)
+        const personality = personalityMatch ? personalityMatch[1].trim() : text.slice(0, 50)
+        const parts = text.split(/[，。]/).filter(p => p.trim())
+        const appearance = parts.length > 2 ? parts[parts.length - 2].trim() : ''
+        const desireStyle = parts.length > 1 ? parts[parts.length - 1].trim() : ''
+        return {
+          name,
+          age,
+          role,
+          personality,
+          appearance,
+          desireStyle,
+          traits: [role].filter(Boolean)
+        }
+      }
+      
+      const fullCharacters = [
+        parseCharacterFromText(char1Text),
+        parseCharacterFromText(char2Text)
+      ]
+      console.log('[TemplateSelector] Setting generatedCharacters:', fullCharacters.map(c => c.name))
+      setGeneratedCharacters(fullCharacters)
+      
+      // 格式化大綱並寫入 storyInput
       const formattedOutline = `【模板：${template.name}】
 
 ${outlineText || '故事即將開始...'}`
       
       setStoryInput(formattedOutline)
-      setGeneratedOutline({ 
-        beginning: outlineText.slice(0, 100) || '故事開始...',
-        development: outlineText.slice(100, 200) || '',
-        climax: outlineText.slice(200, 300) || '',
-        preview: outlineText.slice(0, 50) || '精彩故事...'
-      })
+      
+      // V7.1: 同時保存字符串格式的 outline（給 StoryOutput 使用）
+      setGeneratedOutline(outlineText || '故事即將開始...')
       
       console.log('[TemplateSelector] V6: Characters and outline generated')
       
@@ -467,12 +498,7 @@ ${outlineText || '故事即將開始...'}`
 ${outlineText || '故事即將開始...'}`
       
       setStoryInput(formattedOutline)
-      setGeneratedOutline({ 
-        beginning: outlineText.slice(0, 100) || '故事開始...',
-        development: outlineText.slice(100, 200) || '',
-        climax: outlineText.slice(200, 300) || '',
-        preview: outlineText.slice(0, 50) || '精彩故事...'
-      })
+      setGeneratedOutline(outlineText || '故事即將開始...')
       
       console.log('[TemplateSelector] Outline regenerated, characters preserved')
       
@@ -490,6 +516,9 @@ ${outlineText || '故事即將開始...'}`
     setSelectedTemplate(template.id)
     // 關閉選擇器
     setIsOpen(false)
+    // V6.0: 清空已有故事輸出，重置生成狀態
+    const { setStoryOutput } = useAppStore.getState()
+    setStoryOutput('')
     // 調用 AI 生成角色和大綱（所有模板都走這條路）
     await generateCharactersAndOutlineUnified(template)
   }
@@ -543,10 +572,8 @@ ${outlineText || '故事即將開始...'}`
     <>
       {/* 觸發按鈕 */}
       <Button
-        variant="outline"
-        size="sm"
         onClick={() => setIsOpen(true)}
-        className="w-full nyx-border nyx-text-secondary hover:nyx-surface-2"
+        className="w-full bg-purple-600 hover:bg-purple-700 text-white"
       >
         <BookOpen className="w-4 h-4 mr-2" />
         故事模板

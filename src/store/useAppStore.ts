@@ -89,9 +89,9 @@ interface AppState {
   
   // V5.1: 生成的角色和大綱
   generatedCharacters: { name: string; age: string; role: string; personality: string; appearance: string; desireStyle: string; traits: string[] }[] | null
-  generatedOutline: { beginning: string; development: string; climax: string; preview: string } | null
+  generatedOutline: string | null  // V7.1: 改為字符串格式
   setGeneratedCharacters: (characters: { name: string; age: string; role: string; personality: string; appearance: string; desireStyle: string; traits: string[] }[] | null) => void
-  setGeneratedOutline: (outline: { beginning: string; development: string; climax: string; preview: string } | null) => void
+  setGeneratedOutline: (outline: string | null) => void
 }
 
 export const useAppStore = create<AppState>()(

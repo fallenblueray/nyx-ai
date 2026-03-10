@@ -228,24 +228,20 @@ export default function AdminPromptsPage() {
                         <>
                           <code className="text-purple-400">{'{{templateWorld}}'}</code> - 模板世界設定
                           <br />
-                          <code className="text-purple-400">{'{{tensionType}}'}</code> - 角色張力類型
-                          <br />
-                          <code className="text-purple-400">{'{{examples}}'}</code> - 張力類型例子
+                          <span className="text-slate-600 text-xs block mt-2">
+                            註：tensionType 和 examples 已棄用，角色張力由模板決定
+                          </span>
                         </>
                       )}
                       {prompt.key === 'outline' && (
                         <>
                           <code className="text-purple-400">{'{{templateWorld}}'}</code> - 模板世界設定
                           <br />
-                          <code className="text-purple-400">{'{{character1.name}}'}</code> - 角色1名稱
+                          <code className="text-purple-400">{'{{characterPair}}'}</code> - 角色配對描述（自動包含兩個角色的完整描述）
                           <br />
-                          <code className="text-purple-400">{'{{character1.age}}'}</code> - 角色1年齡
-                          <br />
-                          <code className="text-purple-400">{'{{character1.role}}'}</code> - 角色1身份
-                          <br />
-                          <code className="text-purple-400">{'{{character1.personality}}'}</code> - 角色1性格
-                          <br />
-                          <code className="text-purple-400">{'{{character2.*}}'}</code> - 角色2屬性（同上）
+                          <span className="text-slate-600 text-xs block mt-2">
+                            註：角色屬性以自然語言描述形式傳入，非單獨變數
+                          </span>
                         </>
                       )}
                       {prompt.key === 'story' && (
@@ -254,15 +250,9 @@ export default function AdminPromptsPage() {
                           <br />
                           <code className="text-purple-400">{'{{userInput}}'}</code> - 用戶自定義輸入
                           <br />
-                          <code className="text-purple-400">{'{{character1.*}}'}</code> - 角色1所有屬性
-                          <br />
-                          <code className="text-purple-400">{'{{character2.*}}'}</code> - 角色2所有屬性
-                          <br />
-                          <code className="text-purple-400">{'{{outlineBeginning}}'}</code> - 開端大綱
-                          <br />
-                          <code className="text-purple-400">{'{{outlineDevelopment}}'}</code> - 發展大綱
-                          <br />
-                          <code className="text-purple-400">{'{{outlineClimax}}'}</code> - 高潮大綱
+                          <span className="text-slate-600 text-xs block mt-2">
+                            註：模板元素（情境、風格、氛圍）會自動從模板數據注入，無需在此配置
+                          </span>
                         </>
                       )}
                     </div>

@@ -16,6 +16,11 @@ interface Template {
   atmosphere: string
   pace: string
   intensity: string
+  // V8.0: 角色原型配置
+  characterArchetypes?: {
+    female: string
+    male: string
+  }
 }
 
 const CATEGORIES = [
@@ -43,7 +48,7 @@ export default function AdminTemplatesPage() {
       .finally(() => setLoading(false))
   }, [])
 
-  const change = (id: string, field: keyof Template, value: string) => {
+  const change = (id: string, field: keyof Template, value: any) => {
     setEdited(prev => ({ ...prev, [id]: { ...prev[id], id, [field]: value } }))
   }
 
@@ -114,7 +119,40 @@ export default function AdminTemplatesPage() {
               <Input value={e.description ?? t.description} onChange={ev => change(t.id, 'description', ev.target.value)} className="bg-slate-800 border-slate-700 text-white mb-2" placeholder="描述" />
               <Textarea value={e.baseScenario ?? t.baseScenario} onChange={ev => change(t.id, 'baseScenario', ev.target.value)} className="bg-slate-800 border-slate-700 text-white mb-2" placeholder="基礎情境" />
               <Textarea value={e.writingStyle ?? t.writingStyle} onChange={ev => change(t.id, 'writingStyle', ev.target.value)} className="bg-slate-800 border-slate-700 text-white mb-2" placeholder="寫作風格" />
-              <Textarea value={e.atmosphere ?? t.atmosphere} onChange={ev => change(t.id, 'atmosphere', ev.target.value)} className="bg-slate-800 border-slate-700 text-white" placeholder="氛圍" />
+              <Textarea value={e.atmosphere ?? t.atmosphere} onChange={ev => change(t.id, 'atmosphere', ev.target.value)} className="bg-slate-800 border-slate-700 text-white mb-2" placeholder="氛圍" />
+              {/* V8.0: 角色原型配置 */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-slate-400 text-sm flex items-center gap-1 mb-1">
+                    <span>女主角原型 (V8.0)</span>
+                  </label>
+                  <Textarea 
+                    value={e.characterArchetypes?.female ?? t.characterArchetypes?.female ?? ''} 
+                    onChange={ev => {
+                      const currentArchetypes = e.characterArchetypes ?? t.characterArchetypes ?? { female: '', male: '' }
+                      const updated = { ...currentArchetypes, female: ev.target.value }
+                      change(t.id, 'characterArchetypes', updated as any)
+                    }} 
+                    className="bg-slate-800 border-slate-700 text-white min-h-[100px]" 
+                    placeholder="例如：25-30歲高冷女上司，職場權威，冰山外表..." 
+                  />
+                </div>
+                <div>
+                  <label className="text-slate-400 text-sm flex items-center gap-1 mb-1">
+                    <span>男主角原型 (V8.0)</span>
+                  </label>
+                  <Textarea 
+                    value={e.characterArchetypes?.male ?? t.characterArchetypes?.male ?? ''} 
+                    onChange={ev => {
+                      const currentArchetypes = e.characterArchetypes ?? t.characterArchetypes ?? { female: '', male: '' }
+                      const updated = { ...currentArchetypes, male: ev.target.value }
+                      change(t.id, 'characterArchetypes', updated as any)
+                    }} 
+                    className="bg-slate-800 border-slate-700 text-white min-h-[100px]" 
+                    placeholder="例如：25-30歲普通職員，能力不錯但缺乏自信..." 
+                  />
+                </div>
+              </div>
             </div>
           )
         })}

@@ -27,10 +27,21 @@ interface GenerateStoryRequest {
     character1: CharacterConfig
     character2: CharacterConfig
   }
+  // V7.0: 簡化為單一開端場景
+  openingScene?: string
+  // V7.0: 保留三段結構向後兼容
   outline?: {
     beginning: string
     development: string
     climax: string
+  }
+  // 模板完整數據（包含 baseScenario/writingStyle/atmosphere）
+  templateData?: {
+    baseScenario: string
+    writingStyle: string
+    atmosphere: string
+    pace?: string
+    intensity?: string
   }
   userInput?: string  // 用戶自定義輸入（包含大綱）
   // 舊架構兼容（直接傳入 prompt）
@@ -55,10 +66,11 @@ export async function POST(req: NextRequest) {
       templateId, 
       characters, 
       outline,
+      templateData,
       userInput,
       systemPrompt: legacySystemPrompt, 
       userPrompt: legacyUserPrompt,
-      model = "deepseek/deepseek-r1-0528", 
+      model = "x-ai/grok-4.1-fast", 
       anonymousId, 
       topics,
       skipCache = false
@@ -70,7 +82,7 @@ export async function POST(req: NextRequest) {
     let finalSystemPrompt: string
     let finalUserPrompt: string
     
-    if (templateId && characters && outline) {
+    if (templateId && characters) {
       // ========== 新架構：Prompt Engine ==========
       const template = officialTemplates.find(t => t.id === templateId)
       if (!template) {
@@ -78,14 +90,31 @@ export async function POST(req: NextRequest) {
       }
       
       finalSystemPrompt = template.promptBuilder.systemPrompt || `你是一位頂級成人小說作家，專注於${template.category}題材的創作。`
+      
+      // 構建模板上下文（包含 baseScenario/writingStyle/atmosphere）
+      const templateContext = templateData ? {
+        baseScenario: templateData.baseScenario || template.promptBuilder.baseScenario,
+        writingStyle: templateData.writingStyle || template.promptBuilder.writingStyle,
+        atmosphere: templateData.atmosphere || template.promptBuilder.atmosphere,
+      } : undefined
+      
+      // V7.0: 優先使用單一開端場景，否則使用三段結構
+      const openingScene = body.openingScene || 
+        (outline ? `${outline.beginning}\n\n${outline.development}\n\n${outline.climax}` : undefined)
+      
+      if (!openingScene) {
+        return NextResponse.json({ 
+          error: "缺少必要參數：請提供 openingScene 或 outline" 
+        }, { status: 400 })
+      }
+      
       finalUserPrompt = await buildStoryPrompt(
         finalSystemPrompt,
         characters.character1,
         characters.character2,
-        outline.beginning,
-        outline.development,
-        outline.climax,
-        userInput || legacyUserPrompt // 優先使用 userInput（來自前端大綱），否則用 legacyUserPrompt
+        openingScene,
+        userInput || legacyUserPrompt,
+        templateContext
       )
     } else if (legacySystemPrompt && legacyUserPrompt) {
       // ========== 舊架構：直接傳入 prompt ==========
@@ -93,7 +122,7 @@ export async function POST(req: NextRequest) {
       finalUserPrompt = legacyUserPrompt
     } else {
       return NextResponse.json({ 
-        error: "缺少必要參數：請提供 templateId + characters + outline，或 systemPrompt + userPrompt" 
+        error: "缺少必要參數：請提供 templateId + characters + openingScene，或 systemPrompt + userPrompt" 
       }, { status: 400 })
     }
 

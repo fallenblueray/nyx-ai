@@ -36,7 +36,9 @@ export async function GET() {
           intensity: t.intensity || 'moderate',
           isPremium: t.is_premium,
           isActive: t.is_active,
-          tags: t.tags || []
+          tags: t.tags || [],
+          // V8.0: 角色原型配置
+          characterArchetypes: t.character_archetypes || undefined
         }))
 
         return NextResponse.json({
@@ -122,6 +124,8 @@ export async function POST(request: Request) {
       if (updates.intensity !== undefined) dbUpdates.intensity = updates.intensity
       if (updates.isPremium !== undefined) dbUpdates.is_premium = updates.isPremium
       if (updates.isActive !== undefined) dbUpdates.is_active = updates.isActive
+      // V8.0: 角色原型配置
+      if (updates.characterArchetypes !== undefined) dbUpdates.character_archetypes = updates.characterArchetypes
 
       if (Object.keys(dbUpdates).length === 0) continue
 

@@ -513,9 +513,43 @@ ${perspectiveInstruction}
     traits: string[]
   }
   
+  // V7.1: 從角色描述字符串提取結構化信息
+  const parseCharacterFromText = (text: string): CharacterConfig => {
+    // 提取名字（第一個詞，通常是2-4個中文字）
+    const nameMatch = text.match(/^[^，,\s]+/)
+    const name = nameMatch ? nameMatch[0].trim() : '角色'
+    
+    // 提取年齡
+    const ageMatch = text.match(/(\d{1,2})\s*[歲岁]/)
+    const age = ageMatch ? ageMatch[1] : ''
+    
+    // 提取身份/職業（年齡後面的描述）
+    const roleMatch = text.match(/\d{1,2}\s*[歲岁]，([^，。]+)/)
+    const role = roleMatch ? roleMatch[1].trim() : ''
+    
+    // 提取性格（「她/他」後面的描述）
+    const personalityMatch = text.match(/[她他][是性格]*([^，。]{2,20})/)
+    const personality = personalityMatch ? personalityMatch[1].trim() : text.slice(0, 50)
+    
+    // 外貌和欲望風格從剩餘文本提取
+    const parts = text.split(/[，。]/).filter(p => p.trim())
+    const appearance = parts.length > 2 ? parts[parts.length - 2].trim() : ''
+    const desireStyle = parts.length > 1 ? parts[parts.length - 1].trim() : ''
+    
+    return {
+      name,
+      age,
+      role,
+      personality,
+      appearance,
+      desireStyle,
+      traits: [role].filter(Boolean)
+    }
+  }
+  
   const generateCharacterAndOutline = async (): Promise<{ 
     characters: CharacterConfig[]
-    outline: { beginning: string; development: string; climax: string }
+    openingScene: string  // V7.0: 簡化為單一開端場景
     templateId: string | null
   } | null> => {
     const { selectedTemplate } = useAppStore.getState()
@@ -551,29 +585,18 @@ ${perspectiveInstruction}
         return null
       }
       
-      // 轉換角色格式（完整 CharacterConfig）
-      const char1 = {
-        name: data.data.characters.character1.name,
-        age: data.data.characters.character1.age,
-        role: data.data.characters.character1.role,
-        personality: data.data.characters.character1.personality,
-        appearance: data.data.characters.character1.appearance,
-        desireStyle: data.data.characters.character1.desireStyle,
-        traits: data.data.characters.character1.traits
-      }
-      const char2 = {
-        name: data.data.characters.character2.name,
-        age: data.data.characters.character2.age,
-        role: data.data.characters.character2.role,
-        personality: data.data.characters.character2.personality,
-        appearance: data.data.characters.character2.appearance,
-        desireStyle: data.data.characters.character2.desireStyle,
-        traits: data.data.characters.character2.traits
-      }
+      // V7.1: API 返回的是字符串，需要解析成 CharacterConfig
+      const char1Text = data.data.characters.character1
+      const char2Text = data.data.characters.character2
+      
+      const char1 = parseCharacterFromText(char1Text)
+      const char2 = parseCharacterFromText(char2Text)
+      
+      console.log('[V7.1] Parsed characters:', { char1: char1.name, char2: char2.name })
       
       return {
         characters: [char1, char2],
-        outline: data.data.outline,
+        openingScene: data.data.openingScene || data.data.outline,
         templateId: selectedTemplate
       }
     } catch (err) {
@@ -598,13 +621,13 @@ ${perspectiveInstruction}
     })
     
     let finalCharacters: CharacterConfig[] = []
-    let finalOutline = null
+    let finalOpeningScene = null
     let finalTemplateId = null
     
     if (selectedTemplate && preGeneratedChars && preGeneratedChars.length >= 2 && preGeneratedOutline) {
       // 使用預生成的角色和大綱
       finalCharacters = preGeneratedChars
-      finalOutline = preGeneratedOutline
+      finalOpeningScene = preGeneratedOutline
       finalTemplateId = selectedTemplate
       console.log('[V5.1] Using pre-generated characters:', finalCharacters.map(c => c.name))
     } else if (selectedTemplate) {
@@ -614,7 +637,7 @@ ${perspectiveInstruction}
       console.log('[V5.1] Real-time generation result:', characterAndOutline ? 'success' : 'failed')
       if (characterAndOutline) {
         finalCharacters = characterAndOutline.characters
-        finalOutline = characterAndOutline.outline
+        finalOpeningScene = characterAndOutline.openingScene
         finalTemplateId = characterAndOutline.templateId
         console.log('[V5.1] Generated characters:', finalCharacters.map(c => c.name))
       } else {
@@ -664,7 +687,7 @@ ${perspectiveInstruction}
       // 獲取用戶輸入（包含格式化後的大綱）
       const { storyInput: userStoryInput } = useAppStore.getState()
       
-      if (finalTemplateId && finalOutline && finalCharacters.length >= 2) {
+      if (finalTemplateId && finalOpeningScene && finalCharacters.length >= 2) {
         // V5: 使用新的 Prompt Engine 格式
         requestBody = {
           templateId: finalTemplateId,
@@ -672,7 +695,7 @@ ${perspectiveInstruction}
             character1: finalCharacters[0],
             character2: finalCharacters[1]
           },
-          outline: finalOutline,
+          openingScene: finalOpeningScene,
           userInput: userStoryInput, // 傳遞用戶輸入（包含大綱）
           model: "deepseek/deepseek-r1-0528",
           anonymousId,

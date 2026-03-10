@@ -236,12 +236,7 @@ export default function AppPage() {
 
 ${outlineText || '故事即將開始...'}`
       setStoryInput(formattedOutline)
-      setGeneratedOutline({ 
-        beginning: outlineText?.slice(0, 100) || '故事開始...',
-        development: outlineText?.slice(100, 200) || '',
-        climax: outlineText?.slice(200, 300) || '',
-        preview: outlineText?.slice(0, 50) || '精彩故事...'
-      })
+      setGeneratedOutline(outlineText || '故事即將開始...')
       
       console.log('[Page] Characters and outline regenerated')
       
@@ -301,12 +296,7 @@ ${outlineText || '故事即將開始...'}`
 ${outlineText || '故事即將開始...'}`
       
       setStoryInput(formattedOutline)
-      setGeneratedOutline({ 
-        beginning: outlineText.slice(0, 100) || '故事開始...',
-        development: outlineText.slice(100, 200) || '',
-        climax: outlineText.slice(200, 300) || '',
-        preview: outlineText.slice(0, 50) || '精彩故事...'
-      })
+      setGeneratedOutline(outlineText || '故事即將開始...')
       
       console.log('[Page] Outline regenerated')
       

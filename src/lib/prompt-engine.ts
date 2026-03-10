@@ -1,6 +1,6 @@
 /**
- * V6.0: 簡化版 Prompt Engine - 移除所有格式標記
- * 直接返回純文本，不再強制解析結構
+ * V7.0: 極簡版 Prompt Engine - 簡化大綱系統
+ * 大綱只生成「起始場景描述」，讓 AI 自由發展故事
  */
 
 // 動態提示詞緩存
@@ -62,40 +62,68 @@ export interface CharacterPair {
   tension: string
 }
 
-// V6.1: 從數據庫讀取角色提示詞，支持動態更新
-export async function buildCharacterPrompt(templateWorld: string): Promise<string> {
+// V8.0: 從數據庫讀取角色提示詞，支持動態更新和原型配置
+export async function buildCharacterPrompt(
+  templateWorld: string,
+  archetypes?: { female: string; male: string }
+): Promise<string> {
   const customPrompt = await getPromptFromDB('character')
+  
+  // V8.0: 如果有原型配置，使用原型指導生成
+  if (archetypes?.female && archetypes?.male) {
+    return `根據以下世界設定和角色原型，創建兩個角色。
+
+【世界設定】
+${templateWorld}
+
+【角色原型指導】
+女主角原型方向：${archetypes.female}
+男主角原型方向：${archetypes.male}
+
+【核心要求】
+1. **嚴格按照原型指導創作角色** - 必須體現原型中的年齡、職業、性格特點
+2. **每次必須產生全新的角色組合** - 禁止重複使用之前的名字
+3. 角色之間要有張力和戲劇衝突
+4. 描述簡潔有力，避免過多形容和比喻
+5. 直接描述，不要用詩意語言
+
+【輸出格式 - 嚴格遵守】
+必須使用以下格式，包含「角色1：」和「角色2：」標記：
+
+角色1：[女主角名字]，[年齡]歲，[身份/職業]。她[性格特點]，[外貌描述]，[欲望風格]。
+
+角色2：[男主角名字]，[年齡]歲，[身份/職業]。他[性格特點]，[外貌描述]，[欲望風格]。`
+  }
   
   if (customPrompt) {
     return customPrompt.replace(/\{\{templateWorld\}\}/g, templateWorld)
   }
   
-  // 默認提示詞
-  return `根據以下世界設定，創建兩個角色，用自然語言描述。
+  // 默認提示詞 - V8.0 版本（無原型時的 fallback）
+  return `根據以下世界設定，創建兩個角色。
 
 【世界設定】
 ${templateWorld}
 
 【核心要求】
-1. **每次必須產生全新的角色組合** - 禁止用「林語嫣」「蘇婉」等之前出現過的名字
+1. **每次必須產生全新的角色組合** - 禁止重複使用之前的名字
 2. 根據世界設定，AI 自行判斷最合理的年齡和身份關係：
    - 如果是學妹誘惑：女角應為 18-20歲大一新生，活潑可愛
    - 如果是女上司：女角應為 25-35歲成熟職場女性
    - 如果是鄰居人妻：女角應為 28-35歲溫婉少婦
    - 年齡差由情境決定（可女大男小，也可男大女小）
 3. 角色之間要有張力和戲劇衝突
-4. 描述要吸引人，有代入感
-5. **絕對禁止**使用之前生成過的名字（林語嫣、蘇婉、婉清等常見武俠名完全禁用）
+4. 描述簡潔有力，避免過多形容和比喻
 
-【輸出格式】
-直接輸出兩段描述，無需標題或符號：
+【輸出格式 - 嚴格遵守】
+必須使用以下格式，包含「角色1：」和「角色2：」標記：
 
 角色1：[女主角名字]，[年齡]歲，[身份]。她[性格特點]，[外貌描述]，[欲望風格]。
 
 角色2：[男主角名字]，[年齡]歲，[身份]。他[性格特點]，[外貌描述]，[欲望風格]。`
 }
 
-// V6.1: 從數據庫讀取大綱提示詞，支持動態更新
+// V7.0: 簡化大綱提示詞 - 只生成起始場景
 export async function buildOutlinePrompt(
   templateWorld: string,
   char1Desc: string,
@@ -109,28 +137,43 @@ export async function buildOutlinePrompt(
       .replace(/\{\{characterPair\}\}/g, `${char1Desc}\n${char2Desc}`)
   }
   
-  // 默認提示詞
-  return `根據以下設定，創作一個劇情摘要（約300字）：
+  // V7.0: 極簡大綱 - 只描述起始場景
+  return `根據以下設定，描述故事的第一幕場景（約200字）：
 
-世界設定：${templateWorld}
+【世界設定】
+${templateWorld}
 
-角色：
+【角色】
 ${char1Desc}
 ${char2Desc}
 
-要求：
-1. 描述故事從開始到高潮的發展
-2. 要有張力和情緒遞進
-3. 讓讀者期待故事發展
+【要求】
+1. 描述角色第一次相遇或衝突發生的場景
+2. 設定時間、地點、氛圍
+3. 點出故事的初始張力或懸念
+4. **不要寫後續發展** - 只寫「開始」的部分
+5. 讓讀者期待故事的展開
 
-輸出：直接輸出摘要文字，無需分段或符號。`
+【輸出】
+直接輸出場景描述，無需分段、無需標題。`
 }
 
-// V6.0: 簡化解析 - 從自由文本提取基本信息
+// V6.1: 改進解析 - 優先使用「角色1：」「角色2：」標記
 export function parseCharacterResponse(response: string): { char1: string; char2: string } | null {
   const text = response.trim()
   
-  // 找「角色2」或第二個人名
+  // 方法1：找「角色1：」和「角色2：」標記（最可靠）
+  const role1Match = text.match(/角色1[：:]([\s\S]*?)(?=角色2[：:]|$)/)
+  const role2Match = text.match(/角色2[：:]([\s\S]*)/)
+  
+  if (role1Match && role2Match) {
+    return {
+      char1: role1Match[1].trim(),
+      char2: role2Match[1].trim()
+    }
+  }
+  
+  // 方法2：找「角色2」或第二個人名
   const lines = text.split('\n').filter(l => l.trim())
   
   // 嘗試用「角色2」「男」「她/他」分割
@@ -159,7 +202,7 @@ export function parseCharacterResponse(response: string): { char1: string; char2
   return { char1, char2 }
 }
 
-// V6.0: 大綱直接返回文本
+// V7.0: 大綱直接返回文本（不再分段）
 export function parseOutlineResponse(response: string): string {
   return response.trim() || "故事即將開始..."
 }
@@ -191,9 +234,10 @@ export function extractCharacterFromText(text: string): CharacterConfig {
 
 export async function generateCharacterPair(
   templateWorld: string,
-  callAI: (prompt: string) => Promise<string>
+  callAI: (prompt: string) => Promise<string>,
+  archetypes?: { female: string; male: string }
 ): Promise<{ char1: string; char2: string } | null> {
-  const prompt = await buildCharacterPrompt(templateWorld)
+  const prompt = await buildCharacterPrompt(templateWorld, archetypes)
   const response = await callAI(prompt)
   return parseCharacterResponse(response)
 }
@@ -209,36 +253,57 @@ export async function generateOutline(
   return parseOutlineResponse(response)
 }
 
-// V6.0: 簡化故事生成提示詞 - 兼容舊版接口
+// V7.0: 模板上下文接口
+export interface TemplateContext {
+  baseScenario: string
+  writingStyle: string
+  atmosphere: string
+}
+
+// V7.0: 極簡版故事生成提示詞 - 單一大綱
 export async function buildStoryPrompt(
-  templateWorld: string,
+  systemPrompt: string,
   character1: CharacterConfig,
   character2: CharacterConfig,
-  outlineBeginning: string,
-  outlineDevelopment: string,
-  outlineClimax: string,
-  userInput?: string
+  openingScene: string,  // V7.0: 改為單一開端場景
+  userInput?: string,
+  templateContext?: TemplateContext
 ): Promise<string> {
   const customPrompt = await getPromptFromDB('story')
   
+  // 構建模板元素提示
+  const templateElements = templateContext ? `
+【故事情境】${templateContext.baseScenario}
+【寫作風格】${templateContext.writingStyle}
+【氛圍基調】${templateContext.atmosphere}
+` : ''
+  
   if (customPrompt) {
+    // V7.0: 使用新變數名
     return customPrompt
-      .replace(/\{\{templateWorld\}\}/g, templateWorld)
+      .replace(/\{\{templateWorld\}\}/g, systemPrompt)
+      .replace(/\{\{openingScene\}\}/g, openingScene)
       .replace(/\{\{userInput\}\}/g, userInput || '')
+      + templateElements
   }
   
-  return `你是一位頂級成人小說作家。請根據以下設定創作故事：
+  // V7.0: 預設提示詞 - 簡化版本
+  return `${systemPrompt}
+${templateElements}
 
-世界設定：${templateWorld}
-${userInput ? `用戶輸入：${userInput}\n` : ''}
+【角色設定】
+${character1.name}，${character1.age}，${character1.role}。${character1.personality || ''}
+${character2.name}，${character2.age}，${character2.role}。${character2.personality || ''}
 
-角色1：${character1.name}，${character1.age}，${character1.role}。
-角色2：${character2.name}，${character2.age}，${character2.role}。
+【起始場景】
+${openingScene}
 
-劇情大綱：
-開端：${outlineBeginning}
-發展：${outlineDevelopment}
-高潮：${outlineClimax}
+${userInput ? `【用戶輸入】\n${userInput}\n` : ''}
+【創作要求】
+1. 根據起始場景自然發展故事，無需嚴格遵循特定結構
+2. 讓角色互動自然、情感遞進合理
+3. 根據劇情需要自然完結（1800-2500字）
+4. 文筆流暢，保持風格一致性
 
-要求：使用第一人稱，細膩描寫心理活動和場景氛圍，2500-3000字。`
+直接輸出故事正文。`
 }

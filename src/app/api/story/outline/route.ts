@@ -1,6 +1,6 @@
 /**
- * V6.0: 簡化版 Outline API - 純文本生成
- * 移除所有格式標記，直接返回自然語言描述
+ * V7.0: 簡化版 Outline API - 單一場景描述
+ * 大綱只返回「起始場景」，不再分開端/發展/高潮
  */
 import { NextRequest, NextResponse } from "next/server"
 import { generateCharacterPair, generateOutline } from "@/lib/prompt-engine"
@@ -23,7 +23,6 @@ async function callAI(prompt: string, randomSeed?: number): Promise<string> {
   const apiKey = process.env.OPENROUTER_API_KEY || ""
   const model = "x-ai/grok-4.1-fast"
 
-  // Generate a random seed if not provided
   const seed = randomSeed || Math.floor(Math.random() * 1000000)
 
   const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -31,14 +30,13 @@ async function callAI(prompt: string, randomSeed?: number): Promise<string> {
     headers: {
       "Content-Type": "application/json",
       "Authorization": `Bearer ${apiKey}`,
-      "X-Seed": seed.toString(), // Add seed header for cache busting
+      "X-Seed": seed.toString(),
     },
     body: JSON.stringify({
       model,
       messages: [{ role: "user", content: prompt }],
-      temperature: 1.0, // Increase randomness
-      max_tokens: 1000,
-      // Add seed to body if API supports it
+      temperature: 1.0,
+      max_tokens: 800, // V7.0: 減少token（只生成開端場景）
       seed: seed,
     }),
   })
@@ -53,38 +51,21 @@ async function callAI(prompt: string, randomSeed?: number): Promise<string> {
 }
 
 export async function POST(request: NextRequest) {
-  console.log('[Outline V6] Starting request')
+  console.log('[Outline V7] Starting request')
   
   try {
     const body: OutlineRequest = await request.json()
     const { templateId, mode = 'full', existingCharacters, randomSeed } = body
 
-    // Get template - use local first for speed, Supabase as enhancement
+    // 獲取模板
     const { officialTemplates } = await import('@/data/templates')
     const localTemplate = officialTemplates.find(t => t.id === templateId)
     
     let templateWorld = localTemplate?.promptBuilder?.baseScenario || ''
     let templateName = localTemplate?.name || ''
-    let templateCategory = localTemplate?.category || ''
+    // V8.0: 獲取角色原型配置
+    let characterArchetypes = localTemplate?.promptBuilder?.characterArchetypes
     
-    // Try Supabase in background for future enhancement
-    try {
-      const supabase = await createServerClient()
-      const { data: dbTemplate } = await supabase
-        .from('templates')
-        .select('base_scenario')
-        .eq('id', templateId)
-        .single()
-      
-      if (dbTemplate?.base_scenario) {
-        console.log('[Outline V6] Enhanced with Supabase data')
-        // Future: merge Supabase data with local
-      }
-    } catch (e) {
-      // Ignore Supabase errors, local template is sufficient
-    }
-
-    // Validate we have template data
     if (!templateWorld || !localTemplate) {
       return NextResponse.json(
         { success: false, error: "模板不存在或缺少基礎情境" },
@@ -92,26 +73,31 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log('[Outline V6] Using template:', templateName)
+    console.log('[Outline V7] Using template:', templateName)
+    if (characterArchetypes) {
+      console.log('[Outline V8] Using character archetypes:', characterArchetypes.female?.slice(0, 30), '/.../')
+    }
 
     let charResult: { char1: string; char2: string } | null = null
-    let outlineText: string = ''
+    let openingScene: string = ''
 
-    // V6.5: 支持不同模式
     if (mode === 'outline-only' && existingCharacters) {
-      // 只生成劇情，使用提供的角色
-      console.log('[Outline V6] Mode: outline-only with existing characters')
-      outlineText = await generateOutline(
+      // 只生成場景，使用提供的角色
+      console.log('[Outline V7] Mode: outline-only')
+      openingScene = await generateOutline(
         templateWorld,
         existingCharacters.character1,
         existingCharacters.character2,
         callAI
       )
-      console.log('[Outline V6] Outline:', outlineText.slice(0, 100), '...')
     } else {
-      // 生成角色（mode !== 'outline-only'）
-      console.log('[Outline V6] Generating characters with seed:', randomSeed)
-      charResult = await generateCharacterPair(templateWorld, (prompt) => callAI(prompt, randomSeed))
+      // 生成角色
+      console.log('[Outline V7] Generating characters...')
+      charResult = await generateCharacterPair(
+        templateWorld, 
+        (prompt) => callAI(prompt, randomSeed),
+        characterArchetypes
+      )
 
       if (!charResult) {
         return NextResponse.json(
@@ -120,17 +106,17 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      console.log('[Outline V6] Characters:', charResult.char1.slice(0, 30), '...')
+      console.log('[Outline V7] Characters generated:', charResult.char1.slice(0, 20))
 
-      // 如果不是只生成角色，則生成劇情
+      // 如果不是只生成角色，則生成場景
       if (mode !== 'characters-only') {
-        console.log('[Outline V6] Generating outline...')
-        outlineText = await generateOutline(templateWorld, charResult.char1, charResult.char2, callAI)
-        console.log('[Outline V6] Outline:', outlineText.slice(0, 100), '...')
+        console.log('[Outline V7] Generating opening scene...')
+        openingScene = await generateOutline(templateWorld, charResult.char1, charResult.char2, callAI)
+        console.log('[Outline V7] Scene:', openingScene.slice(0, 50), '...')
       }
     }
 
-    // V6: 返回簡化格式
+    // V7.0: 返回簡化格式（單一openingScene字段）
     return NextResponse.json({
       success: true,
       data: {
@@ -138,12 +124,13 @@ export async function POST(request: NextRequest) {
           character1: charResult.char1,
           character2: charResult.char2,
         } : undefined,
-        outline: outlineText || undefined,
+        openingScene, // V7.0: 改為單一字段
+        outline: openingScene, // 向後兼容：同時返回舊字段名
       }
     })
 
   } catch (error: any) {
-    console.error("[Outline V6] Error:", error)
+    console.error("[Outline V7] Error:", error)
     return NextResponse.json(
       { success: false, error: error.message || "生成失败" },
       { status: 500 }

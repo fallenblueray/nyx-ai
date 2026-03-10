@@ -153,7 +153,7 @@ export async function evaluateStory(
         'X-Title': 'NyxAI Evaluation'
       },
       body: JSON.stringify({
-        model: 'deepseek/deepseek-r1-0528', // 使用較便宜的模型評估
+        model: 'x-ai/grok-4.1-fast', // 使用較便宜的模型評估
         messages: [
           { role: 'system', content: EVALUATION_SYSTEM_PROMPT },
           { role: 'user', content: userPrompt }

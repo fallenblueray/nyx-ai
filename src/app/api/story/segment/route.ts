@@ -5,7 +5,7 @@ import { SYSTEM_PROMPT } from './system_prompt';
 import { cleanGeneratedContent, extractPureStoryContent } from '@/lib/content-cleaner';
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
-const OPENROUTER_MODEL = 'deepseek/deepseek-r1-0528';
+const OPENROUTER_MODEL = 'x-ai/grok-4.1-fast';
 const NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET;
 
 interface DynamicCharacter {

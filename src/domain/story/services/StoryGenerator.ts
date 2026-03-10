@@ -56,7 +56,7 @@ export class StoryGenerator {
   }
 
   async generate(input: GenerateStoryInput): Promise<GenerateStoryOutput> {
-    const { systemPrompt, userPrompt, model = 'deepseek/deepseek-r1-0528', segmentIndex = 0, contextSummary } = input
+    const { systemPrompt, userPrompt, model = 'x-ai/grok-4.1-fast', segmentIndex = 0, contextSummary } = input
     
     if (!systemPrompt || !userPrompt) {
       throw new Error('systemPrompt and userPrompt are required')
@@ -127,7 +127,7 @@ export class StoryGenerator {
    * 智能分段，動態維護上下文
    */
   async generateMultiSegment(input: MultiSegmentInput): Promise<MultiSegmentOutput> {
-    const { systemPrompt, userPrompt, model = 'deepseek/deepseek-r1-0528', targetTotalWords = 8000, maxSegments = 4 } = input
+    const { systemPrompt, userPrompt, model = 'x-ai/grok-4.1-fast', targetTotalWords = 8000, maxSegments = 4 } = input
     
     let fullContent = ''
     let segmentCount = 0

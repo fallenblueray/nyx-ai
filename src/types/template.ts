@@ -59,7 +59,11 @@ export interface PromptConfig {
   atmosphere: string;        // 氛圍描述
   pace: 'slow' | 'medium' | 'fast';  // 節奏
   intensity: 'mild' | 'moderate' | 'intense';  // 情慾強度
-  // perspective removed - now controlled by user settings only
+  // V8.0: 新增角色原型配置
+  characterArchetypes?: {
+    female: string;          // 女主角原型描述
+    male: string;            // 男主角原型描述
+  };
 }
 
 // 角色卡配置
@@ -72,6 +76,10 @@ export interface CharacterConfig {
   relationship: string;      // 與主角關係
   desireStyle: string;       // 情慾風格
   background?: string;       // 背景故事
+  // V8.0: 標記是否基於原型生成
+  archetypeBased?: boolean;
+  // V8.0: 原始原型描述
+  archetypeDesc?: string;
 }
 
 // 分類導航配置
