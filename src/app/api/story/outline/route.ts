@@ -59,51 +59,40 @@ export async function POST(request: NextRequest) {
     const body: OutlineRequest = await request.json()
     const { templateId, mode = 'full', existingCharacters, randomSeed } = body
 
-    // Get template - try Supabase first with timeout, fallback to local
-    let templateWorld = ''
-    let templateName = ''
-    let templateCategory = ''
+    // Get template - use local first for speed, Supabase as enhancement
+    const { officialTemplates } = await import('@/data/templates')
+    const localTemplate = officialTemplates.find(t => t.id === templateId)
     
+    let templateWorld = localTemplate?.promptBuilder?.baseScenario || localTemplate?.baseScenario || ''
+    let templateName = localTemplate?.name || ''
+    let templateCategory = localTemplate?.category || ''
+    
+    // Try Supabase in background for future enhancement
     try {
-      // Quick Supabase query with 2-second timeout
-      const supabasePromise = createServerClient().then(client => 
-        client.from('templates')
-          .select('name, category, base_scenario')
-          .eq('id', templateId)
-          .single()
-      )
+      const supabase = await createServerClient()
+      const { data: dbTemplate } = await supabase
+        .from('templates')
+        .select('base_scenario')
+        .eq('id', templateId)
+        .single()
       
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Supabase timeout')), 2000)
-      )
-      
-      const { data: dbTemplate, error } = await Promise.race([supabasePromise, timeoutPromise])
-      
-      if (!error && dbTemplate && dbTemplate.base_scenario) {
-        console.log('[Outline V6] Using Supabase template:', dbTemplate.name)
-        templateWorld = dbTemplate.base_scenario
-        templateName = dbTemplate.name
-        templateCategory = dbTemplate.category
+      if (dbTemplate?.base_scenario) {
+        console.log('[Outline V6] Enhanced with Supabase data')
+        // Future: merge Supabase data with local
       }
     } catch (e) {
-      console.log('[Outline V6] Supabase error or timeout, using local:', e)
+      // Ignore Supabase errors, local template is sufficient
     }
-    
-    // Fallback to local if Supabase failed
-    if (!templateWorld) {
-      const { officialTemplates } = await import('@/data/templates')
-      const template = officialTemplates.find(t => t.id === templateId)
-      if (!template) {
-        return NextResponse.json(
-          { success: false, error: "模板不存在" },
-          { status: 404 }
-        )
-      }
-      templateWorld = template.promptBuilder?.baseScenario || template.baseScenario || ''
-      templateName = template.name
-      templateCategory = template.category
-      console.log('[Outline V6] Using local template:', templateName)
+
+    // Validate we have template data
+    if (!templateWorld || !localTemplate) {
+      return NextResponse.json(
+        { success: false, error: "模板不存在或缺少基礎情境" },
+        { status: 404 }
+      )
     }
+
+    console.log('[Outline V6] Using template:', templateName)
 
     let charResult: { char1: string; char2: string } | null = null
     let outlineText: string = ''
