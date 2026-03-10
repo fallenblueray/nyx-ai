@@ -57,26 +57,46 @@ export async function POST(request: NextRequest) {
     const body: OutlineRequest = await request.json()
     const { templateId, mode = 'full', existingCharacters, randomSeed } = body
 
-    // 獲取模板
-    const { officialTemplates } = await import('@/data/templates')
-    const localTemplate = officialTemplates.find(t => t.id === templateId)
+    // V8.1: 優先從數據庫獲取模板（包含用戶保存的角色原型）
+    const supabase = createServerClient()
+    let templateWorld = ''
+    let templateName = ''
+    let characterArchetypes = undefined
+    let wordCostMultiplier = 1
     
-    let templateWorld = localTemplate?.promptBuilder?.baseScenario || ''
-    let templateName = localTemplate?.name || ''
-    // V8.0: 獲取角色原型配置
-    let characterArchetypes = localTemplate?.promptBuilder?.characterArchetypes
+    // 1. 嘗試從數據庫獲取
+    const { data: dbTemplate } = await supabase
+      .from('templates')
+      .select('name, prompt_builder, word_cost_multiplier')
+      .eq('id', templateId)
+      .single()
     
-    if (!templateWorld || !localTemplate) {
+    if (dbTemplate?.prompt_builder) {
+      // 使用數據庫中的模板數據
+      templateWorld = dbTemplate.prompt_builder.baseScenario || ''
+      templateName = dbTemplate.name || ''
+      wordCostMultiplier = dbTemplate.word_cost_multiplier || 1
+      // V8.1: 使用數據庫中保存的角色原型
+      characterArchetypes = dbTemplate.prompt_builder.characterArchetypes
+      console.log('[Outline V8.1] Using DB template:', templateName)
+      if (characterArchetypes) {
+        console.log('[Outline V8.1] Using DB character archetypes:', characterArchetypes.female?.slice(0, 30), '/.../')
+      }
+    } else {
+      // 2. 回退到本地模板
+      const { officialTemplates } = await import('@/data/templates')
+      const localTemplate = officialTemplates.find(t => t.id === templateId)
+      templateWorld = localTemplate?.promptBuilder?.baseScenario || ''
+      templateName = localTemplate?.name || ''
+      characterArchetypes = localTemplate?.promptBuilder?.characterArchetypes
+      console.log('[Outline V8.1] Using local template:', templateName)
+    }
+    
+    if (!templateWorld) {
       return NextResponse.json(
         { success: false, error: "模板不存在或缺少基礎情境" },
         { status: 404 }
       )
-    }
-
-    console.log('[Outline V7] Using template:', templateName)
-    if (characterArchetypes) {
-      console.log('[Outline V8] Using character archetypes:', characterArchetypes.female?.slice(0, 30), '/.../')
-    }
 
     let charResult: { char1: string; char2: string } | null = null
     let openingScene: string = ''
