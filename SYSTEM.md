@@ -1,10 +1,25 @@
 # NyxAI 系統說明書 (V5.3 管理員後台 & 動態提示詞)
 
 > **千螢維護協議**：每次開始任何 NyxAI 工作前，必須先完整讀取此文件。
+> **✅ SYSTEM.md 已更新至 V8.3** - 角色原型系統 + Supabase 字段映射修復
 
 ---
 
-## 🗺️ 系統架構速覽 (V5.3)
+## 🔥 本次會話關鍵更新 (V8.1-V8.3)
+
+### V8.3 修復內容
+- **Supabase 字段映射修復**: `/api/story/outline/route.ts` 從 `prompt_builder` JSON 對象改為扁平字段 (`base_scenario`, `character_archetypes`)
+- **模型變更**: `deepseek-r1` → `x-ai/grok-4.1-fast` (OpenRouter via x.ai)
+- **API 向後兼容**: 同時返回 `outline` 和 `openingScene` 字段
+
+### V8.1-V8.2 更新
+- **角色原型系統**: 模板支持從數據庫讀取 `character_archetypes`
+- **錯誤處理加強**: 使用 `.maybeSingle()` 替代 `.single()` 避免拋錯
+- **調試日誌**: 添加 `[Outline V8.x]` 前綴日誌便於追蹤
+
+---
+
+## 🗺️ 系統架構速覽 (V8.3)
 
 ```
 用戶選擇模板 / 輸入一句話
@@ -105,18 +120,22 @@ src/
 
 ---
 
-## ⚙️ 當前生成參數 (V5.3)
+## ⚙️ 當前生成參數 (V8.3)
 
 | 參數 | 值 | 說明 |
 |------|----|------|
-| 生成模型 | `deepseek/deepseek-r1-0528` | 實際寫故事 |
-| max_tokens | 4500 | V5 固定值 |
+| 生成模型 | `x-ai/grok-4.1-fast` | ✅ V8.3: 改為 Grok 4.1 Fast (OpenRouter) |
+| 大綱模型 | `x-ai/grok-4.1-fast` | ✅ V8.3: 角色+大綱生成 |
+| max_tokens | 800 | V8: 大綱生成上限 |
+| max_tokens | 4500 | 故事生成上限 |
 | 硬截斷上限 | 2500 字 | 超過則找句子結束點截斷 |
 | 目標字數 | ~2000 字 | prompt 中說明約 2000 字 |
 | 緩存策略 | 強制跳過 | 所有請求 `skipCache: true` |
 | 段數 | 單段 | 不再分段，自然完結 |
 | **最小生成門檻** | **1000 字** | 少於此門檻直接拒絕 |
-| **提示詞緩存** | **60秒** | V5.3: `prompt-engine.ts` 客戶端緩存 |
+| **提示詞緩存** | **60秒** | `prompt-engine.ts` 客戶端緩存 |
+| **角色原型** | ✅ V8.1 | 支持數據庫 `character_archetypes` |
+| **數據源優先級** | ✅ V8.1 | Supabase templates > local officialTemplates |
 
 ---
 
