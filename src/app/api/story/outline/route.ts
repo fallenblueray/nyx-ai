@@ -98,18 +98,15 @@ export async function POST(request: NextRequest) {
     }
     
     if (dbTemplate) {
-      // 檢查字段名（可能是 snake_case 或 camelCase）
-      const promptBuilder = dbTemplate.prompt_builder || dbTemplate.promptBuilder
+      // V8.2 FIX: Supabase 使用扁平欄位，不是 prompt_builder JSON 對象
+      templateWorld = dbTemplate.base_scenario || dbTemplate.baseScenario || ''
+      templateName = dbTemplate.name || ''
+      wordCostMultiplier = dbTemplate.word_cost_multiplier || 1
+      characterArchetypes = dbTemplate.character_archetypes || dbTemplate.characterArchetypes
       
-      if (promptBuilder) {
-        templateWorld = promptBuilder.baseScenario || ''
-        templateName = dbTemplate.name || ''
-        wordCostMultiplier = dbTemplate.word_cost_multiplier || 1
-        characterArchetypes = promptBuilder.characterArchetypes
-        console.log('[Outline V8.2] Using DB template:', templateName)
-      } else {
-        console.log('[Outline V8.2] DB template found but no prompt_builder data')
-      }
+      console.log('[Outline V8.2] Using DB template:', templateName)
+      console.log('[Outline V8.2] base_scenario exists:', !!dbTemplate.base_scenario)
+      console.log('[Outline V8.2] character_archetypes exists:', !!characterArchetypes)
     }
     
     // 如果數據庫沒有，回退到本地模板
