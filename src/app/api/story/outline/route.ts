@@ -36,7 +36,7 @@ async function callAI(prompt: string, randomSeed?: number): Promise<string> {
       model,
       messages: [{ role: "user", content: prompt }],
       temperature: 1.0,
-      max_tokens: 800, // V7.0: 減少token（只生成開端場景）
+      max_tokens: 800,
       seed: seed,
     }),
   })
@@ -51,67 +51,90 @@ async function callAI(prompt: string, randomSeed?: number): Promise<string> {
 }
 
 export async function POST(request: NextRequest) {
-  console.log('[Outline V7] Starting request')
+  console.log('[Outline V8.2] Starting request')
   
   try {
     const body: OutlineRequest = await request.json()
     const { templateId, mode = 'full', existingCharacters, randomSeed } = body
 
-    // V8.1: 優先從數據庫獲取模板（包含用戶保存的角色原型）
+    console.log('[Outline V8.2] Request templateId:', templateId)
+
+    // V8.2: 優先從數據庫獲取模板
     const supabase = await createServerClient()
     let templateWorld = ''
     let templateName = ''
     let characterArchetypes = undefined
     let wordCostMultiplier = 1
     
-    // 1. 嘗試從數據庫獲取（使用 maybeSingle 避免找不到時拋錯）
+    // 嘗試從數據庫獲取
     let dbTemplate = null
     try {
+      console.log('[Outline V8.2] Querying Supabase for templateId:', templateId)
+      
+      // 先檢查所有模板（調試用）
+      const { data: allTemplates } = await supabase.from('templates').select('id, name').limit(10)
+      console.log('[Outline V8.2] Available templates:', allTemplates?.map(t => t.id) || 'none')
+      
       const result = await supabase
         .from('templates')
-        .select('name, prompt_builder, word_cost_multiplier')
+        .select('*')
         .eq('id', templateId)
         .maybeSingle()
+      
+      console.log('[Outline V8.2] Supabase result:', {
+        data: result.data ? `found: ${result.data.name}` : 'null',
+        error: result.error ? result.error.message : 'none'
+      })
+      
       dbTemplate = result.data
-      console.log('[Outline V8.1] DB query result:', dbTemplate ? 'found' : 'not found')
-    } catch (dbError) {
-      console.error('[Outline V8.1] DB query error:', dbError)
+      
+      if (dbTemplate) {
+        console.log('[Outline V8.2] DB template fields:', Object.keys(dbTemplate))
+        console.log('[Outline V8.2] DB prompt_builder exists:', !!dbTemplate.prompt_builder)
+        console.log('[Outline V8.2] DB promptBuilder exists:', !!dbTemplate.promptBuilder)
+      }
+    } catch (dbError: any) {
+      console.error('[Outline V8.2] DB query error:', dbError.message || dbError)
     }
     
-    if (dbTemplate?.prompt_builder) {
-      // 使用數據庫中的模板數據
-      templateWorld = dbTemplate.prompt_builder.baseScenario || ''
-      templateName = dbTemplate.name || ''
-      wordCostMultiplier = dbTemplate.word_cost_multiplier || 1
-      // V8.1: 使用數據庫中保存的角色原型
-      characterArchetypes = dbTemplate.prompt_builder.characterArchetypes
-      console.log('[Outline V8.1] Using DB template:', templateName)
-      if (characterArchetypes) {
-        console.log('[Outline V8.1] Using DB character archetypes:', characterArchetypes.female?.slice(0, 30), '/.../')
+    if (dbTemplate) {
+      // 檢查字段名（可能是 snake_case 或 camelCase）
+      const promptBuilder = dbTemplate.prompt_builder || dbTemplate.promptBuilder
+      
+      if (promptBuilder) {
+        templateWorld = promptBuilder.baseScenario || ''
+        templateName = dbTemplate.name || ''
+        wordCostMultiplier = dbTemplate.word_cost_multiplier || 1
+        characterArchetypes = promptBuilder.characterArchetypes
+        console.log('[Outline V8.2] Using DB template:', templateName)
+      } else {
+        console.log('[Outline V8.2] DB template found but no prompt_builder data')
       }
-    } else {
-      // 2. 回退到本地模板
+    }
+    
+    // 如果數據庫沒有，回退到本地模板
+    if (!templateWorld) {
+      console.log('[Outline V8.2] Falling back to local template')
       const { officialTemplates } = await import('@/data/templates')
       const localTemplate = officialTemplates.find(t => t.id === templateId)
       templateWorld = localTemplate?.promptBuilder?.baseScenario || ''
       templateName = localTemplate?.name || ''
       characterArchetypes = localTemplate?.promptBuilder?.characterArchetypes
-      console.log('[Outline V8.1] Using local template:', templateName)
+      console.log('[Outline V8.2] Using local template:', templateName)
     }
     
     if (!templateWorld) {
       return NextResponse.json(
         { success: false, error: "模板不存在或缺少基礎情境" },
         { status: 404 }
-      );
+      )
     }
 
     let charResult: { char1: string; char2: string } | null = null
     let openingScene: string = ''
 
     if (mode === 'outline-only' && existingCharacters) {
-      // 只生成場景，使用提供的角色
-      console.log('[Outline V7] Mode: outline-only')
+      console.log('[Outline V8.2] Mode: outline-only')
       openingScene = await generateOutline(
         templateWorld,
         existingCharacters.character1,
@@ -119,8 +142,7 @@ export async function POST(request: NextRequest) {
         callAI
       )
     } else {
-      // 生成角色
-      console.log('[Outline V7] Generating characters...')
+      console.log('[Outline V8.2] Generating characters...')
       charResult = await generateCharacterPair(
         templateWorld, 
         (prompt) => callAI(prompt, randomSeed),
@@ -134,17 +156,15 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      console.log('[Outline V7] Characters generated:', charResult.char1.slice(0, 20))
+      console.log('[Outline V8.2] Characters generated:', charResult.char1.slice(0, 20))
 
-      // 如果不是只生成角色，則生成場景
       if (mode !== 'characters-only') {
-        console.log('[Outline V7] Generating opening scene...')
+        console.log('[Outline V8.2] Generating opening scene...')
         openingScene = await generateOutline(templateWorld, charResult.char1, charResult.char2, callAI)
-        console.log('[Outline V7] Scene:', openingScene.slice(0, 50), '...')
+        console.log('[Outline V8.2] Scene:', openingScene.slice(0, 50), '...')
       }
     }
 
-    // V7.0: 返回簡化格式（單一openingScene字段）
     return NextResponse.json({
       success: true,
       data: {
@@ -152,13 +172,13 @@ export async function POST(request: NextRequest) {
           character1: charResult.char1,
           character2: charResult.char2,
         } : undefined,
-        openingScene, // V7.0: 改為單一字段
-        outline: openingScene, // 向後兼容：同時返回舊字段名
+        openingScene,
+        outline: openingScene,
       }
     })
 
   } catch (error: any) {
-    console.error("[Outline V7] Error:", error)
+    console.error("[Outline V8.2] Error:", error)
     return NextResponse.json(
       { success: false, error: error.message || "生成失败" },
       { status: 500 }
