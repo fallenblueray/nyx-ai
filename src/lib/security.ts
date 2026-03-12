@@ -114,8 +114,9 @@ export function validateInput(params: {
   }
 
   // 驗證角色（Prompt Engine 格式：character1 + character2）
-  if (params.characters) {
-    const chars = [params.characters.character1, params.characters.character2]
+  // 注意：續寫時可能沒有角色數據，允許為空
+  if (params.characters && params.characters.character1) {
+    const chars = [params.characters.character1, params.characters.character2].filter(Boolean)
     for (const char of chars) {
       if (!char || !char.name || char.name.trim().length === 0) {
         return { valid: false, error: '角色名稱不能為空' }
