@@ -12,7 +12,8 @@ import { getOrCreateAnonymousId } from "@/lib/anonymous"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Loader2, Sparkles, RotateCcw, Edit2, Eye, RefreshCw, Download, FileText, Copy, Check, BookOpen, Wand2, AlertCircle, X } from "lucide-react"
+import { Loader2, Sparkles, RotateCcw, Edit2, Eye, RefreshCw, Download, FileText, Copy, Check, BookOpen, Wand2, AlertCircle, X, Share2 } from "lucide-react"
+import { StoryShareCard } from "@/components/StoryShareCard"
 import { cn } from "@/lib/utils"
 import { SYSTEM_PROMPT as OFFICIAL_SYSTEM_PROMPT } from "@/app/api/story/segment/system_prompt"
 import { getThemeById } from "@/lib/themes"
@@ -281,6 +282,12 @@ export function StoryOutput() {
             <CardTitle className="nyx-text-primary text-base">故事輸出</CardTitle>
           </div>
           <div className="flex items-center gap-2">
+            {storyOutput && !isStreaming && (
+              <StoryShareCard 
+                storyContent={storyOutput} 
+                storyTitle={undefined}
+              />
+            )}
             {storyOutput && !isStreaming && (
               <ExportButtons content={storyOutput} title={undefined} />
             )}
