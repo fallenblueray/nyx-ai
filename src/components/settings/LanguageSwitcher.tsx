@@ -16,7 +16,13 @@ import type { Language } from '@/lib/i18n';
 
 interface LanguageSwitcherProps {
   currentLanguage?: Language;
-  translations: any;
+  translations: {
+    settings: {
+      language: {
+        label: string;
+      };
+    };
+  };
 }
 
 export function LanguageSwitcher({

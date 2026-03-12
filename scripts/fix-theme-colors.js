@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* eslint-disable @typescript-eslint/no-require-imports */
 /**
  * Theme Fix Script - Batch fix hardcoded colors in TemplateSelector.tsx
  * Replaces text-white/* and bg-white/* with CSS variable equivalents

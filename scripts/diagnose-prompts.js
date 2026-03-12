@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* eslint-disable @typescript-eslint/no-require-imports */
 /**
  * 诊断脚本：检查 admin_prompts 表中的实际内容
  */

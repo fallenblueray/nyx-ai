@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 /**
  * Quick import: only ID and name
  * Run: cd nyx-ai && node scripts/quick-import-names.js

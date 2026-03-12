@@ -21,7 +21,7 @@ export async function GET(request: Request) {
 
     const supabase = await createServerClient();
 
-    let trendingTemplates: (Template & { usageCount: number })[] = [];
+    const trendingTemplates: (Template & { usageCount: number })[] = [];
 
     try {
       // 查詢指定時間範圍內的模板使用統計

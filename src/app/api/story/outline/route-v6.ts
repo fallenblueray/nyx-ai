@@ -103,10 +103,10 @@ export async function POST(request: NextRequest) {
       }
     })
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[Outline V6] Error:", error)
     return NextResponse.json(
-      { success: false, error: error.message || "生成失败" },
+      { success: false, error: error instanceof Error ? error.message : "生成失败" },
       { status: 500 }
     )
   }

@@ -24,7 +24,7 @@ export function ThemeSwitcher() {
     const stored = localStorage.getItem("theme") as "dark" | "light" | null
     const systemDark = window.matchMedia("(prefers-color-scheme: dark)").matches
     const resolved = stored ?? (systemDark ? "dark" : "light")
-    setTheme(resolved)
+    setTheme(resolved) // eslint-disable-line
     applyTheme(resolved)
   }, [])
 

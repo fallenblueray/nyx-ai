@@ -93,8 +93,8 @@ export async function POST(request: NextRequest) {
         console.log('[Outline V8.2] DB prompt_builder exists:', !!dbTemplate.prompt_builder)
         console.log('[Outline V8.2] DB promptBuilder exists:', !!dbTemplate.promptBuilder)
       }
-    } catch (dbError: any) {
-      console.error('[Outline V8.2] DB query error:', dbError.message || dbError)
+    } catch (dbError: unknown) {
+      console.error('[Outline V8.2] DB query error:', dbError instanceof Error ? dbError.message : dbError)
     }
     
     if (dbTemplate) {
@@ -174,10 +174,10 @@ export async function POST(request: NextRequest) {
       }
     })
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[Outline V8.2] Error:", error)
     return NextResponse.json(
-      { success: false, error: error.message || "生成失败" },
+      { success: false, error: error instanceof Error ? error.message : "生成失败" },
       { status: 500 }
     )
   }

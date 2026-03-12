@@ -23,7 +23,7 @@ export async function GET() {
 
       if (!error && templates && templates.length > 0) {
         // Transform to frontend format
-        const formattedTemplates = templates.map((t: any) => ({
+        const formattedTemplates = templates.map((t: Record<string, unknown>) => ({
           id: t.id,
           slug: t.slug,
           name: t.name,
@@ -106,14 +106,15 @@ export async function POST(request: Request) {
 
     const supabase = createAdminClient()
     let updatedCount = 0
-    let errorDetails: string[] = []
+    const errorDetails: string[] = []
 
     for (const template of templates) {
       const { id, ...updates } = template
       if (!id) continue
 
       // Transform camelCase to snake_case
-      const dbUpdates: any = {}
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const dbUpdates: Record<string, unknown> = {}
       if (updates.name !== undefined) dbUpdates.name = updates.name
       if (updates.category !== undefined) dbUpdates.category = updates.category
       if (updates.description !== undefined) dbUpdates.description = updates.description

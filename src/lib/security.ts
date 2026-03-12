@@ -122,7 +122,7 @@ export function validateInput(params: {
       if (char.name.length > MAX_CHARACTER_NAME) {
         return { valid: false, error: `角色名稱過長，請限制在 ${MAX_CHARACTER_NAME} 字以內` }
       }
-      const charDesc = char.personality || (char as any).description
+      const charDesc = char.personality || (char as {description?: string}).description
       if (charDesc && charDesc.length > MAX_CHARACTER_DESC) {
         return { valid: false, error: `角色描述過長，請限制在 ${MAX_CHARACTER_DESC} 字以內` }
       }

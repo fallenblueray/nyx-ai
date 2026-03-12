@@ -74,12 +74,13 @@ export async function getPromptFromDB(key: string): Promise<string | null> {
 /**
  * 簡單模板變數替換
  */
-function replaceTemplateVars(template: string, vars: Record<string, any>): string {
+function replaceTemplateVars(template: string, vars: Record<string, unknown>): string {
   return template.replace(/\{\{(\w+(?:\.\w+)*)\}\}/g, (match, path) => {
     const keys = path.split('.')
-    let value: any = vars
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let value: unknown = vars
     for (const key of keys) {
-      value = value?.[key]
+      value = (value as Record<string, unknown>)?.[key]
       if (value === undefined) return match
     }
     return String(value)

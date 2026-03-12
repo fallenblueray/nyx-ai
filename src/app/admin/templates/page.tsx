@@ -48,12 +48,12 @@ export default function AdminTemplatesPage() {
       .finally(() => setLoading(false))
   }, [])
 
-  const change = (id: string, field: keyof Template, value: any) => {
+  const change = (id: string, field: keyof Template, value: unknown) => {
     setEdited(prev => ({ ...prev, [id]: { ...prev[id], id, [field]: value } }))
   }
 
   const save = async () => {
-    const list = Object.values(edited).filter((t: any) => t.id)
+    const list = Object.values(edited).filter((t: {id?: string}) => t.id)
     if (!list.length) return alert('無修改')
     const r = await fetch('/api/admin/templates', {
       method: 'POST',
@@ -126,30 +126,30 @@ export default function AdminTemplatesPage() {
                   <label className="text-slate-400 text-sm flex items-center gap-1 mb-1">
                     <span>女主角原型 (V8.0)</span>
                   </label>
-                  <Textarea 
-                    value={e.characterArchetypes?.female ?? t.characterArchetypes?.female ?? ''} 
+                  <Textarea
+                    value={e.characterArchetypes?.female ?? t.characterArchetypes?.female ?? ''}
                     onChange={ev => {
                       const currentArchetypes = e.characterArchetypes ?? t.characterArchetypes ?? { female: '', male: '' }
                       const updated = { ...currentArchetypes, female: ev.target.value }
-                      change(t.id, 'characterArchetypes', updated as any)
-                    }} 
-                    className="bg-slate-800 border-slate-700 text-white min-h-[100px]" 
-                    placeholder="例如：25-30歲高冷女上司，職場權威，冰山外表..." 
+                      change(t.id, 'characterArchetypes', updated as {female: string, male: string})
+                    }}
+                    className="bg-slate-800 border-slate-700 text-white min-h-[100px]"
+                    placeholder="例如：25-30歲高冷女上司，職場權威，冰山外表..."
                   />
                 </div>
                 <div>
                   <label className="text-slate-400 text-sm flex items-center gap-1 mb-1">
                     <span>男主角原型 (V8.0)</span>
                   </label>
-                  <Textarea 
-                    value={e.characterArchetypes?.male ?? t.characterArchetypes?.male ?? ''} 
+                  <Textarea
+                    value={e.characterArchetypes?.male ?? t.characterArchetypes?.male ?? ''}
                     onChange={ev => {
                       const currentArchetypes = e.characterArchetypes ?? t.characterArchetypes ?? { female: '', male: '' }
                       const updated = { ...currentArchetypes, male: ev.target.value }
-                      change(t.id, 'characterArchetypes', updated as any)
-                    }} 
-                    className="bg-slate-800 border-slate-700 text-white min-h-[100px]" 
-                    placeholder="例如：25-30歲普通職員，能力不錯但缺乏自信..." 
+                      change(t.id, 'characterArchetypes', updated as {female: string, male: string})
+                    }}
+                    className="bg-slate-800 border-slate-700 text-white min-h-[100px]"
+                    placeholder="例如：25-30歲普通職員，能力不錯但缺乏自信..."
                   />
                 </div>
               </div>

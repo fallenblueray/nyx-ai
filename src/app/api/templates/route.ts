@@ -17,7 +17,7 @@ export async function GET() {
 
       if (!error && templates && templates.length > 0) {
         // Transform to Template type format
-        const formattedTemplates = templates.map((t: any) => ({
+        const formattedTemplates = templates.map((t: Record<string, unknown>) => ({
           id: t.id,
           slug: t.slug,
           name: t.name,

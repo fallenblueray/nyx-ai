@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* eslint-disable @typescript-eslint/no-require-imports */
 // 載入 .env.local 環境變量
 require("dotenv").config({ path: ".env.local" });
 

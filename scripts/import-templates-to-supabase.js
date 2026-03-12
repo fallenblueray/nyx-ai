@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 /**
  * Import templates from templates.ts to Supabase
  * Run: node scripts/import-templates-to-supabase.js

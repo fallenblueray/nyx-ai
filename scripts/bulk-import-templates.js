@@ -1,5 +1,6 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 /**
- * Bulk import all 55 templates from templates.ts to Supabase
+ * Bulk import all 55 templates from Supabase
  * Run: cd nyx-ai && node scripts/bulk-import-templates.js
  */
 
@@ -71,8 +72,7 @@ const templates = [
     id: 'classic-007', slug: 'secret-crush', name: '暗戀成真', category: 'classic',
     description: '長期暗戀終於表白成功', tags: ['暗戀', '表白', '單相思'],
     base_scenario: '長期暗戀某個人，終於找到機會表白',
-    writing_style: '內心戲豐富，情感細
-膩',
+    writing_style: '內心戲豐富，情感細膩',
     atmosphere: '緊張期待，帶有夢幻感',
     pace: 'slow', intensity: 'mild', is_premium: false
   },
@@ -197,3 +197,19 @@ const templates = [
     description: '全職太太的無聊日常', tags: ['全職太太', '無聊', '寂寞'],
     base_scenario: '丈夫工作忙碌，全職太太獨守空閨，寂寞難耐',
     writing_style: '寂寞氛圍，渴望描寫',
+    atmosphere: '寂寞壓抑，帶有爆發前的張力',
+    pace: 'slow', intensity: 'intense', is_premium: false
+  }
+]
+
+async function importTemplates() {
+  console.log(`Importing ${templates.length} templates to Supabase...`)
+  for (const t of templates) {
+    const { error } = await supabase.from('templates').upsert(t, { onConflict: 'id' })
+    if (error) console.error(`Error importing ${t.id}:`, error.message)
+    else console.log(`✅ Imported: ${t.name}`)
+  }
+  console.log('Done!')
+}
+
+importTemplates().catch(console.error)
