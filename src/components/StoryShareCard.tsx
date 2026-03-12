@@ -11,39 +11,59 @@ interface StoryShareCardProps {
   templateName?: string;
 }
 
+// 熱門 Hook 文案池
+const HOOKS = [
+  "🔥 AI 寫的故事太離譜了",
+  "😱 這個劇情我沒想到",
+  "🚨 深夜辦公室的秘密",
+  "💀 這個結局太刺激了",
+  "🔞 成年人的深夜故事",
+];
+
 export function StoryShareCard({ 
   storyContent, 
-  storyTitle = "AI 生成故事"
+  storyTitle = "AI 生成故事",
+  templateName = "神秘故事"
 }: StoryShareCardProps) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  // 提取故事標題（第一行或前 20 字）
-  const extractTitle = useCallback(() => {
+  // 提取情境標題（從故事第一行或模板名）
+  const extractContextTitle = useCallback(() => {
     const firstLine = storyContent.split("\n")[0].trim();
-    if (firstLine && firstLine.length > 5 && firstLine.length < 50) {
+    // 如果第一行夠短且有吸引力，用它
+    if (firstLine && firstLine.length > 3 && firstLine.length < 20) {
       return firstLine.replace(/["'""']/g, "");
     }
-    return storyTitle;
-  }, [storyContent, storyTitle]);
+    // 否則使用模板名或默認
+    return templateName || "神秘故事";
+  }, [storyContent, templateName]);
 
-  // 提取預覽文本（80-100 字，製造懸念）
-  const extractPreview = useCallback(() => {
-    const cleanText = storyContent
-      .replace(/\n/g, " ")
-      .replace(/\s+/g, " ")
-      .trim();
+  // 提取故事片段（最多4行，製造懸念）
+  const extractStorySnippet = useCallback(() => {
+    // 清理文本
+    const lines = storyContent
+      .split("\n")
+      .map(line => line.trim())
+      .filter(line => line.length > 0 && !line.startsWith("#") && !line.startsWith("第"));
     
-    // 取前 90 字，在句號或逗號處截斷
-    const preview = cleanText.slice(0, 90);
-    const lastPeriod = preview.lastIndexOf("。");
-    const lastComma = preview.lastIndexOf("，");
-    const cutPoint = lastPeriod > 40 ? lastPeriod : lastComma > 40 ? lastComma : 80;
+    // 取前4行，每行最多15字
+    const snippet = lines.slice(0, 4).map(line => {
+      if (line.length > 15) {
+        return line.slice(0, 15) + "…";
+      }
+      return line;
+    });
     
-    return preview.slice(0, cutPoint) + "……";
+    return snippet;
   }, [storyContent]);
 
-  // 生成 Canvas 圖片
+  // 隨機選擇 Hook
+  const getRandomHook = useCallback(() => {
+    return HOOKS[Math.floor(Math.random() * HOOKS.length)];
+  }, []);
+
+  // 生成 Canvas 圖片 - 病毒傳播優化版
   const generateCard = useCallback(async (): Promise<HTMLCanvasElement | null> => {
     return new Promise((resolve) => {
       const canvas = document.createElement("canvas");
@@ -53,131 +73,165 @@ export function StoryShareCard({
         return;
       }
 
-      // 設置畫布尺寸 (1200x630 適合社交媒體分享)
+      // 設置畫布尺寸 (1200x1200 正方形，更適合社交媒體)
       const width = 1200;
-      const height = 630;
+      const height = 1200;
       canvas.width = width;
       canvas.height = height;
 
-      // 深色漸層背景
+      // ===== 背景層 =====
+      // 深色漸層背景（藍紫調）
       const gradient = ctx.createLinearGradient(0, 0, width, height);
-      gradient.addColorStop(0, "#1a1a2e");
-      gradient.addColorStop(0.5, "#16213e");
-      gradient.addColorStop(1, "#0f3460");
+      gradient.addColorStop(0, "#0f0c29");
+      gradient.addColorStop(0.5, "#302b63");
+      gradient.addColorStop(1, "#24243e");
       ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, width, height);
 
-      // 添加裝飾性光暈
-      const glowGradient = ctx.createRadialGradient(
-        width * 0.8, height * 0.2, 0,
-        width * 0.8, height * 0.2, 400
+      // 微光效果 - 右上角
+      const glow1 = ctx.createRadialGradient(
+        width * 0.8, height * 0.15, 0,
+        width * 0.8, height * 0.15, 500
       );
-      glowGradient.addColorStop(0, "rgba(147, 51, 234, 0.3)");
-      glowGradient.addColorStop(1, "rgba(147, 51, 234, 0)");
-      ctx.fillStyle = glowGradient;
+      glow1.addColorStop(0, "rgba(139, 92, 246, 0.4)");
+      glow1.addColorStop(0.5, "rgba(139, 92, 246, 0.1)");
+      glow1.addColorStop(1, "rgba(139, 92, 246, 0)");
+      ctx.fillStyle = glow1;
       ctx.fillRect(0, 0, width, height);
 
-      // 頂部標籤
-      ctx.fillStyle = "rgba(147, 51, 234, 0.2)";
-      ctx.fillRect(40, 40, 200, 40);
-      ctx.strokeStyle = "rgba(147, 51, 234, 0.5)";
-      ctx.lineWidth = 1;
-      ctx.strokeRect(40, 40, 200, 40);
-      
-      ctx.font = "bold 18px 'Microsoft YaHei', 'PingFang SC', sans-serif";
-      ctx.fillStyle = "#a855f7";
-      ctx.textAlign = "center";
-      ctx.fillText("AI 生成故事", 140, 67);
+      // 微光效果 - 左下角
+      const glow2 = ctx.createRadialGradient(
+        width * 0.2, height * 0.85, 0,
+        width * 0.2, height * 0.85, 400
+      );
+      glow2.addColorStop(0, "rgba(236, 72, 153, 0.3)");
+      glow2.addColorStop(1, "rgba(236, 72, 153, 0)");
+      ctx.fillStyle = glow2;
+      ctx.fillRect(0, 0, width, height);
 
-      // 主標題
-      const title = extractTitle();
-      ctx.font = "bold 48px 'Microsoft YaHei', 'PingFang SC', sans-serif";
-      ctx.fillStyle = "#ffffff";
-      ctx.textAlign = "left";
-      
-      // 標題換行處理
-      const maxTitleWidth = width - 160;
-      let titleY = 160;
-      if (ctx.measureText(title).width > maxTitleWidth) {
-        const words = title.split("");
-        let line = "";
-        for (let i = 0; i < words.length; i++) {
-          const testLine = line + words[i];
-          if (ctx.measureText(testLine).width > maxTitleWidth && line !== "") {
-            ctx.fillText(line, 80, titleY);
-            line = words[i];
-            titleY += 60;
-          } else {
-            line = testLine;
-          }
-        }
-        ctx.fillText(line, 80, titleY);
-      } else {
-        ctx.fillText(title, 80, titleY);
+      // 細微噪點紋理（模擬質感）
+      ctx.fillStyle = "rgba(255, 255, 255, 0.02)";
+      for (let i = 0; i < 100; i++) {
+        const x = Math.random() * width;
+        const y = Math.random() * height;
+        const size = Math.random() * 2;
+        ctx.fillRect(x, y, size, size);
       }
 
-      // 分隔線
-      ctx.beginPath();
-      ctx.moveTo(80, titleY + 40);
-      ctx.lineTo(width - 80, titleY + 40);
-      ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
-      ctx.lineWidth = 2;
-      ctx.stroke();
+      // ===== 內容層 =====
+      const padding = 80;
+      let currentY = 180;
 
-      // 故事預覽內容
-      const preview = extractPreview();
-      ctx.font = "28px 'Microsoft YaHei', 'PingFang SC', sans-serif";
-      ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
+      // 1. Hook（36px）- 最吸睛
+      ctx.font = "bold 36px 'PingFang SC', 'Microsoft YaHei', sans-serif";
+      ctx.fillStyle = "#fbbf24"; // 琥珀色，醒目
+      ctx.textAlign = "left";
+      ctx.fillText(getRandomHook(), padding, currentY);
+      currentY += 80;
+
+      // 2. 情境標題（48px）- 核心賣點
+      const contextTitle = extractContextTitle();
+      ctx.font = "bold 48px 'PingFang SC', 'Microsoft YaHei', sans-serif";
+      ctx.fillStyle = "#ffffff";
       
-      const lineHeight = 48;
-      const maxWidth = width - 160;
-      const words = preview.split("");
+      // 標題換行處理（最多2行）
+      const maxTitleWidth = width - padding * 2;
+      const words = contextTitle.split("");
       let line = "";
-      let y = titleY + 120;
+      let lineCount = 0;
       
-      for (let i = 0; i < words.length; i++) {
+      for (let i = 0; i < words.length && lineCount < 2; i++) {
         const testLine = line + words[i];
-        if (ctx.measureText(testLine).width > maxWidth && line !== "") {
-          ctx.fillText(line, 80, y);
+        if (ctx.measureText(testLine).width > maxTitleWidth && line !== "") {
+          ctx.fillText(line, padding, currentY);
           line = words[i];
-          y += lineHeight;
+          currentY += 70;
+          lineCount++;
         } else {
           line = testLine;
         }
       }
-      ctx.fillText(line, 80, y);
+      if (line && lineCount < 2) {
+        ctx.fillText(line, padding, currentY);
+        currentY += 100;
+      } else {
+        currentY += 60;
+      }
 
-      // 底部品牌區域
-      const bottomY = height - 100;
-      
-      // 漸層遮罩（底部）
-      const bottomGradient = ctx.createLinearGradient(0, bottomY - 50, 0, height);
-      bottomGradient.addColorStop(0, "rgba(26, 26, 46, 0)");
-      bottomGradient.addColorStop(1, "rgba(26, 26, 46, 0.8)");
-      ctx.fillStyle = bottomGradient;
-      ctx.fillRect(0, bottomY - 50, width, 150);
-
-      // CTA 按鈕樣式文字
-      ctx.fillStyle = "rgba(147, 51, 234, 0.3)";
-      ctx.fillRect(80, bottomY, 280, 56);
-      ctx.strokeStyle = "#a855f7";
+      // 3. 分隔裝飾線
+      ctx.beginPath();
+      ctx.moveTo(padding, currentY - 30);
+      ctx.lineTo(width - padding, currentY - 30);
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
       ctx.lineWidth = 2;
-      ctx.strokeRect(80, bottomY, 280, 56);
-      
-      ctx.font = "bold 24px 'Microsoft YaHei', 'PingFang SC', sans-serif";
-      ctx.fillStyle = "#ffffff";
-      ctx.textAlign = "center";
-      ctx.fillText("繼續閱讀 →", 220, bottomY + 38);
+      ctx.stroke();
 
-      // 網址
-      ctx.font = "20px 'Microsoft YaHei', sans-serif";
-      ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
+      // 4. 故事片段（24px，最多4行）
+      const snippet = extractStorySnippet();
+      ctx.font = "24px 'PingFang SC', 'Microsoft YaHei', sans-serif";
+      ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
+      
+      snippet.forEach((line, index) => {
+        currentY += 50;
+        // 引號裝飾
+        if (index === 0) {
+          ctx.fillStyle = "rgba(139, 92, 246, 0.6)";
+          ctx.fillText("「", padding - 30, currentY);
+          ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
+        }
+        ctx.fillText(line, padding, currentY);
+      });
+      
+      // 省略號懸念
+      currentY += 50;
+      ctx.fillStyle = "rgba(139, 92, 246, 0.6)";
+      ctx.fillText("」", padding, currentY);
+      currentY += 80;
+
+      // 5. CTA 按鈕區域（28px）
+      const ctaY = height - 200;
+      
+      // CTA 背景
+      const ctaGradient = ctx.createLinearGradient(padding, ctaY - 20, padding + 400, ctaY + 60);
+      ctaGradient.addColorStop(0, "rgba(139, 92, 246, 0.3)");
+      ctaGradient.addColorStop(1, "rgba(236, 72, 153, 0.3)");
+      ctx.fillStyle = ctaGradient;
+      ctx.beginPath();
+      ctx.roundRect(padding, ctaY - 20, 400, 80, 16);
+      ctx.fill();
+      
+      // CTA 邊框
+      ctx.strokeStyle = "rgba(139, 92, 246, 0.6)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.roundRect(padding, ctaY - 20, 400, 80, 16);
+      ctx.stroke();
+      
+      // CTA 文字
+      ctx.font = "bold 28px 'PingFang SC', 'Microsoft YaHei', sans-serif";
+      ctx.fillStyle = "#ffffff";
+      ctx.textAlign = "left";
+      ctx.fillText("▶  查看完整故事", padding + 40, ctaY + 30);
+
+      // 6. 品牌標識（底部）
+      ctx.font = "20px 'PingFang SC', sans-serif";
+      ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
       ctx.textAlign = "right";
-      ctx.fillText("nyx-ai.net", width - 80, bottomY + 38);
+      ctx.fillText("nyx-ai.net", width - padding, height - 60);
+      
+      // 品牌 Logo 區域
+      ctx.fillStyle = "rgba(139, 92, 246, 0.2)";
+      ctx.beginPath();
+      ctx.arc(padding + 20, height - 70, 24, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.font = "bold 20px sans-serif";
+      ctx.fillStyle = "#a78bfa";
+      ctx.textAlign = "center";
+      ctx.fillText("N", padding + 20, height - 63);
 
       resolve(canvas);
     });
-  }, [extractTitle, extractPreview]);
+  }, [extractContextTitle, extractStorySnippet, getRandomHook]);
 
   // 下載圖片
   const handleDownload = useCallback(async () => {
@@ -190,7 +244,7 @@ export function StoryShareCard({
       }
 
       const link = document.createElement("a");
-      link.download = `nyx-ai-story-${Date.now()}.png`;
+      link.download = `nyx-ai-${Date.now()}.png`;
       link.href = canvas.toDataURL("image/png");
       link.click();
       
@@ -229,7 +283,7 @@ export function StoryShareCard({
         } catch (err) {
           // 如果無法複製圖片，提供下載替代
           const link = document.createElement("a");
-          link.download = `nyx-ai-story-${Date.now()}.png`;
+          link.download = `nyx-ai-${Date.now()}.png`;
           link.href = canvas.toDataURL("image/png");
           link.click();
           toast.success("瀏覽器不支援直接複製，已自動下載");
