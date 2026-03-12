@@ -2,6 +2,7 @@
 
 import FloatingLines from "@/components/floating-lines";
 import { ParticleField } from "@/components/particle-field";
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";

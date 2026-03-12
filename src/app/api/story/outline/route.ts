@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
       
       console.log('[Outline V8.2] Supabase result:', {
         data: result.data ? `found: ${result.data.name}` : 'null',
-        error: result.error ? result.error.message : 'none'
+        error: result.error ? (result.error instanceof Error ? result.error.message : String(result.error)) : 'none'
       })
       
       dbTemplate = result.data

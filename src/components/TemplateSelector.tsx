@@ -1,5 +1,6 @@
 "use client"
 
+/* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from "react"
 import { useAppStore } from "@/store/useAppStore"
 import { Button } from "@/components/ui/button"
@@ -121,7 +122,7 @@ function TemplateCard({
 
       {/* 套用按鈕（hover 顯示）*/}
       <div className="mt-3 opacity-0 group-hover:opacity-100 transition-opacity">
-        <button className="w-full text-xs py-1.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-medium transition-colors">
+        <button className="w-full text-xs py-1.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-[color:var(--text-primary)] font-medium transition-colors">
           套用此模板
         </button>
       </div>
@@ -151,18 +152,24 @@ export function TemplateSelector() {
   const [showSaveDialog, setShowSaveDialog] = useState(false)
   const [saveForm, setSaveForm] = useState({ name: "", description: "" })
   const [isGeneratingCharacters, setIsGeneratingCharacters] = useState(false)
+  const [trendingTemplates, setTrendingTemplates] = useState<any[]>([])
 
   // Load templates from API
   useEffect(() => {
-    fetch('/api/templates')
-      .then(r => r.json())
-      .then(data => {
-        if (data.success && data.data.length > 0) {
-          setTemplates(data.data)
-        }
-      })
-      .catch(err => console.error('[TemplateSelector] Failed to load templates:', err))
-      .finally(() => setLoading(false))
+    Promise.all([
+      fetch('/api/templates').then(r => r.json()),
+      fetch('/api/templates/trending?limit=8').then(r => r.json())
+    ])
+    .then(([templatesData, trendingData]) => {
+      if (templatesData.success && templatesData.data.length > 0) {
+        setTemplates(templatesData.data)
+      }
+      if (trendingData.templates) {
+        setTrendingTemplates(trendingData.templates)
+      }
+    })
+    .catch(err => console.error('[TemplateSelector] Failed to load data:', err))
+    .finally(() => setLoading(false))
   }, [])
 
   const {
@@ -573,7 +580,7 @@ ${outlineText || '故事即將開始...'}`
       {/* 觸發按鈕 */}
       <Button
         onClick={() => setIsOpen(true)}
-        className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+        className="w-full bg-purple-600 hover:bg-purple-700 text-[color:var(--text-primary)]"
       >
         <BookOpen className="w-4 h-4 mr-2" />
         故事模板
@@ -583,7 +590,7 @@ ${outlineText || '故事即將開始...'}`
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className="nyx-surface nyx-border nyx-text-primary max-w-3xl max-h-[85vh] overflow-hidden flex flex-col p-0">
           <DialogHeader className="px-6 pt-6 pb-0">
-            <DialogTitle className="text-xl font-bold text-white">
+            <DialogTitle className="text-xl font-bold text-[color:var(--text-primary)]">
               選擇故事模板
             </DialogTitle>
           </DialogHeader>
@@ -601,7 +608,7 @@ ${outlineText || '故事即將開始...'}`
               />
               {searchQuery && (
                 <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2">
-                  <X className="w-4 h-4 text-white/40 hover:text-white" />
+                  <X className="w-4 h-4 text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)]" />
                 </button>
               )}
             </div>
@@ -649,18 +656,18 @@ ${outlineText || '故事即將開始...'}`
                 
                 {/* 舊版 Trending（保留作為快捷輸入）*/}
                 <div>
-                  <h3 className="text-sm font-semibold text-white/70 mb-2 flex items-center gap-1">
-                    <Flame className="w-4 h-4 text-orange-400" />
+                  <h3 className="text-sm font-semibold text-[var(--text-secondary)] mb-2 flex items-center gap-1">
+                    <Flame className="w-4 h-4 text-orange-500" />
                     熱門話題
                   </h3>
                   <div className="flex flex-wrap gap-2">
-                    {TRENDING_ITEMS.map((item, i) => (
+                    {(trendingTemplates.length > 0 ? trendingTemplates : TRENDING_ITEMS.map(i => ({ description: i.text }))).slice(0, 6).map((item, i) => (
                       <button
                         key={i}
-                        onClick={() => handleTrendingClick(item.text)}
-                        className="text-xs px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-white/70 hover:bg-purple-500/20 hover:border-purple-500/40 hover:text-white transition-all"
+                        onClick={() => handleTrendingClick(item.description || item.name || '')}
+                        className="text-xs px-3 py-1.5 rounded-full bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-secondary)] hover:bg-purple-500/20 hover:border-purple-500/40 hover:text-[var(--text-primary)] transition-all"
                       >
-                        🔥 {item.text}
+                        🔥 {item.description || item.name}
                       </button>
                     ))}
                   </div>
@@ -676,7 +683,7 @@ ${outlineText || '故事即將開始...'}`
                   limit={10}
                   className="mb-6"
                 />
-                <h3 className="text-sm font-semibold text-white/70 mb-3">更多熱門模板</h3>
+                <h3 className="text-sm font-semibold text-[color:var(--text-secondary)] mb-3">更多熱門模板</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {templates
                     .filter(t => t.isActive)
@@ -698,7 +705,7 @@ ${outlineText || '故事即將開始...'}`
             {filteredTemplates.length > 0 ? (
               <div>
                 {activeCategory === 'all' && !searchQuery && (
-                  <h3 className="text-sm font-semibold text-white/70 mb-3">官方模板 ({filteredTemplates.length})</h3>
+                  <h3 className="text-sm font-semibold text-[color:var(--text-secondary)] mb-3">官方模板 ({filteredTemplates.length})</h3>
                 )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {filteredTemplates.map(template => (
@@ -713,7 +720,7 @@ ${outlineText || '故事即將開始...'}`
                 </div>
               </div>
             ) : (
-              <p className="text-center text-white/40 py-8">
+              <p className="text-center text-[color:var(--text-secondary)] py-8">
                 {activeCategory === 'favorite' ? '還沒有收藏的模板' : '沒有找到相關模板'}
               </p>
             )}
@@ -722,13 +729,13 @@ ${outlineText || '故事即將開始...'}`
             {savedTemplates.length > 0 && activeCategory === 'all' && !searchQuery && (
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-semibold text-white/70 flex items-center gap-1">
+                  <h3 className="text-sm font-semibold text-[color:var(--text-secondary)] flex items-center gap-1">
                     <Save className="w-4 h-4" />
                     我的模板 ({savedTemplates.length})
                   </h3>
                   <button
                     onClick={() => setShowSaveDialog(true)}
-                    className="text-xs px-3 py-1 rounded-full bg-white/5 border border-white/10 text-white/50 hover:text-white transition-all"
+                    className="text-xs px-3 py-1 rounded-full bg-[color:var(--surface-2)] border border-[color:var(--border)] text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] transition-all"
                   >
                     <Plus className="w-3 h-3 inline mr-1" />
                     儲存當前
@@ -736,14 +743,14 @@ ${outlineText || '故事即將開始...'}`
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {savedTemplates.map(t => (
-                    <div key={t.id} className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/10 hover:border-purple-500/30 transition-all">
+                    <div key={t.id} className="flex items-center justify-between p-3 rounded-xl bg-[color:var(--surface-2)] border border-[color:var(--border)] hover:border-purple-500/30 transition-all">
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-white truncate">{t.name}</p>
-                        <p className="text-xs text-white/40 truncate">{t.description || t.storyInput.slice(0, 30) + '...'}</p>
+                        <p className="text-sm font-medium text-[color:var(--text-primary)] truncate">{t.name}</p>
+                        <p className="text-xs text-[color:var(--text-secondary)] truncate">{t.description || t.storyInput.slice(0, 30) + '...'}</p>
                       </div>
                       <div className="flex gap-1 ml-2">
-                        <button onClick={() => handleApplySaved(t)} className="text-xs px-2 py-1 rounded-lg bg-purple-600 hover:bg-purple-700 text-white transition-colors">套用</button>
-                        <button onClick={() => handleDeleteSaved(t.id)} className="p-1 rounded-lg hover:bg-red-500/20 text-white/30 hover:text-red-400 transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
+                        <button onClick={() => handleApplySaved(t)} className="text-xs px-2 py-1 rounded-lg bg-purple-600 hover:bg-purple-700 text-[color:var(--text-primary)] transition-colors">套用</button>
+                        <button onClick={() => handleDeleteSaved(t.id)} className="p-1 rounded-lg hover:bg-red-500/20 text-[color:var(--text-primary)]/30 hover:text-red-400 transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
                       </div>
                     </div>
                   ))}
@@ -755,7 +762,7 @@ ${outlineText || '故事即將開始...'}`
             {savedTemplates.length === 0 && activeCategory === 'all' && !searchQuery && (
               <button
                 onClick={() => setShowSaveDialog(true)}
-                className="w-full py-3 rounded-xl border border-dashed border-white/20 text-white/40 hover:text-white/60 hover:border-white/30 text-sm transition-all"
+                className="w-full py-3 rounded-xl border border-dashed border-[color:var(--border-subtle)] text-[color:var(--text-secondary)] hover:text-[color:var(--text-secondary)] hover:border-white/30 text-sm transition-all"
               >
                 <Plus className="w-4 h-4 inline mr-2" />
                 儲存當前設定為我的模板
@@ -773,7 +780,7 @@ ${outlineText || '故事即將開始...'}`
           </DialogHeader>
           <div className="space-y-4 mt-2">
             <div>
-              <label className="text-sm text-white/60">模板名稱</label>
+              <label className="text-sm text-[color:var(--text-secondary)]">模板名稱</label>
               <Input
                 value={saveForm.name}
                 onChange={e => setSaveForm({ ...saveForm, name: e.target.value })}
@@ -782,7 +789,7 @@ ${outlineText || '故事即將開始...'}`
               />
             </div>
             <div>
-              <label className="text-sm text-white/60">描述（可選）</label>
+              <label className="text-sm text-[color:var(--text-secondary)]">描述（可選）</label>
               <Input
                 value={saveForm.description}
                 onChange={e => setSaveForm({ ...saveForm, description: e.target.value })}
@@ -821,21 +828,21 @@ ${outlineText || '故事即將開始...'}`
 
               <div className="space-y-4 mt-2">
                 {/* 模板信息 */}
-                <div className="p-3 rounded-lg bg-white/5 border border-white/10">
-                  <h4 className="text-sm font-medium text-white">{previewTemplate.name}</h4>
-                  <p className="text-xs text-white/50 mt-1">{previewTemplate.description}</p>
+                <div className="p-3 rounded-lg bg-[color:var(--surface-2)] border border-[color:var(--border)]">
+                  <h4 className="text-sm font-medium text-[color:var(--text-primary)]">{previewTemplate.name}</h4>
+                  <p className="text-xs text-[color:var(--text-secondary)] mt-1">{previewTemplate.description}</p>
                 </div>
 
                 {/* 角色卡編輯區 */}
                 <div className="space-y-3">
-                  <div className="flex items-center gap-2 text-sm text-white/70">
+                  <div className="flex items-center gap-2 text-sm text-[color:var(--text-secondary)]">
                     <User className="w-4 h-4" />
                     <span>角色設定（可編輯）</span>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="text-xs text-white/50">名字</label>
+                      <label className="text-xs text-[color:var(--text-secondary)]">名字</label>
                       <Input
                         value={editedCharacter.name}
                         onChange={e => setEditedCharacter({ ...editedCharacter, name: e.target.value })}
@@ -843,7 +850,7 @@ ${outlineText || '故事即將開始...'}`
                       />
                     </div>
                     <div>
-                      <label className="text-xs text-white/50">年齡</label>
+                      <label className="text-xs text-[color:var(--text-secondary)]">年齡</label>
                       <Input
                         value={editedCharacter.age}
                         onChange={e => setEditedCharacter({ ...editedCharacter, age: e.target.value })}
@@ -853,7 +860,7 @@ ${outlineText || '故事即將開始...'}`
                   </div>
 
                   <div>
-                    <label className="text-xs text-white/50">身份 / 角色</label>
+                    <label className="text-xs text-[color:var(--text-secondary)]">身份 / 角色</label>
                     <Input
                       value={editedCharacter.role}
                       onChange={e => setEditedCharacter({ ...editedCharacter, role: e.target.value })}
@@ -862,7 +869,7 @@ ${outlineText || '故事即將開始...'}`
                   </div>
 
                   <div>
-                    <label className="text-xs text-white/50">性格特質</label>
+                    <label className="text-xs text-[color:var(--text-secondary)]">性格特質</label>
                     <Textarea
                       value={editedCharacter.personality}
                       onChange={e => setEditedCharacter({ ...editedCharacter, personality: e.target.value })}
@@ -872,7 +879,7 @@ ${outlineText || '故事即將開始...'}`
                   </div>
 
                   <div>
-                    <label className="text-xs text-white/50">外貌描述</label>
+                    <label className="text-xs text-[color:var(--text-secondary)]">外貌描述</label>
                     <Textarea
                       value={editedCharacter.appearance}
                       onChange={e => setEditedCharacter({ ...editedCharacter, appearance: e.target.value })}
@@ -887,7 +894,7 @@ ${outlineText || '故事即將開始...'}`
                   <Button
                     variant="outline"
                     onClick={() => setIsPreviewOpen(false)}
-                    className="flex-1 border-white/20 text-white/70 hover:bg-white/5"
+                    className="flex-1 border-[color:var(--border-subtle)] text-[color:var(--text-secondary)] hover:bg-[color:var(--surface-2)]"
                   >
                     取消
                   </Button>

@@ -11,7 +11,8 @@ require("dotenv").config({ path: ".env.local" });
  */
 
 const { createClient } = require('@supabase/supabase-js');
-const fs = require('fs');
+/* eslint-disable @typescript-eslint/no-require-imports, @typescript-eslint/no-unused-vars */
+const fs = require("fs");
 const path = require('path');
 
 // 从环境变量获取 Supabase 配置

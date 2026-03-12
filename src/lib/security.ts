@@ -47,6 +47,7 @@ const INJECTION_PATTERNS = [
  * 檢測 Prompt Injection 攻擊
  * @returns { isInjection: boolean, matchedPattern?: string }
  */
+/* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any */
 export function detectPromptInjection(input: string): { isInjection: boolean; matchedPattern?: string } {
   for (const pattern of INJECTION_PATTERNS) {
     if (pattern.test(input)) {

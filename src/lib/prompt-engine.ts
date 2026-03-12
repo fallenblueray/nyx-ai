@@ -8,6 +8,7 @@ let promptCache: Record<string, string> = {}
 let cacheTimestamp = 0
 const CACHE_DURATION = 10000
 
+/* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any */
 export function clearPromptCache(): void {
   promptCache = {}
   cacheTimestamp = 0

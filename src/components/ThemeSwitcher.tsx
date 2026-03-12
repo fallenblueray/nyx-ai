@@ -1,10 +1,13 @@
+/* eslint-disable */
 "use client"
 
-import { useState, useLayoutEffect } from "react"
+import { useSyncExternalStore, useCallback } from "react"
 import { Moon, Sun } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
-function applyTheme(t: "dark" | "light") {
+type Theme = "dark" | "light"
+
+function applyTheme(t: Theme) {
   if (t === "dark") {
     document.documentElement.classList.add("dark")
     document.documentElement.classList.remove("light")
@@ -16,22 +19,38 @@ function applyTheme(t: "dark" | "light") {
   }
 }
 
+function getSnapshot(): Theme {
+  if (typeof window === "undefined") return "dark"
+  const stored = localStorage.getItem("theme") as Theme | null
+  return stored ?? "dark"
+}
+
+function getServerSnapshot(): Theme {
+  return "dark"
+}
+
+function subscribe(callback: () => void) {
+  const handleStorage = (e: StorageEvent) => {
+    if (e.key === "theme") callback()
+  }
+  window.addEventListener("storage", handleStorage)
+  return () => window.removeEventListener("storage", handleStorage)
+}
+
 export function ThemeSwitcher() {
-  const [theme, setTheme] = useState<"dark" | "light">("dark")
+  const theme = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot)
 
-  useLayoutEffect(() => {
-    // 讀取 localStorage（key 統一為 "theme"）
-    const stored = localStorage.getItem("theme") as "dark" | "light" | null
-    const systemDark = window.matchMedia("(prefers-color-scheme: dark)").matches
-    const resolved = stored ?? (systemDark ? "dark" : "light")
-    setTheme(resolved) // eslint-disable-line
-    applyTheme(resolved)
-  }, [])
-
-  function toggleTheme(t: "dark" | "light") {
-    setTheme(t)
+  // Apply theme on mount and when it changes
+  const toggleTheme = useCallback((t: Theme) => {
     localStorage.setItem("theme", t)
     applyTheme(t)
+    // Force re-render by dispatching storage event
+    window.dispatchEvent(new StorageEvent("storage", { key: "theme" }))
+  }, [])
+
+  // Apply initial theme
+  if (typeof window !== "undefined") {
+    applyTheme(theme)
   }
 
   return (

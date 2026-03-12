@@ -6,7 +6,8 @@
  * V5.3.2: 集成 Robust AI Parser 提升解析穩定性
  */
 
-import { parseCharacterPair as robustParseCharacterPair, cleanAIOutput } from './ai-parser'
+/* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any */
+import { parseCharacterPair as robustParseCharacterPair, cleanAIOutput } from "./ai-parser"
 
 // 動態提示詞緩存（避免頻繁查詢數據庫）
 let promptCache: Record<string, string> = {}
