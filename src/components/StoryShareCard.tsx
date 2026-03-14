@@ -425,8 +425,9 @@ export function StoryShareCard({
 
   // 原生分享（Web Share API）
   const handleNativeShare = useCallback(async () => {
-    // 如果沒有分享連結，先保存故事
+    // 如果沒有分享連結，直接打開分享對話框
     if (!shareUrl) {
+      console.log("[StoryShareCard] No shareUrl, opening dialog");
       setShowShareDialog(true);
       return;
     }
@@ -456,9 +457,14 @@ export function StoryShareCard({
 
   // 保存並獲取分享連結
   const handleSaveAndGetUrl = useCallback(async () => {
-    if (!storyContent) return;
+    if (!storyContent) {
+      toast.error("沒有故事內容");
+      return;
+    }
 
     setIsSaving(true);
+    console.log("[StoryShareCard] Starting save...");
+    
     try {
       // 保存故事
       const saveResult = await saveStory({
@@ -468,24 +474,41 @@ export function StoryShareCard({
         is_public: true,
       });
 
-      if (saveResult.error || !saveResult.story) {
-        toast.error(saveResult.error || "保存失敗");
+      console.log("[StoryShareCard] Save result:", saveResult);
+
+      if (saveResult.error) {
+        toast.error(saveResult.error);
+        return;
+      }
+
+      if (!saveResult.story) {
+        toast.error("保存失敗：沒有返回故事數據");
         return;
       }
 
       // 獲取分享連結
+      console.log("[StoryShareCard] Getting share URL for story:", saveResult.story.id);
       const shareResult = await shareStory(saveResult.story.id);
+      
+      console.log("[StoryShareCard] Share result:", shareResult);
 
-      if (shareResult.error || !shareResult.shareId) {
-        toast.error(shareResult.error || "獲取分享連結失敗");
+      if (shareResult.error) {
+        toast.error(shareResult.error);
+        return;
+      }
+
+      if (!shareResult.shareId) {
+        toast.error("獲取分享連結失敗");
         return;
       }
 
       const url = `${window.location.origin}/share/${shareResult.shareId}`;
+      console.log("[StoryShareCard] Generated URL:", url);
+      
       onShareUrlChange?.(url);
       toast.success("故事已保存，可以分享了！");
     } catch (error) {
-      console.error("Save and share error:", error);
+      console.error("[StoryShareCard] Save and share error:", error);
       toast.error("保存失敗，請重試");
     } finally {
       setIsSaving(false);
