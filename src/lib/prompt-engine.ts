@@ -262,33 +262,51 @@ export interface TemplateContext {
 }
 
 // V7.0: 極簡版故事生成提示詞 - 單一大綱
+// V8.0: 新增 intensity 參數支持
 export async function buildStoryPrompt(
   systemPrompt: string,
   character1: CharacterConfig,
   character2: CharacterConfig,
   openingScene: string,  // V7.0: 改為單一開端場景
   userInput?: string,
-  templateContext?: TemplateContext
+  templateContext?: TemplateContext,
+  intensityModifier?: string  // V8.0: 刺激度修飾符
 ): Promise<string> {
   const customPrompt = await getPromptFromDB('story')
-  
+
   // 構建模板元素提示
   const templateElements = templateContext ? `
 【故事情境】${templateContext.baseScenario}
 【寫作風格】${templateContext.writingStyle}
 【氛圍基調】${templateContext.atmosphere}
 ` : ''
-  
+
+  // V8.0: 刺激度修飾
+  const intensitySection = intensityModifier ? `
+【內容強度要求 - 重要】
+${intensityModifier}
+必須嚴格按照上述強度要求創作，不可偏離。
+` : ''
+
   if (customPrompt) {
     // V7.0: 使用新變數名
-    return customPrompt
+    // V8.0: 在適當位置插入刺激度修飾符
+    let prompt = customPrompt
       .replace(/\{\{templateWorld\}\}/g, systemPrompt)
       .replace(/\{\{openingScene\}\}/g, openingScene)
       .replace(/\{\{userInput\}\}/g, userInput || '')
       + templateElements
+
+    // V8.0: 如果有刺激度修飾符，插入到創作要求之前
+    if (intensitySection) {
+      prompt = prompt.replace(/【創作要求】/, `${intensitySection}\n【創作要求】`)
+    }
+
+    return prompt
   }
-  
+
   // V7.0: 預設提示詞 - 簡化版本
+  // V8.0: 加入刺激度修飾符
   return `${systemPrompt}
 ${templateElements}
 
@@ -298,13 +316,14 @@ ${character2.name}，${character2.age}，${character2.role}。${character2.perso
 
 【起始場景】
 ${openingScene}
-
+${intensitySection}
 ${userInput ? `【用戶輸入】\n${userInput}\n` : ''}
 【創作要求】
 1. 根據起始場景自然發展故事，無需嚴格遵循特定結構
 2. 讓角色互動自然、情感遞進合理
 3. 根據劇情需要自然完結（1800-2500字）
 4. 文筆流暢，保持風格一致性
+${intensityModifier ? '5. **嚴格遵守上述內容強度要求** - 這是核心創作指導' : ''}
 
 直接輸出故事正文。`
 }

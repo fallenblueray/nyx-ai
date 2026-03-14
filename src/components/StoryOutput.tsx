@@ -397,6 +397,7 @@ export function GenerateButtons() {
     extractCharacters,
     setShouldRegenerate,
     humanizeEnabled,
+    intensity,
   } = useAppStore()
 
   const [rechargeOpen, setRechargeOpen] = useState(false)
@@ -708,6 +709,7 @@ ${perspectiveInstruction}
           model: "deepseek/deepseek-r1-0528",
           anonymousId,
           skipCache: true,
+          userIntensity: intensity, // V8.0: 傳遞刺激度
         }
         console.log('[V5.1] Using new Prompt Engine API with pre-generated data:', finalTemplateId)
       } else if (selectedTemplate && finalCharacters.length >= 2) {
@@ -895,8 +897,8 @@ ${perspectiveInstruction}
           systemPrompt,
           userPrompt,
           model: "deepseek/deepseek-r1-0528",
-          
           characters,
+          userIntensity: intensity, // V8.0: 傳遞刺激度
           ...(anonymousId && { anonymousId }),
           skipCache: true,  // 續寫永遠生成新內容，不讀緩存
         })

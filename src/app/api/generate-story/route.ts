@@ -8,6 +8,7 @@ import { buildCacheKey, getCachedStory, setCachedStory } from "@/lib/redis-cache
 import { cleanGeneratedContent, extractPureStoryContent, cleanSegmentTransition } from "@/lib/content-cleaner"
 import { buildStoryPrompt, type CharacterConfig } from "@/lib/prompt-engine"
 import { officialTemplates } from "@/data/templates"
+import { getIntensityModifier, validateIntensity } from "@/lib/intensity-config"
 import crypto from "crypto"
 
 export const runtime = 'nodejs'
@@ -43,6 +44,8 @@ interface GenerateStoryRequest {
     pace?: string
     intensity?: string
   }
+  // V8.0: 用戶調節的刺激度（1-10）
+  userIntensity?: number
   userInput?: string  // 用戶自定義輸入（包含大綱）
   // 舊架構兼容（直接傳入 prompt）
   systemPrompt?: string
@@ -108,13 +111,18 @@ export async function POST(req: NextRequest) {
         }, { status: 400 })
       }
       
+      // V8.0: 處理用戶調節的刺激度
+      const validatedIntensity = body.userIntensity ? validateIntensity(body.userIntensity) : undefined
+      const intensityModifier = validatedIntensity ? getIntensityModifier(validatedIntensity) : undefined
+
       finalUserPrompt = await buildStoryPrompt(
         finalSystemPrompt,
         characters.character1,
         characters.character2,
         openingScene,
         userInput || legacyUserPrompt,
-        templateContext
+        templateContext,
+        intensityModifier  // V8.0: 傳入刺激度修飾符
       )
     } else if (legacySystemPrompt && legacyUserPrompt) {
       // ========== 舊架構：直接傳入 prompt ==========

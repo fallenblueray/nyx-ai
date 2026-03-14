@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { DEFAULT_INTENSITY } from '@/lib/intensity-config'
 
 const FREE_WORD_LIMIT = 8000
 
@@ -92,6 +93,10 @@ interface AppState {
   generatedOutline: string | null  // V7.1: 改為字符串格式
   setGeneratedCharacters: (characters: { name: string; age: string; role: string; personality: string; appearance: string; desireStyle: string; traits: string[] }[] | null) => void
   setGeneratedOutline: (outline: string | null) => void
+
+  // V8.0: 刺激度調節
+  intensity: number
+  setIntensity: (intensity: number) => void
 }
 
 export const useAppStore = create<AppState>()(
@@ -223,10 +228,14 @@ export const useAppStore = create<AppState>()(
       generatedOutline: null,
       setGeneratedCharacters: (characters) => set({ generatedCharacters: characters }),
       setGeneratedOutline: (outline) => set({ generatedOutline: outline }),
-      
+
       // V5.2: 模板生成載入狀態
       isGeneratingTemplate: false,
       setIsGeneratingTemplate: (v) => set({ isGeneratingTemplate: v }),
+
+      // V8.0: 刺激度調節 (默認值 5 - 均衡)
+      intensity: DEFAULT_INTENSITY,
+      setIntensity: (intensity) => set({ intensity }),
     }),
     {
       name: 'nyx-ai-storage',
@@ -237,6 +246,7 @@ export const useAppStore = create<AppState>()(
         characters: state.characters,
         perspective: state.perspective,
         storyTheme: state.storyTheme,
+        intensity: state.intensity,
       }),
     }
   )

@@ -8,6 +8,7 @@ import { useAppStore } from "@/store/useAppStore"
 import { CharacterManager } from "@/components/CharacterManager"
 import { PerspectiveSelector } from "@/components/PerspectiveSelector"
 import { StoryOutput, GenerateButtons } from "@/components/StoryOutput"
+import { IntensitySlider } from "@/components/IntensitySlider"
 import { HistoryDrawer } from "@/components/HistoryDrawer"
 import { UserMenu } from "@/components/UserMenu"
 import { TemplateSelector } from "@/components/TemplateSelector"
@@ -46,7 +47,9 @@ export default function AppPage() {
     setSelectedTemplate,
     isGeneratingTemplate,
     setGeneratedOutline,
-    selectedTemplate
+    selectedTemplate,
+    intensity,
+    setIntensity
   } = useAppStore()
   
   const [historyOpen, setHistoryOpen] = useState(false)
@@ -477,7 +480,16 @@ ${combination.character}和我獨處一室，氣氛變得有些微妙...`
               </label>
               <PerspectiveSelector />
             </div>
-            
+
+            {/* V8.0: 刺激度調節 */}
+            <div className="space-y-2">
+              <IntensitySlider
+                value={intensity}
+                onChange={setIntensity}
+                size="md"
+              />
+            </div>
+
             <div className="pt-4 border-t nyx-border">
               <GenerateButtons />
             </div>
