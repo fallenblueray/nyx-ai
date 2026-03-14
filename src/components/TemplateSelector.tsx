@@ -4,7 +4,7 @@
 import { useState, useEffect } from "react"
 import { useAppStore } from "@/store/useAppStore"
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { BookOpen, Save, Plus, Trash2, Crown, Flame, Star, Search, X, User, Sparkles, Check, TrendingUp, Loader2 } from "lucide-react"
@@ -593,6 +593,9 @@ ${outlineText || '故事即將開始...'}`
             <DialogTitle className="text-xl font-bold text-[color:var(--text-primary)]">
               選擇故事模板
             </DialogTitle>
+            <DialogDescription className="sr-only">
+              瀏覽和選擇故事模板開始創作
+            </DialogDescription>
           </DialogHeader>
 
           {/* 搜索框 */}
@@ -777,6 +780,9 @@ ${outlineText || '故事即將開始...'}`
         <DialogContent className="nyx-surface nyx-border nyx-text-primary max-w-sm">
           <DialogHeader>
             <DialogTitle>儲存為我的模板</DialogTitle>
+            <DialogDescription className="sr-only">
+              將當前設定儲存為個人模板
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 mt-2">
             <div>
@@ -824,6 +830,9 @@ ${outlineText || '故事即將開始...'}`
                     </span>
                   )}
                 </DialogTitle>
+                <DialogDescription className="sr-only">
+                  預覽和編輯角色卡設定
+                </DialogDescription>
               </DialogHeader>
 
               <div className="space-y-4 mt-2">
