@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/input";
 import Link from "next/link";
 import { ChevronRight, Sparkles, Wand2 } from "lucide-react";
 
+import Image from "next/image";
+
 export function Hero() {
   const [userPrompt, setUserPrompt] = useState("");
 
@@ -24,6 +26,17 @@ export function Hero() {
   return (
     <section className="py-16 md:py-24 lg:py-32">
       <div className="mx-auto max-w-4xl px-6 text-center">
+        {/* Logo */}
+        <div className="mx-auto mb-6 w-24 h-24 md:w-32 md:h-32 relative">
+          <Image
+            src="/images/logo.jpg"
+            alt="NyxAI"
+            fill
+            className="rounded-2xl object-cover shadow-2xl shadow-purple-500/20"
+            priority
+          />
+        </div>
+
         {/* Badge */}
         <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 backdrop-blur-sm">
           <Sparkles className="h-3.5 w-3.5 text-purple-400" />
