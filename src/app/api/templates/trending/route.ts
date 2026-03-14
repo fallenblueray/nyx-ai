@@ -81,23 +81,27 @@ export async function GET(request: Request) {
     // 如果數據不足，補充熱門默認模板
     if (trendingTemplates.length < limit) {
       const existingIds = new Set(trendingTemplates.map((t) => t.id));
-      const HOT_TEMPLATE_IDS = [
-        "office-overtime",
-        "neighbor-wife",
-        "teacher-tutoring", 
-        "childhood-friend",
-        "school-senior"
+      // 熱門模板配置：同時支持 id 和 slug 匹配
+      const HOT_TEMPLATES = [
+        { slug: "cold-boss-overtime", id: "career-001" },      // 女上司加班
+        { slug: "lonely-neighbor", id: "mature-001" },         // 寂寞鄰居
+        { slug: "female-teacher-after-class", id: "campus-002" }, // 女老師課後
+        { slug: "childhood-sweetheart", id: "classic-002" },   // 青梅竹馬
+        { slug: "school-belle-senior", id: "campus-001" },     // 校花學姐
       ];
       
       // 優先使用預設熱門模板
-      for (const id of HOT_TEMPLATE_IDS) {
+      for (const hot of HOT_TEMPLATES) {
         if (trendingTemplates.length >= limit) break;
-        if (existingIds.has(id)) continue;
+        if (existingIds.has(hot.id)) continue;
         
-        const template = officialTemplates.find((t) => t.id === id);
+        // 同時匹配 id 或 slug
+        const template = officialTemplates.find(
+          (t) => t.id === hot.id || t.slug === hot.slug
+        );
         if (template) {
           trendingTemplates.push({ ...template, usageCount: 0 });
-          existingIds.add(id);
+          existingIds.add(template.id);
         }
       }
       
