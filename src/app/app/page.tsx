@@ -15,10 +15,10 @@ import { RandomStoryButton } from "@/components/RandomStoryButton"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
-import { Menu, Save, History, Share2, Plus, Loader2, Settings } from "lucide-react"
+import { Menu, Save, History, Plus, Loader2, Settings } from "lucide-react"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
-import { saveStory, shareStory } from "@/app/actions/story"
+import { saveStory } from "@/app/actions/story"
 import { useTranslation } from "@/components/TranslationContext"
 import { RefreshCw, Users, BookOpen } from "lucide-react"
 
@@ -51,8 +51,6 @@ export default function AppPage() {
   
   const [historyOpen, setHistoryOpen] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [sharing, setSharing] = useState(false)
-  const [shareCopied, setShareCopied] = useState(false)
   const [title, setTitle] = useState("")
   const [saved, setSaved] = useState(false)
   const [isRegeneratingCharacters, setIsRegeneratingCharacters] = useState(false)
@@ -121,40 +119,6 @@ export default function AppPage() {
       setTimeout(() => setSaved(false), 2000)
     }
     setSaving(false)
-  }
-  
-  const handleShare = async () => {
-    if (!storyOutput) return
-    
-    // First save the story
-    setSaving(true)
-    const saveResult = await saveStory({
-      title: title || "無標題",
-      content: storyOutput,
-      roles: characters,
-      is_public: true
-    })
-    
-    if (saveResult.error) {
-      setError(saveResult.error)
-      setSaving(false)
-      return
-    }
-    
-    // Then share
-    setSharing(true)
-    const result = await shareStory(saveResult.story?.id || "")
-    
-    if (result.error) {
-      setError(result.error)
-    } else if (result.shareId) {
-      const shareUrl = `${window.location.origin}/share/${result.shareId}`
-      navigator.clipboard.writeText(shareUrl)
-      setShareCopied(true)
-      setTimeout(() => setShareCopied(false), 2000)
-    }
-    setSaving(false)
-    setSharing(false)
   }
   
   const handleNewStory = () => {
@@ -353,26 +317,6 @@ ${outlineText || '故事即將開始...'}`
               <Save className="w-4 h-4 mr-1" />
             )}
             <span className="hidden sm:inline">{saved ? (translations.app?.saved || "已儲存") : (translations.app?.save || "儲存")}</span>
-          </Button>
-          
-          <Button
-            variant="ghost"
-            size="sm"
-            disabled={!hasOutput || sharing}
-            onClick={handleShare}
-            className={cn(
-              "nyx-text-secondary hover:nyx-text-primary",
-              !hasOutput && "opacity-50 cursor-not-allowed"
-            )}
-          >
-            {sharing || saving ? (
-              <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-            ) : shareCopied ? (
-              <Share2 className="w-4 h-4 mr-1 text-green-500" />
-            ) : (
-              <Share2 className="w-4 h-4 mr-1" />
-            )}
-            <span className="hidden sm:inline">{shareCopied ? (translations.app?.copied || "已複製") : "分享"}</span>
           </Button>
           
           <Button

@@ -246,18 +246,12 @@ export function StoryOutput() {
   const { storyOutput, error, isGenerating, currentSceneIndex, totalScenes, isStreaming, storyInput, characters } = useAppStore()
   const [isEditing, setIsEditing] = useState(false)
   const [editContent, setEditContent] = useState("")
-  const [savedShareUrl, setSavedShareUrl] = useState<string | undefined>(undefined)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const outputRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     setEditContent(storyOutput)
   }, [storyOutput])
-
-  // 當故事變化時重置分享連結
-  useEffect(() => {
-    setSavedShareUrl(undefined)
-  }, [storyInput])
 
   // Auto-resize textarea to match content height
   const adjustTextareaHeight = useCallback(() => {
@@ -292,8 +286,6 @@ export function StoryOutput() {
               <StoryShareCard
                 storyContent={storyOutput}
                 storyTitle={undefined}
-                shareUrl={savedShareUrl}
-                onShareUrlChange={setSavedShareUrl}
               />
             )}
             {storyOutput && !isStreaming && (
