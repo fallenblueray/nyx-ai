@@ -517,11 +517,14 @@ export function StoryShareCard({
 
   return (
     <>
-      {/* 主分享按鈕 */}
+      {/* 主分享按鈕 - 總是打開分享對話框 */}
       <Button
         variant="ghost"
         size="sm"
-        onClick={handleNativeShare}
+        onClick={() => {
+          console.log("[StoryShareCard] Share button clicked, shareUrl:", shareUrl);
+          setShowShareDialog(true);
+        }}
         className="nyx-text-muted hover:nyx-text-primary h-7 px-2"
       >
         <Share2 className="w-3 h-3 mr-1" />
