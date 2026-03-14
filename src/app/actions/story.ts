@@ -169,25 +169,32 @@ export async function getSharedStory(shareId: string) {
   try {
     const supabase = createAdminClient()
 
-    // Try by ID first, then by share_id
+    // Try by ID first, then by short_id
     const query = supabase
       .from('stories')
       .select('*')
       .eq('is_public', true)
 
-    // Check if shareId looks like UUID (direct id) or token
+    // Check if shareId looks like UUID (direct id) or short token
     if (shareId.includes('-') && shareId.length === 36) {
-      // Try both: as story id first, then as share_id
+      // Try as story id first
       const { data: data1 } = await query.eq('id', shareId).maybeSingle()
       if (data1) return { story: data1 }
-      
-      const { data: data2, error } = await query.eq('share_id', shareId).maybeSingle()
-      if (error || !data2) return { error: '找不到故事' }
-      return { story: data2 }
     }
 
-    const { data: story, error } = await query.eq('id', shareId).maybeSingle()
-    if (error || !story) return { error: '找不到故事' }
+    // Try by short_id (8-char nanoid)
+    const { data: story, error } = await query.eq('short_id', shareId).maybeSingle()
+    if (error || !story) {
+      // Fallback: try by id (for backward compatibility)
+      const { data: storyById, error: idError } = await supabase
+        .from('stories')
+        .select('*')
+        .eq('is_public', true)
+        .eq('id', shareId)
+        .maybeSingle()
+      if (idError || !storyById) return { error: '找不到故事' }
+      return { story: storyById }
+    }
     return { story }
   } catch (err) {
     console.error('getSharedStory error:', err)
@@ -197,19 +204,21 @@ export async function getSharedStory(shareId: string) {
 
 export async function shareStory(id: string) {
   const session = await getServerSession(authOptions)
-  
+
   if (!session?.user?.id) {
     return { error: '請先登入' }
   }
 
-  const supabase = await createServerClient()
+  // ✅ 使用 admin client 繞過 RLS
+  const supabase = createAdminClient()
 
+  // 獲取故事的 short_id（新版使用 short_id 而不是 share_id）
   const { data: story, error } = await supabase
     .from('stories')
     .update({ is_public: true })
     .eq('id', id)
     .eq('user_id', session.user.id)
-    .select('share_id')
+    .select('short_id')
     .single()
 
   if (error) {
@@ -217,5 +226,6 @@ export async function shareStory(id: string) {
   }
 
   revalidatePath('/app')
-  return { shareId: story?.share_id }
+  // 返回 short_id 作為分享 ID
+  return { shareId: story?.short_id || id }
 }
