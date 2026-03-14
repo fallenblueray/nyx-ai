@@ -518,18 +518,18 @@ export function StoryShareCard({
   return (
     <>
       {/* 主分享按鈕 - 總是打開分享對話框 */}
-      <Button
-        variant="ghost"
-        size="sm"
+      <button
         onClick={() => {
-          console.log("[StoryShareCard] Share button clicked, shareUrl:", shareUrl);
+          console.log("[StoryShareCard] Share button clicked");
+          alert("分享按鈕被點擊了！");
           setShowShareDialog(true);
         }}
-        className="nyx-text-muted hover:nyx-text-primary h-7 px-2"
+        className="flex items-center gap-1 px-2 py-1 text-sm text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
+        type="button"
       >
-        <Share2 className="w-3 h-3 mr-1" />
-        分享
-      </Button>
+        <Share2 className="w-3 h-3" />
+        <span>分享</span>
+      </button>
 
       {/* 分享選項對話框 */}
       <Dialog open={showShareDialog} onOpenChange={setShowShareDialog}>
