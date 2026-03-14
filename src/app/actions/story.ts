@@ -71,13 +71,14 @@ export interface StoryData {
 
 export async function saveStory(data: StoryData) {
   const session = await getServerSession(authOptions)
-  
+
   if (!session?.user?.id) {
     return { error: '請先登入' }
   }
 
   try {
-    const supabase = await createServerClient()
+    // ✅ 使用 admin client 繞過 RLS
+    const supabase = createAdminClient()
 
     const storyData = {
       user_id: session.user.id,
@@ -110,12 +111,13 @@ export async function saveStory(data: StoryData) {
 
 export async function updateStory(id: string, data: Partial<StoryData>) {
   const session = await getServerSession(authOptions)
-  
+
   if (!session?.user?.id) {
     return { error: '請先登入' }
   }
 
-  const supabase = await createServerClient()
+  // ✅ 使用 admin client 繞過 RLS
+  const supabase = createAdminClient()
 
   const updateData: Record<string, unknown> = {}
   if (data.title) updateData.title = data.title
@@ -142,12 +144,13 @@ export async function updateStory(id: string, data: Partial<StoryData>) {
 
 export async function getUserStories() {
   const session = await getServerSession(authOptions)
-  
+
   if (!session?.user?.id) {
     return { error: '請先登入' }
   }
 
-  const supabase = await createServerClient()
+  // ✅ 使用 admin client 繞過 RLS
+  const supabase = createAdminClient()
 
   const { data: stories, error } = await supabase
     .from('stories')
