@@ -1,7 +1,40 @@
 # NyxAI 系統說明書 (V5.3 管理員後台 & 動態提示詞)
 
 > **千螢維護協議**：每次開始任何 NyxAI 工作前，必須先完整讀取此文件。
-> **✅ SYSTEM.md 已更新至 V8.3** - 角色原型系統 + Supabase 字段映射修復
+> **✅ SYSTEM.md 已更新至 V8.4** - Phase 2 病毒增長系統 + 數據庫架構
+
+---
+
+## 🔥 本次會話關鍵更新 (V8.4)
+
+### Phase 2 - 病毒增長系統
+- **故事頁面系統**: `/story/{id}` 獨立故事頁面，支持短 ID，SEO 優化
+- **隨機故事功能**: 一鍵生成病毒題材組合（人物+場景+開場白+刺激度評分）
+- **排行榜系統**: 首頁「熱門故事」卡片 + `/trending` 完整排行榜頁面
+- **病毒題材池**: 15 人物 × 12 場景 × 15 開場白，自動標籤生成
+
+### 數據庫架構 (stories 表)
+```sql
+-- 核心字段
+id UUID PRIMARY KEY
+title TEXT
+content TEXT NOT NULL
+short_id VARCHAR(10) UNIQUE
+template_name TEXT
+is_public BOOLEAN DEFAULT true
+view_count INTEGER DEFAULT 0
+share_count INTEGER DEFAULT 0
+created_at TIMESTAMPTZ
+
+-- 必要索引
+idx_stories_short_id, idx_stories_view_count, idx_stories_share_count
+
+-- RLS 策略
+Allow public read (is_public = true)
+Allow owner read/update/insert
+```
+
+**執行位置**: `supabase/migrations/001_create_stories_table.sql`
 
 ---
 

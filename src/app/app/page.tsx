@@ -11,6 +11,7 @@ import { StoryOutput, GenerateButtons } from "@/components/StoryOutput"
 import { HistoryDrawer } from "@/components/HistoryDrawer"
 import { UserMenu } from "@/components/UserMenu"
 import { TemplateSelector } from "@/components/TemplateSelector"
+import { RandomStoryButton } from "@/components/RandomStoryButton"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
@@ -325,7 +326,7 @@ ${outlineText || '故事即將開始...'}`
         </div>
         
         {/* 固定右側按鈕群 */}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0">
           <Button
             variant="ghost"
             size="sm"
@@ -443,6 +444,21 @@ ${outlineText || '故事即將開始...'}`
                 {translations.app?.storyStart || "劇情起點"}
               </label>
               <TemplateSelector />
+              {/* 隨機故事功能 */}
+              <RandomStoryButton 
+                onSelect={(combination) => {
+                  // 清除之前的角色卡和故事內容
+                  setCharacters([])
+                  setStoryOutput("")
+                  setGeneratedOutline(null)
+                  
+                  // 生成故事起點描述
+                  const storySetup = `${combination.scene}，${combination.opening.text}
+
+${combination.character}和我獨處一室，氣氛變得有些微妙...`
+                  setStoryInput(storySetup)
+                }}
+              />
               {/* V5.2: 模板生成載入提示 */}
               {isGeneratingTemplate && (
                 <div className="flex items-center gap-2 text-sm text-purple-400 mb-2">

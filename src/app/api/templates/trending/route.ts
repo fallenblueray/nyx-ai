@@ -24,34 +24,52 @@ export async function GET(request: Request) {
     const trendingTemplates: (Template & { usageCount: number })[] = [];
 
     try {
-      // 查詢指定時間範圍內的模板使用統計
-      const { data: stats, error } = await supabase
-        .from("template_usage_stats")
-        .select("template_id, count")
-        .gte("used_at", new Date(Date.now() - hours * 60 * 60 * 1000).toISOString())
-        .order("used_at", { ascending: false });
+      // 使用 trending_templates 視圖獲取24小時內熱門模板
+      const { data: trendingData, error: trendingError } = await supabase
+        .from("trending_templates")
+        .select("template_id, usage_count_24h")
+        .limit(limit);
 
-      if (!error && stats) {
-        // 統計每個模板的使用次數
-        const usageCount: Record<string, number> = {};
-        stats.forEach((stat: { template_id: string }) => {
-          usageCount[stat.template_id] = (usageCount[stat.template_id] || 0) + 1;
-        });
-
-        // 排序並獲取前 N 個
-        const sortedTemplateIds = Object.entries(usageCount)
-          .sort(([, a], [, b]) => b - a)
-          .slice(0, limit)
-          .map(([id]) => id);
-
+      if (!trendingError && trendingData && trendingData.length > 0) {
         // 從官方模板中獲取完整數據
-        for (const templateId of sortedTemplateIds) {
-          const template = officialTemplates.find((t) => t.id === templateId);
+        for (const item of trendingData) {
+          const template = officialTemplates.find((t) => t.id === item.template_id);
           if (template) {
             trendingTemplates.push({
               ...template,
-              usageCount: usageCount[templateId],
+              usageCount: item.usage_count_24h || 0,
             });
+          }
+        }
+      } else {
+        // 如果視圖沒有數據，直接查詢 template_usage_stats 做聚合
+        const { data: stats, error } = await supabase
+          .from("template_usage_stats")
+          .select("template_id")
+          .gte("used_at", new Date(Date.now() - hours * 60 * 60 * 1000).toISOString());
+
+        if (!error && stats && stats.length > 0) {
+          // 統計每個模板的使用次數
+          const usageCount: Record<string, number> = {};
+          stats.forEach((stat: { template_id: string }) => {
+            usageCount[stat.template_id] = (usageCount[stat.template_id] || 0) + 1;
+          });
+
+          // 排序並獲取前 N 個
+          const sortedTemplateIds = Object.entries(usageCount)
+            .sort(([, a], [, b]) => b - a)
+            .slice(0, limit)
+            .map(([id]) => id);
+
+          // 從官方模板中獲取完整數據
+          for (const templateId of sortedTemplateIds) {
+            const template = officialTemplates.find((t) => t.id === templateId);
+            if (template) {
+              trendingTemplates.push({
+                ...template,
+                usageCount: usageCount[templateId],
+              });
+            }
           }
         }
       }

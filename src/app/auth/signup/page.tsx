@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useState, Suspense } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -16,8 +16,11 @@ const getSupabase = () => {
   return createClient(url, key)
 }
 
-export default function SignUp() {
+function SignUpForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const refCode = searchParams.get("ref")
+
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
@@ -55,18 +58,82 @@ export default function SignUp() {
 
       // Auto-confirm (for dev, since confirm email is disabled)
       if (data.user) {
-        // ✅ 初始化 profiles 表（新用戶免費 8000 字）
+        // ✅ 初始化 profiles 表（新用戶免費 8000 字 + 邀請獎勵）
+        let initialWordCount = 8000;
+        let referralSuccess = false;
+
+        // 追蹤邀請轉化
+        if (refCode) {
+          try {
+            console.log('[Signup] Tracking referral:', refCode, 'for user:', data.user.id);
+            const response = await fetch("/api/referral", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ code: refCode, referredId: data.user.id }),
+            });
+
+            const result = await response.json();
+            console.log('[Signup] Referral API response:', response.status, result);
+
+            if (response.ok) {
+              initialWordCount += 1000; // 邀請獎勵 1000 字
+              referralSuccess = true;
+              console.log('[Signup] Referral tracked successfully, word count:', initialWordCount);
+            } else {
+              console.error('[Signup] Referral API error:', result);
+            }
+          } catch (err) {
+            console.error("[Signup] Referral tracking error:", err);
+          }
+        }
+
+        console.log('[Signup] Creating profile with word_count:', initialWordCount);
         const { error: profileError } = await supabase
           .from('profiles')
           .upsert(
             {
               id: data.user.id,
-              email: data.user.email,
-              word_count: 8000,
+              word_count: initialWordCount,
               is_first_purchase: true,
             },
             { onConflict: 'id' }
           )
+
+        if (profileError) {
+          console.error('[Signup] Profile creation error:', profileError);
+        } else {
+          console.log('[Signup] Profile created successfully');
+        }
+
+        // ✅ 同時追踪邀請人的獎勵（給邀請人加字）
+        if (referralSuccess && refCode) {
+          try {
+            console.log('[Signup] Adding reward to referrer for code:', refCode);
+            const { data: referralData } = await supabase
+              .from('referral_codes')
+              .select('user_id')
+              .eq('code', refCode.toUpperCase())
+              .single();
+            
+            if (referralData?.user_id) {
+              const { data: referrerProfile } = await supabase
+                .from('profiles')
+                .select('word_count')
+                .eq('id', referralData.user_id)
+                .single();
+              
+              if (referrerProfile) {
+                await supabase
+                  .from('profiles')
+                  .update({ word_count: (referrerProfile.word_count || 0) + 1000 })
+                  .eq('id', referralData.user_id);
+                console.log('[Signup] Referrer reward added:', referralData.user_id);
+              }
+            }
+          } catch (rewardErr) {
+            console.error('[Signup] Referrer reward error:', rewardErr);
+          }
+        }
 
         if (profileError) {
           console.error('Profile init error:', profileError)
@@ -74,18 +141,26 @@ export default function SignUp() {
         }
 
         // Sign in immediately
-        const { error: signInError } = await supabase.auth.signInWithPassword({
+        console.log('[Signup] Attempting auto-login...');
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
           email,
           password,
         })
 
         if (signInError) {
+          console.error('[Signup] Auto-login failed:', signInError);
           setError("帳號已建立，請在登入頁登入")
           setTimeout(() => router.push("/auth/signin"), 2000)
         } else {
-          // Auto redirect to app
-          router.push("/app")
-          router.refresh()
+          console.log('[Signup] Auto-login successful, session:', signInData.session ? 'exists' : 'null');
+          // 確保 session 已設置
+          if (signInData.session) {
+            // 強制刷新頁面以確保 session 同步
+            window.location.href = "/app";
+          } else {
+            router.push("/app");
+            router.refresh();
+          }
         }
       }
     } catch (err) {
@@ -103,9 +178,17 @@ export default function SignUp() {
           <CardTitle className="text-2xl font-bold text-white">
             建立帳號
           </CardTitle>
-          <p className="text-slate-400 text-sm">
-            開始你的 NyxAI 創作旅程
-          </p>
+          {refCode ? (
+            <div className="mt-2">
+              <span className="text-sm text-purple-400">
+                🎁 使用邀請碼 <strong>{refCode}</strong> 註冊，獲得額外 1000 字獎勵！
+              </span>
+            </div>
+          ) : (
+            <p className="text-slate-400 text-sm">
+              開始你的 NyxAI 創作旅程
+            </p>
+          )}
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -176,5 +259,14 @@ export default function SignUp() {
         </CardContent>
       </Card>
     </main>
+  )
+}
+
+// Main export with Suspense wrapper
+export default function SignUp() {
+  return (
+    <Suspense>
+      <SignUpForm />
+    </Suspense>
   )
 }

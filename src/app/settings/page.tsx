@@ -5,6 +5,8 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { LanguageSwitcher } from '@/components/settings/LanguageSwitcher';
 import { ThemeSwitcher } from '@/components/settings/ThemeSwitcher';
 import { MemorySettings } from '@/components/settings/MemorySettings';
+import { InviteTab } from '@/components/settings/InviteTab';
+import { WordCountTab } from '@/components/settings/WordCountTab';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowLeft } from 'lucide-react';
@@ -28,7 +30,7 @@ export default async function SettingsPage() {
   const supabase = createAdminClient();
   const { data: profileData, error: dataError } = await supabase
     .from('profiles')
-    .select('preferred_language, word_count')
+    .select('preferred_language, word_count, is_first_purchase')
     .eq('id', session.user.id)
     .single();
 
@@ -39,6 +41,7 @@ export default async function SettingsPage() {
   const language = (profileData.preferred_language || 'zh-TW') as Language;
   const translations = getTranslation(language);
   const wordCount = profileData.word_count || 0;
+  const isFirstPurchase = profileData.is_first_purchase ?? true;
 
   // 獲取記憶層偏好
   const { preferences } = await getUserPreferences();
@@ -65,15 +68,21 @@ export default async function SettingsPage() {
       {/* Content */}
       <div className="mx-auto max-w-2xl px-4 py-8 sm:px-6 lg:px-8">
         <Tabs defaultValue="language" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="language">
               {translations.settings.tabs.language}
             </TabsTrigger>
             <TabsTrigger value="appearance">
               {translations.settings.tabs.appearance}
             </TabsTrigger>
+            <TabsTrigger value="wordcount">
+              ⚡ 字數
+            </TabsTrigger>
             <TabsTrigger value="memory">
               🧠 AI 記憶
+            </TabsTrigger>
+            <TabsTrigger value="invite">
+              💌 邀請好友
             </TabsTrigger>
           </TabsList>
 
@@ -85,12 +94,20 @@ export default async function SettingsPage() {
             <ThemeSwitcher translations={translations} />
           </TabsContent>
 
+          <TabsContent value="wordcount" className="space-y-4">
+            <WordCountTab wordCount={wordCount} isFirstPurchase={true} />
+          </TabsContent>
+
           <TabsContent value="memory" className="space-y-4">
             {preferences ? (
               <MemorySettings initialPreferences={preferences} />
             ) : (
               <p className="text-slate-400 text-sm">載入記憶設定中...</p>
             )}
+          </TabsContent>
+
+          <TabsContent value="invite" className="space-y-4">
+            <InviteTab />
           </TabsContent>
         </Tabs>
       </div>

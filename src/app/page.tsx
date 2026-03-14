@@ -7,33 +7,28 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { ChevronRight, Sparkles, Zap, BookOpen, Users, Clock, PenTool, Layers, Download, Play, Wand2 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { officialTemplates } from "@/data/templates";
+import { TrendingStories } from "@/components/TrendingStories";
 import type { Template } from "@/types/template";
 
 const NYX_GRADIENT = ["#1e1b4b", "#3730a3", "#6d28d9", "#8b5cf6", "#a78bfa"];
 
-// 熱門題材數據
-// ========== Phase 5: 熱門模板快捷入口 ==========
-// 從官方模板中選取高質量模板作為熱門推薦
-const HOT_TOPIC_TEMPLATES = officialTemplates
-  .filter(t => t.isActive && !t.isPremium) // 只選免費且活躍的
-  .slice(0, 8) // 取前 8 個
-  .map(t => ({
-    id: t.id,
-    title: t.name,
-    desc: t.description.slice(0, 30) + (t.description.length > 30 ? '...' : ''),
-    color: t.category === 'classic' ? 'from-purple-500/20 to-pink-500/20' :
-           t.category === 'career' ? 'from-amber-500/20 to-orange-500/20' :
-           t.category === 'campus' ? 'from-green-500/20 to-emerald-500/20' :
-           t.category === 'mature' ? 'from-rose-500/20 to-red-500/20' :
-           t.category === 'taboo' ? 'from-red-500/20 to-pink-500/20' :
-           t.category === 'ntr' ? 'from-orange-500/20 to-amber-500/20' :
-           t.category === 'extreme' ? 'from-violet-500/20 to-fuchsia-500/20' :
-           'from-blue-500/20 to-cyan-500/20'
-  }));
+// 獲取模板顏色
+const getTemplateColor = (category: string) => {
+  switch (category) {
+    case 'classic': return 'from-purple-500/20 to-pink-500/20';
+    case 'career': return 'from-amber-500/20 to-orange-500/20';
+    case 'campus': return 'from-green-500/20 to-emerald-500/20';
+    case 'mature': return 'from-rose-500/20 to-red-500/20';
+    case 'taboo': return 'from-red-500/20 to-pink-500/20';
+    case 'ntr': return 'from-orange-500/20 to-amber-500/20';
+    case 'extreme': return 'from-violet-500/20 to-fuchsia-500/20';
+    default: return 'from-blue-500/20 to-cyan-500/20';
+  }
+};
 
 // NyxAI 能力
 const CAPABILITIES = [
@@ -60,6 +55,14 @@ const PRICING = [
   { words: "300萬字", price: "666", popular: false },
 ];
 
+// 熱門模板類型
+interface HotTopicTemplate {
+  id: string;
+  title: string;
+  desc: string;
+  color: string;
+}
+
 export default function Home() {
   const [demoInput] = useState("深夜加班時，女上司忽然鎖上辦公室的門");
   const [demoOutput] = useState(`她慢慢走向我桌前。
@@ -72,6 +75,60 @@ export default function Home() {
 
 「陪我多待一會，好嗎？」`);
   const [userPrompt, setUserPrompt] = useState("");
+  
+  // 熱門模板狀態 - 從 Supabase 獲取
+  const [hotTopics, setHotTopics] = useState<HotTopicTemplate[]>([]);
+  const [isLoadingHotTopics, setIsLoadingHotTopics] = useState(true);
+  
+  // 獲取熱門模板
+  useEffect(() => {
+    const fetchHotTopics = async () => {
+      try {
+        const response = await fetch('/api/templates/trending?limit=8');
+        const data = await response.json();
+        
+        if (data.templates && data.templates.length > 0) {
+          // 使用 Supabase 返回的熱門模板
+          const formatted = data.templates.map((t: Template) => ({
+            id: t.id,
+            title: t.name,
+            desc: t.description.slice(0, 30) + (t.description.length > 30 ? '...' : ''),
+            color: getTemplateColor(t.category)
+          }));
+          setHotTopics(formatted);
+        } else {
+          // 回退：使用本地模板數據
+          const fallback = officialTemplates
+            .filter(t => t.isActive && !t.isPremium)
+            .slice(0, 8)
+            .map(t => ({
+              id: t.id,
+              title: t.name,
+              desc: t.description.slice(0, 30) + (t.description.length > 30 ? '...' : ''),
+              color: getTemplateColor(t.category)
+            }));
+          setHotTopics(fallback);
+        }
+      } catch (error) {
+        console.error("Failed to fetch hot topics:", error);
+        // 出錯時使用本地數據
+        const fallback = officialTemplates
+          .filter(t => t.isActive && !t.isPremium)
+          .slice(0, 8)
+          .map(t => ({
+            id: t.id,
+            title: t.name,
+            desc: t.description.slice(0, 30) + (t.description.length > 30 ? '...' : ''),
+            color: getTemplateColor(t.category)
+          }));
+        setHotTopics(fallback);
+      } finally {
+        setIsLoadingHotTopics(false);
+      }
+    };
+    
+    fetchHotTopics();
+  }, []);
 
   const handleGenerate = () => {
     if (userPrompt.trim()) {
@@ -265,24 +322,37 @@ export default function Home() {
               點擊進入，自動填寫提示詞
             </p>
             
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {HOT_TOPIC_TEMPLATES.map((topic) => (
-                <Link
-                  key={topic.id}
-                  href={`/app?template=${encodeURIComponent(topic.id)}&prompt=${encodeURIComponent(topic.desc)}`}
-                  className="group"
-                >
-                  <div className={`rounded-xl border border-white/10 bg-gradient-to-br ${topic.color} p-5 backdrop-blur-sm transition-all duration-300 hover:border-white/30 hover:scale-[1.02] h-full`}>
-                    <h3 className="text-lg font-bold text-white mb-2 group-hover:text-purple-300 transition-colors">
-                      {topic.title}
-                    </h3>
-                    <p className="text-sm text-white/60 leading-relaxed">
-                      「{topic.desc}」
-                    </p>
-                  </div>
-                </Link>
-              ))}
-            </div>
+            {isLoadingHotTopics ? (
+              <div className="flex justify-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-400"></div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {hotTopics.map((topic) => (
+                  <Link
+                    key={topic.id}
+                    href={`/app?template=${encodeURIComponent(topic.id)}&prompt=${encodeURIComponent(topic.desc)}`}
+                    className="group"
+                  >
+                    <div className={`rounded-xl border border-white/10 bg-gradient-to-br ${topic.color} p-5 backdrop-blur-sm transition-all duration-300 hover:border-white/30 hover:scale-[1.02] h-full`}>
+                      <h3 className="text-lg font-bold text-white mb-2 group-hover:text-purple-300 transition-colors">
+                        {topic.title}
+                      </h3>
+                      <p className="text-sm text-white/60 leading-relaxed">
+                        「{topic.desc}」
+                      </p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* ==================== 熱門故事排行榜 ==================== */}
+        <section className="relative z-10 py-12 px-4">
+          <div className="mx-auto max-w-4xl">
+            <TrendingStories />
           </div>
         </section>
 

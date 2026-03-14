@@ -102,34 +102,16 @@ export function UserMenu() {
   if (isLoggedIn) {
     return (
       <div className="flex items-center gap-3">
-        {/* Phase 4: 創作成就統計（沉沒成本） */}
-        {(stats.totalStories > 0 || stats.totalCharacters > 0) && (
-          <div className="hidden md:flex items-center gap-3 text-xs px-3 py-1.5 rounded-full bg-[var(--surface-2)] border border-[var(--border)]">
-            {stats.totalStories > 0 && (
-              <span className="text-purple-400 flex items-center gap-1">
-                <BookOpen className="w-3 h-3" />
-                {stats.totalStories} 部作品
-              </span>
-            )}
-            {stats.totalCharacters > 0 && (
-              <span className="text-blue-400 flex items-center gap-1">
-                <Users className="w-3 h-3" />
-                {stats.totalCharacters} 個角色
-              </span>
-            )}
-          </div>
-        )}
-
-        {/* 剩餘字數 + 充值按鈕 */}
+        {/* 充值按鈕（餘額在設定頁查看） */}
         <Button
           variant="ghost"
           size="sm"
           onClick={() => setRechargeOpen(true)}
           className="text-yellow-400 hover:text-yellow-300 hover:bg-[var(--surface-2)] px-2"
-          title="點擊充值"
+          title="立即充值"
         >
           <Zap className="w-4 h-4 mr-1" />
-          <span className="text-sm">{wordCount.toLocaleString()} 字</span>
+          <span className="text-sm">充值</span>
         </Button>
 
         <div className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
