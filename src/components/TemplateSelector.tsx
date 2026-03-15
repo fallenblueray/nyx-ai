@@ -225,6 +225,10 @@ export function TemplateSelector() {
   // V5.2: 統一的角色+大綱生成函數（所有模板使用）
   const generateCharactersAndOutlineUnified = async (template: Template) => {
     console.log('[TemplateSelector] V5.2: Generating characters and outline for:', template.id)
+    
+    // V6.9: 先清除舊角色，避免重複累積
+    setCharacters([])
+    
     setIsGeneratingCharacters(true)
     setIsGeneratingTemplate(true)
     setError(null)

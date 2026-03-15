@@ -75,9 +75,9 @@ export default function AppPage() {
         // 記錄選中的模板（V5: Prompt Engine 使用）
         setSelectedTemplate(templateId)
         
-        // 只有當沒有現有角色時才創建 URL 模板角色（避免覆蓋 AI 生成的角色）
+        // V6.9: 檢查是否正在生成角色，避免競態條件導致重複角色
         const currentState = useAppStore.getState()
-        if (currentState.characters.length === 0 && template.characterConfig) {
+        if (currentState.characters.length === 0 && template.characterConfig && !currentState.isGeneratingTemplate) {
           const char = {
             id: `${template.id}-char-${Date.now()}`,
             name: template.characterConfig.name,
@@ -90,7 +90,7 @@ export default function AppPage() {
     } else if (promptFromUrl && !storyInput) {
       setStoryInput(promptFromUrl)
     }
-  }, [searchParams, setStoryInput, storyInput, setCharacters, setSelectedTemplate])
+  }, [searchParams, setStoryInput, storyInput, setCharacters, setSelectedTemplate, isGeneratingTemplate])
   
   const hasOutput = storyOutput.trim().length > 0
   

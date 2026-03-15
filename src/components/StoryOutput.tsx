@@ -414,6 +414,12 @@ export function GenerateButtons() {
     if (shouldRegenerate && canGenerate && !isGenerating) {
       setError(null)
       setShouldRegenerate(false)
+      
+      // V6.9: 「再寫一次」時清除舊角色，讓重新生成流程創建新角色
+      const { setCharacters, setGeneratedCharacters } = useAppStore.getState()
+      setCharacters([])
+      setGeneratedCharacters(null)
+      
       // V3: 使用分段生成流程
       generateStoryV3()
     }
