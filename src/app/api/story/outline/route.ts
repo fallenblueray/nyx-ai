@@ -1,7 +1,7 @@
 /**
- * V9.0: 優化版 Outline API - 單一 AI 調用生成角色+大綱
+ * V9.1: 優化版 Outline API - 單一 AI 調用生成角色+大綱+標題
  * - 性能優化：從兩次串行 AI 調用改為單次調用
- * - 目標：從 ~16-30秒 優化到 ~8-12秒
+ * - 新增：自動生成故事標題
  * - Fallback：解析失敗時自動回退到串行生成
  */
 import { NextRequest, NextResponse } from "next/server"
@@ -131,6 +131,7 @@ export async function POST(request: NextRequest) {
 
     let charResult: { char1: string; char2: string } | null = null
     let openingScene: string = ''
+    let storyTitle: string = '' // V9.1: 新增故事標題
 
     if (mode === 'outline-only' && existingCharacters) {
       console.log('[Outline V8.2] Mode: outline-only')
@@ -175,15 +176,17 @@ export async function POST(request: NextRequest) {
         
         openingScene = await generateOutline(templateWorld, charResult.char1, charResult.char2, callAI)
       } else {
-        // 成功解析組合結果
+        // 成功解析組合結果（V9.1: 包含標題）
         charResult = {
           char1: combinedResult.characters.character1,
           char2: combinedResult.characters.character2
         }
         openingScene = combinedResult.outline
-        console.log('[Outline V9.0] Combined generation successful:', {
+        storyTitle = combinedResult.title
+        console.log('[Outline V9.1] Combined generation successful:', {
           char1: charResult.char1.slice(0, 30),
-          outlineLength: openingScene.length
+          outlineLength: openingScene.length,
+          title: storyTitle
         })
       }
     }
@@ -197,6 +200,7 @@ export async function POST(request: NextRequest) {
         } : undefined,
         openingScene,
         outline: openingScene,
+        title: storyTitle || undefined, // V9.1: 新增故事標題
       }
     })
 

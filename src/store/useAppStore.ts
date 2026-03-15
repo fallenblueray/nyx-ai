@@ -94,6 +94,14 @@ interface AppState {
   setGeneratedCharacters: (characters: { name: string; age: string; role: string; personality: string; appearance: string; desireStyle: string; traits: string[] }[] | null) => void
   setGeneratedOutline: (outline: string | null) => void
 
+  // V9.1: 故事標題
+  storyTitle: string
+  setStoryTitle: (title: string) => void
+
+  // V9.1: 生成中止控制器
+  outlineAbortController: AbortController | null
+  setOutlineAbortController: (controller: AbortController | null) => void
+
   // V8.0: 刺激度調節
   intensity: number
   setIntensity: (intensity: number) => void
@@ -228,6 +236,14 @@ export const useAppStore = create<AppState>()(
       generatedOutline: null,
       setGeneratedCharacters: (characters) => set({ generatedCharacters: characters }),
       setGeneratedOutline: (outline) => set({ generatedOutline: outline }),
+
+      // V9.1: 故事標題
+      storyTitle: '',
+      setStoryTitle: (title) => set({ storyTitle: title }),
+
+      // V9.1: 生成中止控制器
+      outlineAbortController: null,
+      setOutlineAbortController: (controller) => set({ outlineAbortController: controller }),
 
       // V5.2: 模板生成載入狀態
       isGeneratingTemplate: false,

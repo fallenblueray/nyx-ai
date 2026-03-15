@@ -64,20 +64,23 @@ function CategoryTab({
 
 // ========== 模板卡片 ==========
 function TemplateCard({
-  template, onSelect, isFavorite, onToggleFavorite
+  template, onSelect, isFavorite, onToggleFavorite, isGenerating, onStop
 }: {
   template: Template
   onSelect: (t: Template) => void
   isFavorite: boolean
   onToggleFavorite: (id: string) => void
+  isGenerating?: boolean
+  onStop?: () => void
 }) {
   return (
     <div
       className={cn(
         "group relative rounded-xl border p-4 cursor-pointer transition-all duration-200",
-        "bg-[var(--surface-2)] hover:bg-[var(--surface-3)] border-[var(--border)] hover:border-[var(--accent-border)]"
+        "bg-[var(--surface-2)] hover:bg-[var(--surface-3)] border-[var(--border)] hover:border-[var(--accent-border)]",
+        isGenerating && "opacity-80 pointer-events-none"
       )}
-      onClick={() => onSelect(template)}
+      onClick={() => !isGenerating && onSelect(template)}
     >
       {/* Premium 標識 */}
       {template.isPremium && (
@@ -120,11 +123,24 @@ function TemplateCard({
         </p>
       )}
 
-      {/* 套用按鈕（hover 顯示）*/}
+      {/* 套用按鈕（hover 顯示）或生成中狀態 */}
       <div className="mt-3 opacity-0 group-hover:opacity-100 transition-opacity">
-        <button className="w-full text-xs py-1.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-[color:var(--text-primary)] font-medium transition-colors">
-          套用此模板
-        </button>
+        {isGenerating ? (
+          <button 
+            onClick={(e) => {
+              e.stopPropagation()
+              onStop?.()
+            }}
+            className="w-full text-xs py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-[color:var(--text-primary)] font-medium transition-colors flex items-center justify-center gap-1"
+          >
+            <Loader2 className="w-3 h-3 animate-spin" />
+            生成中... 點擊停止
+          </button>
+        ) : (
+          <button className="w-full text-xs py-1.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-[color:var(--text-primary)] font-medium transition-colors">
+            套用此模板
+          </button>
+        )}
       </div>
     </div>
   )
@@ -181,9 +197,12 @@ export function TemplateSelector() {
     setSelectedTemplate,
     setGeneratedCharacters,
     setGeneratedOutline,
+    setStoryTitle,
     setIsGenerating,
     setError,
-    setIsGeneratingTemplate
+    isGeneratingTemplate,
+    setIsGeneratingTemplate,
+    setOutlineAbortController
   } = useAppStore()
 
   // 載入收藏和儲存模板
@@ -222,12 +241,28 @@ export function TemplateSelector() {
     role: string
   } | null>(null)
 
+  // V9.1: 中止當前生成
+  const abortGeneration = () => {
+    const { outlineAbortController } = useAppStore.getState()
+    if (outlineAbortController) {
+      console.log('[TemplateSelector] Aborting generation...')
+      outlineAbortController.abort()
+      setOutlineAbortController(null)
+    }
+    setIsGeneratingCharacters(false)
+    setIsGeneratingTemplate(false)
+  }
+
   // V5.2: 統一的角色+大綱生成函數（所有模板使用）
   const generateCharactersAndOutlineUnified = async (template: Template) => {
     console.log('[TemplateSelector] V5.2: Generating characters and outline for:', template.id)
     
     // V6.9: 先清除舊角色，避免重複累積
     setCharacters([])
+    
+    // V9.1: 創建新的 AbortController
+    const abortController = new AbortController()
+    setOutlineAbortController(abortController)
     
     setIsGeneratingCharacters(true)
     setIsGeneratingTemplate(true)
@@ -243,6 +278,7 @@ export function TemplateSelector() {
           "Content-Type": "application/json",
           "Cache-Control": "no-cache"
         },
+        signal: abortController.signal,
         body: JSON.stringify({
           templateId: template.id,
           timestamp: Date.now(),
@@ -357,15 +393,29 @@ ${outlineText || '故事即將開始...'}`
       // V7.1: 同時保存字符串格式的 outline（給 StoryOutput 使用）
       setGeneratedOutline(outlineText || '故事即將開始...')
       
+      // V9.1: 保存故事標題
+      const title = data.data.title
+      if (title) {
+        setStoryTitle(title)
+        console.log('[TemplateSelector] V9.1: Story title generated:', title)
+      }
+      
       console.log('[TemplateSelector] V6: Characters and outline generated')
       
     } catch (err) {
-      console.error("[TemplateSelector] Failed to generate:", err)
-      setError("網絡錯誤，請檢查連接後重試")
+      // V9.1: 處理中止錯誤
+      if (err instanceof Error && err.name === 'AbortError') {
+        console.log('[TemplateSelector] Generation aborted by user')
+        setError('已停止生成')
+      } else {
+        console.error("[TemplateSelector] Failed to generate:", err)
+        setError("網絡錯誤，請檢查連接後重試")
+      }
       setStoryInput(template.promptBuilder?.baseScenario || template.description)
     } finally {
       setIsGeneratingCharacters(false)
       setIsGeneratingTemplate(false)
+      setOutlineAbortController(null)
     }
   }
   
@@ -702,6 +752,8 @@ ${outlineText || '故事即將開始...'}`
                         onSelect={handleSelectTemplate}
                         isFavorite={favorites.includes(template.id)}
                         onToggleFavorite={handleToggleFavorite}
+                        isGenerating={isGeneratingTemplate}
+                        onStop={abortGeneration}
                       />
                     ))}
                 </div>
@@ -722,6 +774,8 @@ ${outlineText || '故事即將開始...'}`
                       onSelect={handleSelectTemplate}
                       isFavorite={favorites.includes(template.id)}
                       onToggleFavorite={handleToggleFavorite}
+                      isGenerating={isGeneratingTemplate}
+                      onStop={abortGeneration}
                     />
                   ))}
                 </div>

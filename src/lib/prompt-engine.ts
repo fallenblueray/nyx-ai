@@ -336,6 +336,7 @@ export interface CombinedGenerationResult {
     character2: string
   }
   outline: string
+  title: string // V9.1: 新增故事標題
 }
 
 /**
@@ -363,10 +364,11 @@ ${templateWorld}${archetypeSection}
 1. **先創建角色1和角色2** - 包含名字、年齡、身份、性格、外貌
 2. **再寫開場場景**（約200字）- 必須是這兩個角色第一次相遇/衝突的場景
 3. **場景必須與角色性格匹配** - 體現角色的具體特點和關係張力
-4. 只寫開場，不要寫後續發展
+4. **最後創建故事標題** - 簡潔有力，10-15個字，體現核心張力
+5. 只寫開場，不要寫後續發展
 
 【輸出格式 - 嚴格遵守】
-必須使用以下格式，包含三個標記：
+必須使用以下格式，包含四個標記：
 
 ===角色1===
 [女主角名字]，[年齡]歲，[身份/職業]。她[性格特點]，[外貌描述]。
@@ -377,14 +379,18 @@ ${templateWorld}${archetypeSection}
 ===場景===
 [開場場景描述，約200字，與上述角色性格匹配]
 
+===標題===
+[故事標題，10-15個字，簡潔有力]
+
 【重要】
-- 必須包含 ===角色1===、===角色2===、===場景=== 三個標記
+- 必須包含 ===角色1===、===角色2===、===場景===、===標題=== 四個標記
 - 角色2不要使用詩意語言，直接描述即可
+- 標題要簡短有力，能概括故事核心衝突
 - 每次生成全新的角色組合，不要重複之前的名字`
 }
 
 /**
- * V9.0: 解析組合生成的回應
+ * V9.1: 解析組合生成的回應（包含標題）
  */
 export function parseCombinedResponse(response: string): CombinedGenerationResult | null {
   const text = response.trim()
@@ -393,17 +399,20 @@ export function parseCombinedResponse(response: string): CombinedGenerationResul
   const char1Marker = '===角色1==='
   const char2Marker = '===角色2==='
   const sceneMarker = '===場景==='
+  const titleMarker = '===標題==='
   
   const char1Start = text.indexOf(char1Marker)
   const char2Start = text.indexOf(char2Marker)
   const sceneStart = text.indexOf(sceneMarker)
+  const titleStart = text.indexOf(titleMarker)
   
-  // 驗證標記完整性
+  // 驗證標記完整性（標題可選，向下兼容）
   if (char1Start === -1 || char2Start === -1 || sceneStart === -1) {
-    console.warn('[V9.0] Missing markers in combined response:', {
+    console.warn('[V9.1] Missing required markers in combined response:', {
       hasChar1: char1Start !== -1,
       hasChar2: char2Start !== -1,
-      hasScene: sceneStart !== -1
+      hasScene: sceneStart !== -1,
+      hasTitle: titleStart !== -1
     })
     return null
   }
@@ -411,11 +420,24 @@ export function parseCombinedResponse(response: string): CombinedGenerationResul
   // 提取內容
   const char1Text = text.slice(char1Start + char1Marker.length, char2Start).trim()
   const char2Text = text.slice(char2Start + char2Marker.length, sceneStart).trim()
-  const sceneText = text.slice(sceneStart + sceneMarker.length).trim()
+  
+  // 場景和標題的邊界處理
+  let sceneText: string
+  let titleText: string
+  
+  if (titleStart !== -1 && titleStart > sceneStart) {
+    // 有標題標記
+    sceneText = text.slice(sceneStart + sceneMarker.length, titleStart).trim()
+    titleText = text.slice(titleStart + titleMarker.length).trim()
+  } else {
+    // 無標題標記（向下兼容）
+    sceneText = text.slice(sceneStart + sceneMarker.length).trim()
+    titleText = ''
+  }
   
   // 驗證內容非空
   if (!char1Text || !char2Text || !sceneText) {
-    console.warn('[V9.0] Empty content in parsed result')
+    console.warn('[V9.1] Empty content in parsed result')
     return null
   }
   
@@ -424,7 +446,8 @@ export function parseCombinedResponse(response: string): CombinedGenerationResul
       character1: char1Text,
       character2: char2Text
     },
-    outline: sceneText
+    outline: sceneText,
+    title: titleText || '未命名故事' // 默認標題
   }
 }
 
@@ -450,13 +473,14 @@ export async function generateCharactersAndOutline(
   const result = parseCombinedResponse(response)
   
   if (result) {
-    console.log('[V9.0] Successfully parsed combined result:', {
+    console.log('[V9.1] Successfully parsed combined result:', {
       char1: result.characters.character1.slice(0, 30),
       char2: result.characters.character2.slice(0, 30),
-      outlineLength: result.outline.length
+      outlineLength: result.outline.length,
+      title: result.title
     })
   } else {
-    console.warn('[V9.0] Failed to parse combined response')
+    console.warn('[V9.1] Failed to parse combined response')
   }
   
   return result
