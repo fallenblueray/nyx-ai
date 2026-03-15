@@ -1,7 +1,34 @@
-# NyxAI 系統說明書 (V5.3 管理員後台 & 動態提示詞)
+# NyxAI 系統說明書 (V9.2 統一標題輸入框 & 故事生成停止按鈕)
 
 > **千螢維護協議**：每次開始任何 NyxAI 工作前，必須先完整讀取此文件。
-> **✅ SYSTEM.md 已更新至 V8.4** - Phase 2 病毒增長系統 + 數據庫架構
+> **✅ SYSTEM.md 已更新至 V9.2** - 統一標題輸入框 + 故事生成停止按鈕
+
+---
+
+## 🔥 本次會話關鍵更新 (V9.1-V9.2)
+
+### V9.2 - 統一標題輸入框 & 故事生成停止按鈕
+- **統一標題輸入框**: 移除條件渲染，標題輸入框始終可見於左側面板頂部
+  - 支援手動輸入（優先級高於 AI 生成）
+  - 留空時 AI 自動生成標題（生成角色/大綱時）
+  - 使用 `useEffect` 同步 AI 生成標題到本地狀態
+- **故事生成停止按鈕**: 
+  - 新增 `storyAbortController` 專用於故事生成中止
+  - 生成期間按鈕變為紅色「生成中... 點擊停止」
+  - 支援「開始創作」和「繼續創作」兩種模式
+  - 使用 `AbortController.signal` 綁定到 fetch 請求
+
+**相關文件**:
+- `src/app/app/page.tsx` - 標題輸入框位置與邏輯
+- `src/components/StoryOutput.tsx` - 停止按鈕與中止控制
+- `src/store/useAppStore.ts` - `storyAbortController` 狀態管理
+
+### V9.1 - 標題生成與大綱生成停止按鈕
+- **AI 自動生成標題**: 選擇模板時同步生成故事標題
+  - Prompt 要求 AI 輸出 `### 故事標題: [標題]` 格式
+  - 解析失敗時使用默認格式：`{模板名稱} - {主角名}的故事`
+- **大綱生成停止按鈕**: `TemplateSelector.tsx` 生成期間顯示停止按鈕
+  - 使用 `outlineAbortController` 中止大綱/角色生成
 
 ---
 
@@ -406,6 +433,20 @@ setGeneratedOutline: (outline) => void
 // V5.2 載入狀態
 isGeneratingTemplate: boolean            // 模板生成中（顯示載入提示）
 setIsGeneratingTemplate: (v: boolean) => void
+
+// V9.1 故事標題
+storyTitle: string                        // AI 生成的故事標題
+setStoryTitle: (title: string) => void
+
+// V9.1 大綱生成中止控制器
+outlineAbortController: AbortController | null
+setOutlineAbortController: (controller) => void
+abortGeneration: () => void               // 中止大綱/角色生成
+
+// V9.2 故事生成中止控制器
+storyAbortController: AbortController | null
+setStoryAbortController: (controller) => void
+abortStoryGeneration: () => void          // 中止故事生成
 ```
 
 ### 保留狀態 (向後兼容)
@@ -457,6 +498,12 @@ targetSegments: number          // ⚠️ 雖保留但實際固定為單段
    - 原因：AI 輸出包含 markdown 標記 `**名稱：**` 或繁簡體混用
    - 修復：`prompt-engine.ts` 先 `cleanText.replace(/\*\*/g, '')` 去除 markdown 標記
    - 使用 Unicode 碼點匹配繁簡體：`名(?:\u7a31|\u79f0|稱|称)`
+8. **標題輸入框重複**:
+   - 原因：`page.tsx` 中同時存在 `hasOutput` 條件和 `storyTitle` 條件的兩個標題區域
+   - 修復：V9.2 統一為單一標題輸入框，始終可見，無條件限制
+9. **停止按鈕無效**:
+   - 原因：未正確綁定 `AbortController` 到 fetch 請求
+   - 修復：V9.2 區分 `outlineAbortController`（大綱生成）和 `storyAbortController`（故事生成）
 
 ---
 
@@ -483,6 +530,8 @@ npx vercel --prod --yes --token "$VERCEL_TOKEN"
 
 | 日期 | 版本 | 變更 |
 |------|------|------|
+| 2026-03-15 | **V9.2** | **統一標題輸入框**：始終可見無條件限制；**故事生成停止按鈕**：紅色停止按鈕支援開始/繼續創作 |
+| 2026-03-15 | **V9.1** | **AI 自動生成標題**：選模板時同步生成；**大綱生成停止按鈕**：TemplateSelector 載入期間可中止 |
 | 2026-03-07 | V5.3.1 | 修復角色解析：Unicode 碼點匹配繁簡體 + 去除 markdown 標記 |
 | 2026-03-07 | V5.3 | 管理員後台 `/admin/prompts`，動態提示詞配置，從數據庫讀取 |
 | 2026-03-07 | V5.2 | 統一 AI 生成流程，移除模板預設角色，添加載入提示 |
@@ -493,5 +542,5 @@ npx vercel --prod --yes --token "$VERCEL_TOKEN"
 
 ---
 
-*最後更新：2026-03-07 by 千螢*
-*版本：V5.3 - 管理員後台 & 動態提示詞*
+*最後更新：2026-03-15 by 千螢*
+*版本：V9.2 - 統一標題輸入框 & 故事生成停止按鈕*
