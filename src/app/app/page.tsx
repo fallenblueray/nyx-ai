@@ -96,6 +96,13 @@ export default function AppPage() {
   
   const hasOutput = storyOutput.trim().length > 0
   
+  // V9.1: 當 AI 生成標題時，同步到本地標題（如果用戶未手動輸入）
+  useEffect(() => {
+    if (storyTitle && !title) {
+      setTitle(storyTitle)
+    }
+  }, [storyTitle, title])
+  
   const handleSaveDraft = () => {
     localStorage.setItem("nyx-ai-draft", storyInput)
     const t = translations as { app?: { draftSaved?: string } }
@@ -374,19 +381,21 @@ ${outlineText || '故事即將開始...'}`
           )}
         >
           <div className="p-4 space-y-4">
-            {hasOutput && (
-              <div className="space-y-2">
-                <label className="text-sm font-medium nyx-text-secondary">
-                  故事標題
-                </label>
-                <Input
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="輸入標題..."
-                  className="nyx-input"
-                />
-              </div>
-            )}
+            {/* V9.1: 故事標題輸入框（始終可見，支援手動輸入或AI生成）*/}
+            <div className="space-y-2">
+              <label className="text-sm font-medium nyx-text-secondary">
+                故事標題
+              </label>
+              <Input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder={storyTitle || "輸入標題（或留空由AI生成）..."}
+                className="nyx-input"
+              />
+              {storyTitle && !title && (
+                <p className="text-xs text-purple-400">AI 已生成標題：{storyTitle}</p>
+              )}
+            </div>
             
             <div className="space-y-2">
               <label className="text-sm font-medium nyx-text-secondary">
@@ -408,14 +417,6 @@ ${combination.character}和我獨處一室，氣氛變得有些微妙...`
                   setStoryInput(storySetup)
                 }}
               />
-              {/* V9.1: 故事標題顯示 */}
-              {storyTitle && (
-                <div className="mb-2 p-2 rounded-lg bg-purple-500/10 border border-purple-500/20">
-                  <span className="text-xs text-purple-400">故事標題</span>
-                  <h3 className="text-sm font-semibold text-purple-300">{storyTitle}</h3>
-                </div>
-              )}
-              
               {/* V5.2: 模板生成載入提示 */}
               {isGeneratingTemplate && (
                 <div className="flex items-center gap-2 text-sm text-purple-400 mb-2">

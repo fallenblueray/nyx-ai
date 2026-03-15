@@ -98,10 +98,15 @@ interface AppState {
   storyTitle: string
   setStoryTitle: (title: string) => void
 
-  // V9.1: 生成中止控制器
+  // V9.1: 生成中止控制器（大綱/角色生成）
   outlineAbortController: AbortController | null
   setOutlineAbortController: (controller: AbortController | null) => void
   abortGeneration: () => void
+
+  // V9.2: 生成中止控制器（故事生成）
+  storyAbortController: AbortController | null
+  setStoryAbortController: (controller: AbortController | null) => void
+  abortStoryGeneration: () => void
 
   // V8.0: 刺激度調節
   intensity: number
@@ -242,18 +247,34 @@ export const useAppStore = create<AppState>()(
       storyTitle: '',
       setStoryTitle: (title) => set({ storyTitle: title }),
 
-      // V9.1: 生成中止控制器
+      // V9.1: 生成中止控制器（大綱/角色生成）
       outlineAbortController: null,
       setOutlineAbortController: (controller) => set({ outlineAbortController: controller }),
       abortGeneration: () => {
         const state = useAppStore.getState()
         if (state.outlineAbortController) {
-          console.log('[Store] Aborting generation...')
+          console.log('[Store] Aborting outline generation...')
           state.outlineAbortController.abort()
           set({ 
             outlineAbortController: null,
             isGeneratingTemplate: false,
             error: '已停止生成'
+          })
+        }
+      },
+
+      // V9.2: 生成中止控制器（故事生成）
+      storyAbortController: null,
+      setStoryAbortController: (controller) => set({ storyAbortController: controller }),
+      abortStoryGeneration: () => {
+        const state = useAppStore.getState()
+        if (state.storyAbortController) {
+          console.log('[Store] Aborting story generation...')
+          state.storyAbortController.abort()
+          set({ 
+            storyAbortController: null,
+            isGenerating: false,
+            error: '已停止故事生成'
           })
         }
       },

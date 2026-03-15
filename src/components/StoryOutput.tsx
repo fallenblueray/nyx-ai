@@ -398,6 +398,8 @@ export function GenerateButtons() {
     setShouldRegenerate,
     humanizeEnabled,
     intensity,
+    setStoryAbortController,
+    abortStoryGeneration,
   } = useAppStore()
 
   const [rechargeOpen, setRechargeOpen] = useState(false)
@@ -675,6 +677,10 @@ ${perspectiveInstruction}
       }))
     }
 
+    // V9.2: 創建 AbortController 用於停止生成
+    const abortController = new AbortController()
+    setStoryAbortController(abortController)
+
     const { resetStreaming, setStreamingState, humanizeEnabled } = useAppStore.getState()
     resetStreaming()
     // V2.9: 設置流式狀態，啟動進度條。currentSceneIndex 從 1 開始（第一段）
@@ -759,7 +765,8 @@ ${perspectiveInstruction}
       const response = await fetch("/api/generate-story", {
         method: "POST",
         headers,
-        body: JSON.stringify(requestBody)
+        body: JSON.stringify(requestBody),
+        signal: abortController.signal
       })
 
       if (!response.ok) {
@@ -870,13 +877,21 @@ ${perspectiveInstruction}
       }
     } catch (err) {
       console.error('[V2.5] Generation error:', err)
-      setError(err instanceof Error ? err.message : "生成失敗，請重試")
+      // V9.2: 處理中止錯誤
+      if (err instanceof Error && err.name === 'AbortError') {
+        console.log('[V2.5] Story generation aborted by user')
+        setError('已停止故事生成')
+      } else {
+        setError(err instanceof Error ? err.message : "生成失敗，請重試")
+      }
     } finally {
       setIsGenerating(false)
       setCurrentSegment(0)
       // 結束流式狀態
-      const { setStreamingState } = useAppStore.getState()
+      const { setStreamingState, setStoryAbortController } = useAppStore.getState()
       setStreamingState({ isStreaming: false })
+      // V9.2: 清除中止控制器
+      setStoryAbortController(null)
     }
   }
 
@@ -885,6 +900,10 @@ ${perspectiveInstruction}
 
   // V1/V2: 續寫流程
   const continueStory = async () => {
+    // V9.2: 創建 AbortController 用於停止生成
+    const abortController = new AbortController()
+    setStoryAbortController(abortController)
+
     const { setStreamingState, humanizeEnabled } = useAppStore.getState()
     // 設置流式狀態，啟動進度條（續寫顯示為第 1/1 段）
     setStreamingState({ isStreaming: true, currentSceneIndex: 1, totalScenes: 1 })
@@ -922,7 +941,8 @@ ${perspectiveInstruction}
           ...(fingerprint && { fingerprint }), // V2.1: 傳遞指紋
           ...(fingerprint && { fingerprintComponents: components }), // V2.1: 傳遞指紋組件
           skipCache: true,  // 續寫永遠生成新內容，不讀緩存
-        })
+        }),
+        signal: abortController.signal
       })
 
       if (!response.ok) {
@@ -1030,12 +1050,20 @@ ${perspectiveInstruction}
       }
 
     } catch (err) {
-      setError(err instanceof Error ? err.message : "生成失敗，請重試")
+      // V9.2: 處理中止錯誤
+      if (err instanceof Error && err.name === 'AbortError') {
+        console.log('[Continue] Story generation aborted by user')
+        setError('已停止故事生成')
+      } else {
+        setError(err instanceof Error ? err.message : "生成失敗，請重試")
+      }
     } finally {
       setIsGenerating(false)
       // 結束流式狀態
-      const { setStreamingState } = useAppStore.getState()
+      const { setStreamingState, setStoryAbortController } = useAppStore.getState()
       setStreamingState({ isStreaming: false })
+      // V9.2: 清除中止控制器
+      setStoryAbortController(null)
     }
   }
 
@@ -1045,32 +1073,41 @@ ${perspectiveInstruction}
         {/* V4: 分段選擇器已移除，固定單段生成 */}
 
         {!hasOutput ? (
-          // 未有故事：顯示「開始創作」
-          <Button
-            onClick={() => generateStoryV3()}
-            disabled={!canGenerate || isGenerating}
-            className="w-full bg-blue-600 hover:bg-blue-700"
-          >
-            {isGenerating ? (
-              <><Loader2 className="w-4 h-4 mr-1 sm:mr-2 animate-spin" />生成中...</>
-            ) : (
-              <><Sparkles className="w-4 h-4 mr-1 sm:mr-2" />開始創作</>
-            )}
-          </Button>
-        ) : (
-          // 已有故事：「繼續創作」+ 「再寫一次」並排
-          <div className="flex gap-1 sm:gap-2">
+          // 未有故事：顯示「開始創作」或「停止」
+          isGenerating ? (
             <Button
-              onClick={() => continueStory()}
-              disabled={isGenerating}
-              className="flex-1 bg-purple-600 hover:bg-purple-700 px-2 sm:px-4"
+              onClick={() => abortStoryGeneration()}
+              className="w-full bg-red-600 hover:bg-red-700"
             >
-              {isGenerating ? (
-                <><Loader2 className="w-4 h-4 mr-1 sm:mr-2 animate-spin" />續寫中...</>
-              ) : (
-                <><RotateCcw className="w-4 h-4 mr-1 sm:mr-2" />繼續創作</>
-              )}
+              <><Loader2 className="w-4 h-4 mr-1 sm:mr-2 animate-spin" />生成中... 點擊停止</>
             </Button>
+          ) : (
+            <Button
+              onClick={() => generateStoryV3()}
+              disabled={!canGenerate}
+              className="w-full bg-blue-600 hover:bg-blue-700"
+            >
+              <><Sparkles className="w-4 h-4 mr-1 sm:mr-2" />開始創作</>
+            </Button>
+          )
+        ) : (
+          // 已有故事：「繼續創作」或「停止」+ 「再寫一次」並排
+          <div className="flex gap-1 sm:gap-2">
+            {isGenerating ? (
+              <Button
+                onClick={() => abortStoryGeneration()}
+                className="flex-1 bg-red-600 hover:bg-red-700 px-2 sm:px-4"
+              >
+                <><Loader2 className="w-4 h-4 mr-1 sm:mr-2 animate-spin" />續寫中... 點擊停止</>
+              </Button>
+            ) : (
+              <Button
+                onClick={() => continueStory()}
+                className="flex-1 bg-purple-600 hover:bg-purple-700 px-2 sm:px-4"
+              >
+                <><RotateCcw className="w-4 h-4 mr-1 sm:mr-2" />繼續創作</>
+              </Button>
+            )}
             <Button
               onClick={() => {
                 // 標記需要重新生成
