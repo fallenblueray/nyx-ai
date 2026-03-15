@@ -47,6 +47,8 @@ export default function AppPage() {
     setSelectedTemplate,
     isGeneratingTemplate,
     setGeneratedOutline,
+    storyTitle,
+    abortGeneration,
     selectedTemplate,
     intensity,
     setIntensity
@@ -406,11 +408,28 @@ ${combination.character}和我獨處一室，氣氛變得有些微妙...`
                   setStoryInput(storySetup)
                 }}
               />
+              {/* V9.1: 故事標題顯示 */}
+              {storyTitle && (
+                <div className="mb-2 p-2 rounded-lg bg-purple-500/10 border border-purple-500/20">
+                  <span className="text-xs text-purple-400">故事標題</span>
+                  <h3 className="text-sm font-semibold text-purple-300">{storyTitle}</h3>
+                </div>
+              )}
+              
               {/* V5.2: 模板生成載入提示 */}
               {isGeneratingTemplate && (
                 <div className="flex items-center gap-2 text-sm text-purple-400 mb-2">
                   <Loader2 className="w-4 h-4 animate-spin" />
                   <span>正在生成角色與劇情大綱...</span>
+                  {/* V9.1: 停止生成按鈕 */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={abortGeneration}
+                    className="ml-auto text-xs text-red-400 hover:text-red-300 border-red-400/30 hover:border-red-400/50 hover:bg-red-500/10"
+                  >
+                    停止
+                  </Button>
                 </div>
               )}
               <Textarea

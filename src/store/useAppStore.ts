@@ -101,6 +101,7 @@ interface AppState {
   // V9.1: 生成中止控制器
   outlineAbortController: AbortController | null
   setOutlineAbortController: (controller: AbortController | null) => void
+  abortGeneration: () => void
 
   // V8.0: 刺激度調節
   intensity: number
@@ -244,6 +245,18 @@ export const useAppStore = create<AppState>()(
       // V9.1: 生成中止控制器
       outlineAbortController: null,
       setOutlineAbortController: (controller) => set({ outlineAbortController: controller }),
+      abortGeneration: () => {
+        const state = useAppStore.getState()
+        if (state.outlineAbortController) {
+          console.log('[Store] Aborting generation...')
+          state.outlineAbortController.abort()
+          set({ 
+            outlineAbortController: null,
+            isGeneratingTemplate: false,
+            error: '已停止生成'
+          })
+        }
+      },
 
       // V5.2: 模板生成載入狀態
       isGeneratingTemplate: false,

@@ -64,15 +64,16 @@ function CategoryTab({
 
 // ========== 模板卡片 ==========
 function TemplateCard({
-  template, onSelect, isFavorite, onToggleFavorite, isGenerating, onStop
+  template, onSelect, isFavorite, onToggleFavorite, isGenerating
 }: {
   template: Template
   onSelect: (t: Template) => void
   isFavorite: boolean
   onToggleFavorite: (id: string) => void
   isGenerating?: boolean
-  onStop?: () => void
 }) {
+  const abortGeneration = useAppStore.getState().abortGeneration
+  
   return (
     <div
       className={cn(
@@ -129,7 +130,7 @@ function TemplateCard({
           <button 
             onClick={(e) => {
               e.stopPropagation()
-              onStop?.()
+              abortGeneration()
             }}
             className="w-full text-xs py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-[color:var(--text-primary)] font-medium transition-colors flex items-center justify-center gap-1"
           >
@@ -240,18 +241,6 @@ export function TemplateSelector() {
     appearance: string
     role: string
   } | null>(null)
-
-  // V9.1: 中止當前生成
-  const abortGeneration = () => {
-    const { outlineAbortController } = useAppStore.getState()
-    if (outlineAbortController) {
-      console.log('[TemplateSelector] Aborting generation...')
-      outlineAbortController.abort()
-      setOutlineAbortController(null)
-    }
-    setIsGeneratingCharacters(false)
-    setIsGeneratingTemplate(false)
-  }
 
   // V5.2: 統一的角色+大綱生成函數（所有模板使用）
   const generateCharactersAndOutlineUnified = async (template: Template) => {
@@ -753,7 +742,6 @@ ${outlineText || '故事即將開始...'}`
                         isFavorite={favorites.includes(template.id)}
                         onToggleFavorite={handleToggleFavorite}
                         isGenerating={isGeneratingTemplate}
-                        onStop={abortGeneration}
                       />
                     ))}
                 </div>
@@ -775,7 +763,6 @@ ${outlineText || '故事即將開始...'}`
                       isFavorite={favorites.includes(template.id)}
                       onToggleFavorite={handleToggleFavorite}
                       isGenerating={isGeneratingTemplate}
-                      onStop={abortGeneration}
                     />
                   ))}
                 </div>
