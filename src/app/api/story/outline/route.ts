@@ -1,9 +1,11 @@
 /**
- * V7.0: 簡化版 Outline API - 單一場景描述
- * 大綱只返回「起始場景」，不再分開端/發展/高潮
+ * V9.0: 優化版 Outline API - 單一 AI 調用生成角色+大綱
+ * - 性能優化：從兩次串行 AI 調用改為單次調用
+ * - 目標：從 ~16-30秒 優化到 ~8-12秒
+ * - Fallback：解析失敗時自動回退到串行生成
  */
 import { NextRequest, NextResponse } from "next/server"
-import { generateCharacterPair, generateOutline } from "@/lib/prompt-engine"
+import { generateCharacterPair, generateOutline, generateCharactersAndOutline } from "@/lib/prompt-engine"
 import { createServerClient } from "@/lib/supabase/server"
 
 export const maxDuration = 60
@@ -138,27 +140,51 @@ export async function POST(request: NextRequest) {
         existingCharacters.character2,
         callAI
       )
-    } else {
-      console.log('[Outline V8.2] Generating characters...')
+    } else if (mode === 'characters-only') {
+      // V9.0: 只生成角色（fallback 到舊方式，保持兼容性）
+      console.log('[Outline V9.0] Mode: characters-only, using legacy method')
       charResult = await generateCharacterPair(
         templateWorld, 
         (prompt) => callAI(prompt, randomSeed),
         characterArchetypes
       )
-
-      if (!charResult) {
-        return NextResponse.json(
-          { success: false, error: "角色生成失敗" },
-          { status: 500 }
+    } else {
+      // V9.0: 使用單一 AI 調用同時生成角色+大綱（性能優化）
+      console.log('[Outline V9.0] Using combined generation...')
+      const combinedResult = await generateCharactersAndOutline(
+        templateWorld,
+        (prompt) => callAI(prompt, randomSeed),
+        characterArchetypes
+      )
+      
+      if (!combinedResult) {
+        console.warn('[Outline V9.0] Combined generation failed, falling back to sequential')
+        // Fallback: 使用舊的串行方式
+        charResult = await generateCharacterPair(
+          templateWorld, 
+          (prompt) => callAI(prompt, randomSeed),
+          characterArchetypes
         )
-      }
-
-      console.log('[Outline V8.2] Characters generated:', charResult.char1.slice(0, 20))
-
-      if (mode !== 'characters-only') {
-        console.log('[Outline V8.2] Generating opening scene...')
+        
+        if (!charResult) {
+          return NextResponse.json(
+            { success: false, error: "角色生成失敗" },
+            { status: 500 }
+          )
+        }
+        
         openingScene = await generateOutline(templateWorld, charResult.char1, charResult.char2, callAI)
-        console.log('[Outline V8.2] Scene:', openingScene.slice(0, 50), '...')
+      } else {
+        // 成功解析組合結果
+        charResult = {
+          char1: combinedResult.characters.character1,
+          char2: combinedResult.characters.character2
+        }
+        openingScene = combinedResult.outline
+        console.log('[Outline V9.0] Combined generation successful:', {
+          char1: charResult.char1.slice(0, 30),
+          outlineLength: openingScene.length
+        })
       }
     }
 
