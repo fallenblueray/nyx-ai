@@ -139,7 +139,7 @@ export function useStoryGeneration(options: UseStoryGenerationOptions = {}) {
 }
 
 // 導出相關的輔助函數
-export function getAnonymousId(isLoggedIn: boolean): string | undefined {
+export async function getAnonymousId(isLoggedIn: boolean): Promise<string | undefined> {
   if (isLoggedIn) return undefined
-  return getOrCreateAnonymousId()
+  return await getOrCreateAnonymousId()
 }

@@ -8,7 +8,7 @@ import { getUserWordCount } from "@/app/actions/story"
 import { RechargeModal } from "@/components/RechargeModal"
 import { SignupPromptModal } from "@/components/SignupPromptModal"
 import { RechargePromptModal } from "@/components/RechargePromptModal"
-import { getOrCreateAnonymousId } from "@/lib/anonymous"
+import { getOrCreateAnonymousId, generateFingerprint } from "@/lib/anonymous"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -422,9 +422,9 @@ export function GenerateButtons() {
   // 初始化：獲取匿名用戶剩餘字數
   useEffect(() => {
     if (!isLoggedIn) {
-      const anonymousId = getOrCreateAnonymousId()
-      if (anonymousId) {
-        fetch(`/api/anonymous-usage?id=${anonymousId}`)
+      getOrCreateAnonymousId().then(anonymousId => {
+        if (anonymousId) {
+          fetch(`/api/anonymous-usage?id=${anonymousId}`)
           .then(r => r.json())
           .then(data => {
             if (data.wordsLeft !== undefined) {
@@ -432,7 +432,8 @@ export function GenerateButtons() {
             }
           })
           .catch(console.warn)
-      }
+        }
+      })
     }
   }, [isLoggedIn, setAnonymousWordsLeft])
 
@@ -680,7 +681,10 @@ ${perspectiveInstruction}
     let humanizeBuffer = ""
 
     try {
-      const anonymousId = !isLoggedIn ? getOrCreateAnonymousId() : undefined
+      const anonymousId = !isLoggedIn ? await getOrCreateAnonymousId() : undefined
+      
+      // V2.1: 生成瀏覽器指紋（防無痕模式繞過）
+      const { fingerprint, components } = !isLoggedIn ? await generateFingerprint() : { fingerprint: '', components: {} }
 
       // V4: 固定單段生成，無需多段 header
       const headers: Record<string, string> = { "Content-Type": "application/json" }
@@ -708,6 +712,8 @@ ${perspectiveInstruction}
           userInput: userStoryInput, // 傳遞用戶輸入（包含大綱）
           model: "deepseek/deepseek-r1-0528",
           anonymousId,
+          fingerprint, // V2.1: 傳遞指紋
+          fingerprintComponents: components, // V2.1: 傳遞指紋組件
           skipCache: true,
           userIntensity: intensity, // V8.0: 傳遞刺激度
         }
@@ -724,6 +730,8 @@ ${perspectiveInstruction}
             character2: finalCharacters[1]
           },
           anonymousId,
+          fingerprint, // V2.1: 傳遞指紋
+          fingerprintComponents: components, // V2.1: 傳遞指紋組件
           skipCache: true,
         }
         console.log('[V5.1] Using legacy API with characters:', finalCharacters.map(c => c.name))
@@ -735,6 +743,8 @@ ${perspectiveInstruction}
           userPrompt,
           model: "deepseek/deepseek-r1-0528",
           anonymousId,
+          fingerprint, // V2.1: 傳遞指紋
+          fingerprintComponents: components, // V2.1: 傳遞指紋組件
           skipCache: true,
         }
         console.log('[V5.1] Using traditional API (no template/characters)')
@@ -880,7 +890,10 @@ ${perspectiveInstruction}
 
     try {
       const { systemPrompt, userPrompt } = buildPrompt(true)
-      const anonymousId = !isLoggedIn ? getOrCreateAnonymousId() : undefined
+      const anonymousId = !isLoggedIn ? await getOrCreateAnonymousId() : undefined
+      
+      // V2.1: 生成瀏覽器指紋（防無痕模式繞過）
+      const { fingerprint, components } = !isLoggedIn ? await generateFingerprint() : { fingerprint: '', components: {} }
 
       // V2.5: 續寫不使用多段模式（只用單段生成）
       const headers: Record<string, string> = { "Content-Type": "application/json" }
@@ -900,6 +913,8 @@ ${perspectiveInstruction}
           characters,
           userIntensity: intensity, // V8.0: 傳遞刺激度
           ...(anonymousId && { anonymousId }),
+          ...(fingerprint && { fingerprint }), // V2.1: 傳遞指紋
+          ...(fingerprint && { fingerprintComponents: components }), // V2.1: 傳遞指紋組件
           skipCache: true,  // 續寫永遠生成新內容，不讀緩存
         })
       })

@@ -53,6 +53,9 @@ interface GenerateStoryRequest {
   // 通用參數
   model?: string
   anonymousId?: string
+  // V2.1: 瀏覽器指紋（防無痕模式繞過）
+  fingerprint?: string
+  fingerprintComponents?: Record<string, unknown>
   topics?: Array<{ category: string; item: string }>
   skipCache?: boolean
 }
@@ -200,10 +203,11 @@ export async function POST(req: NextRequest) {
     const isLoggedIn = !!session?.user?.id
 
     // ============================================================
-    // 字數額度檢查
+    // 字數額度檢查（V2.1: 支持指紋識別）
     // ============================================================
     let currentWordCount = 0
     let isAnonymous = false
+    let resolvedAnonymousId = anonymousId
 
     if (isLoggedIn) {
       const { data: profile } = await supabase
@@ -212,19 +216,70 @@ export async function POST(req: NextRequest) {
         .eq("id", session!.user.id)
         .single()
       currentWordCount = profile?.word_count ?? 0
-    } else if (anonymousId && isValidUUID(anonymousId)) {
-      isAnonymous = true
-      const { data: usage } = await supabase
-        .from("anonymous_usage")
-        .select("words_used, words_limit")
-        .eq("anonymous_id", anonymousId)
-        .maybeSingle()
-
-      const wordsUsed = usage?.words_used ?? 0
-      const wordsLimit = usage?.words_limit ?? FREE_WORD_LIMIT
-      currentWordCount = Math.max(0, wordsLimit - wordsUsed)
     } else {
-      return NextResponse.json({ error: "請登入或提供匿名 ID" }, { status: 401 })
+      isAnonymous = true
+      
+      // V2.1: 優先使用指紋識別（防無痕模式繞過）
+      if (body.fingerprint && body.fingerprint.length >= 20) {
+        // 嘗試用指紋查找現有記錄
+        const { data: fingerprintMatch } = await supabase
+          .from("anonymous_usage")
+          .select("anonymous_id, words_used, words_limit")
+          .eq("fingerprint", body.fingerprint)
+          .order("updated_at", { ascending: false })
+          .limit(1)
+          .maybeSingle()
+
+        if (fingerprintMatch) {
+          // 找到匹配的指紋，使用該記錄
+          resolvedAnonymousId = fingerprintMatch.anonymous_id
+          const wordsUsed = fingerprintMatch.words_used ?? 0
+          const wordsLimit = fingerprintMatch.words_limit ?? FREE_WORD_LIMIT
+          currentWordCount = Math.max(0, wordsLimit - wordsUsed)
+          console.log(`[Anonymous] Fingerprint matched: ${body.fingerprint.slice(0, 16)}..., ID: ${resolvedAnonymousId}`)
+        } else if (anonymousId && isValidUUID(anonymousId)) {
+          // 沒有指紋匹配，但提供了 anonymousId，創建新記錄並綁定指紋
+          resolvedAnonymousId = anonymousId
+          const { data: usage } = await supabase
+            .from("anonymous_usage")
+            .select("words_used, words_limit")
+            .eq("anonymous_id", anonymousId)
+            .maybeSingle()
+
+          const wordsUsed = usage?.words_used ?? 0
+          const wordsLimit = usage?.words_limit ?? FREE_WORD_LIMIT
+          currentWordCount = Math.max(0, wordsLimit - wordsUsed)
+
+          // 更新記錄添加指紋（供下次使用）
+          if (currentWordCount < FREE_WORD_LIMIT) {
+            await supabase.from("anonymous_usage").upsert({
+              anonymous_id: anonymousId,
+              fingerprint: body.fingerprint,
+              fingerprint_components: body.fingerprintComponents || {},
+              ip_address: clientIp,
+              user_agent: req.headers.get('user-agent') || '',
+              words_used: wordsUsed,
+              words_limit: wordsLimit
+            }, { onConflict: 'anonymous_id' })
+          }
+        } else {
+          return NextResponse.json({ error: "請提供匿名 ID 或指紋" }, { status: 401 })
+        }
+      } else if (anonymousId && isValidUUID(anonymousId)) {
+        // 後向兼容：沒有指紋時使用 anonymousId
+        resolvedAnonymousId = anonymousId
+        const { data: usage } = await supabase
+          .from("anonymous_usage")
+          .select("words_used, words_limit")
+          .eq("anonymous_id", anonymousId)
+          .maybeSingle()
+
+        const wordsUsed = usage?.words_used ?? 0
+        const wordsLimit = usage?.words_limit ?? FREE_WORD_LIMIT
+        currentWordCount = Math.max(0, wordsLimit - wordsUsed)
+      } else {
+        return NextResponse.json({ error: "請登入或提供匿名 ID" }, { status: 401 })
+      }
     }
 
     // ============================================================
@@ -291,9 +346,17 @@ export async function POST(req: NextRequest) {
         if (isLoggedIn) {
           await supabase.from("profiles").update({ word_count: remainingAfterCache }).eq("id", session!.user.id)
           updateUserPreferencesAsync(supabase, session!.user.id, estimatedWords).catch(console.warn)
-        } else if (anonymousId) {
-          const { data: ex } = await supabase.from("anonymous_usage").select("words_used").eq("anonymous_id", anonymousId).maybeSingle()
-          await supabase.from("anonymous_usage").upsert({ anonymous_id: anonymousId, words_used: (ex?.words_used ?? 0) + estimatedWords, words_limit: FREE_WORD_LIMIT }, { onConflict: 'anonymous_id' })
+        } else if (resolvedAnonymousId) {
+          const { data: ex } = await supabase.from("anonymous_usage").select("words_used").eq("anonymous_id", resolvedAnonymousId).maybeSingle()
+          await supabase.from("anonymous_usage").upsert({ 
+            anonymous_id: resolvedAnonymousId, 
+            words_used: (ex?.words_used ?? 0) + estimatedWords, 
+            words_limit: FREE_WORD_LIMIT,
+            ...(body.fingerprint && { fingerprint: body.fingerprint }),
+            ...(body.fingerprintComponents && { fingerprint_components: body.fingerprintComponents }),
+            ip_address: clientIp,
+            user_agent: req.headers.get('user-agent') || ''
+          }, { onConflict: 'anonymous_id' })
         }
 
         // 流式輸出緩存內容
@@ -426,18 +489,22 @@ export async function POST(req: NextRequest) {
                       .update({ word_count: currentWordCount - wordsUsed })
                       .eq("id", session!.user.id)
                     updateUserPreferencesAsync(supabase, session!.user.id, wordsUsed).catch(console.warn)
-                  } else if (anonymousId) {
+                  } else if (resolvedAnonymousId) {
                     const { data: existing } = await supabase
                       .from("anonymous_usage")
                       .select("words_used")
-                      .eq("anonymous_id", anonymousId)
+                      .eq("anonymous_id", resolvedAnonymousId)
                       .maybeSingle()
                     await supabase
                       .from("anonymous_usage")
                       .upsert({
-                        anonymous_id: anonymousId,
+                        anonymous_id: resolvedAnonymousId,
                         words_used: (existing?.words_used ?? 0) + wordsUsed,
-                        words_limit: FREE_WORD_LIMIT
+                        words_limit: FREE_WORD_LIMIT,
+                        ...(body.fingerprint && { fingerprint: body.fingerprint }),
+                        ...(body.fingerprintComponents && { fingerprint_components: body.fingerprintComponents }),
+                        ip_address: clientIp,
+                        user_agent: req.headers.get('user-agent') || ''
                       }, { onConflict: 'anonymous_id' })
                   }
 
@@ -446,7 +513,7 @@ export async function POST(req: NextRequest) {
                     void supabase.from("template_usage_stats").insert({
                       template_id: templateId,
                       user_id: isLoggedIn ? session!.user.id : null,
-                      anonymous_id: anonymousId || null,
+                      anonymous_id: resolvedAnonymousId || null,
                       word_count: wordsUsed,
                     })
                   }
@@ -546,12 +613,16 @@ export async function POST(req: NextRequest) {
                       
                       if (isLoggedIn) {
                         await supabase.from("profiles").update({ word_count: currentWordCount - wordsUsed }).eq("id", session!.user.id)
-                      } else if (anonymousId) {
-                        const { data: existing } = await supabase.from("anonymous_usage").select("words_used").eq("anonymous_id", anonymousId).maybeSingle()
+                      } else if (resolvedAnonymousId) {
+                        const { data: existing } = await supabase.from("anonymous_usage").select("words_used").eq("anonymous_id", resolvedAnonymousId).maybeSingle()
                         await supabase.from("anonymous_usage").upsert({
-                          anonymous_id: anonymousId,
+                          anonymous_id: resolvedAnonymousId,
                           words_used: (existing?.words_used ?? 0) + wordsUsed,
-                          words_limit: FREE_WORD_LIMIT
+                          words_limit: FREE_WORD_LIMIT,
+                          ...(body.fingerprint && { fingerprint: body.fingerprint }),
+                          ...(body.fingerprintComponents && { fingerprint_components: body.fingerprintComponents }),
+                          ip_address: clientIp,
+                          user_agent: req.headers.get('user-agent') || ''
                         }, { onConflict: 'anonymous_id' })
                       }
                       
@@ -559,7 +630,7 @@ export async function POST(req: NextRequest) {
                         void supabase.from("template_usage_stats").insert({
                           template_id: templateId,
                           user_id: isLoggedIn ? session!.user.id : null,
-                          anonymous_id: anonymousId || null,
+                          anonymous_id: resolvedAnonymousId || null,
                           word_count: wordsUsed,
                         })
                       }

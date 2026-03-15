@@ -5,6 +5,7 @@
  */
 
 import type { Template, PromptConfig, CharacterConfig } from '@/types/template';
+import { getIntensityModifier, calculateIntensityFromTemplate } from './intensity-config';
 
 /**
  * 從模板構建完整的 System Prompt
@@ -13,11 +14,8 @@ export function buildSystemPromptFromTemplate(template: Template, customScenario
   const config = template.promptBuilder;
   const character = template.characterConfig;
   
-  const intensityText = {
-    mild: '含蓄曖昧，情感細膩',
-    moderate: '適度描寫，情慾漸進',
-    intense: '大膽露骨，情慾豐富'
-  }[config.intensity];
+  const intensityLevel = calculateIntensityFromTemplate(config.pace, config.intensity);
+  const intensityText = getIntensityModifier(intensityLevel);
 
   const paceText = {
     slow: '節奏舒緩，細細鋪陳',
