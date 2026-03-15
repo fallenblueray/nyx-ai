@@ -124,8 +124,8 @@ function TemplateCard({
         </p>
       )}
 
-      {/* 套用按鈕（hover 顯示）或生成中狀態 */}
-      <div className="mt-3 opacity-0 group-hover:opacity-100 transition-opacity">
+      {/* 套用按鈕（hover 顯示）或生成中狀態（始終顯示） */}
+      <div className={cn("mt-3 transition-opacity", isGenerating ? "opacity-100" : "opacity-0 group-hover:opacity-100")}>
         {isGenerating ? (
           <button 
             onClick={(e) => {
@@ -382,12 +382,10 @@ ${outlineText || '故事即將開始...'}`
       // V7.1: 同時保存字符串格式的 outline（給 StoryOutput 使用）
       setGeneratedOutline(outlineText || '故事即將開始...')
       
-      // V9.1: 保存故事標題
-      const title = data.data.title
-      if (title) {
-        setStoryTitle(title)
-        console.log('[TemplateSelector] V9.1: Story title generated:', title)
-      }
+      // V9.1: 保存故事標題（使用默認值確保始終顯示）
+      const title = data.data.title || `${template.name} - ${fullCharacters[0]?.name || '主角'}的故事`
+      setStoryTitle(title)
+      console.log('[TemplateSelector] V9.1: Story title generated:', title)
       
       console.log('[TemplateSelector] V6: Characters and outline generated')
       
